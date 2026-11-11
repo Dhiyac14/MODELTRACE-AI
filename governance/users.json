@@ -1,0 +1,7 @@
+[
+  {"user_id": "dev.alex", "name": "Alex (model developer)", "roles": ["developer"]},
+  {"user_id": "val.sam", "name": "Sam (independent validator)", "roles": ["validator"]},
+  {"user_id": "mrm.jordan", "name": "Jordan (model risk manager)", "roles": ["risk_manager"]},
+  {"user_id": "mon.riley", "name": "Riley (monitoring analyst)", "roles": ["monitoring_analyst"]},
+  {"user_id": "lead.taylor", "name": "Taylor (team lead: developer and risk manager)", "roles": ["developer", "risk_manager"]}
+]
