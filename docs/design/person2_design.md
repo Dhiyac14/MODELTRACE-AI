@@ -34,9 +34,9 @@ Scope, from the work split (P2.1–P2.5) and the plan (steps 5, 6, 13–16):
 ```
  source files + old document ─► Discovery Agent ─► reports/discovery/<id>_discovery.json ─┐
  inventory + Person 1 reports ─► Documentation Agent ─► reports/documentation/, docs/model_cards/ ─┤
- Person 1: migration + parity ─► reports/migration/<id>_parity.json ─────────────────────┤
- Person 1: validation        ─► reports/validation/<id>_validation.json ───────────────┼─► approval gates
- Person 1: monitoring batches ─► reports/monitoring/<id>_monitoring.json                 │   (workflow/)
+ Person 1: migration + parity ─► reports/migration/migration_results.json ──────────────┤
+ Person 1: validation        ─► reports/validation/validation_results.json ─────────────┼─► approval gates
+ Person 1: monitoring batches ─► reports/monitoring/monitoring_results.json             │   (workflow/)
                                    └─► Monitoring Agent ─► reports/alerts/<id>_alerts.json ┘
  approvals, reviews, audit ─► governance/approval_log.json, alert_reviews.json, audit_log.json
 ```
@@ -88,7 +88,7 @@ projection refreshed after every action.
 |---|---|---|
 | not_started / in_progress / changes_requested / invalidated | start, reopen, request changes, upstream reopen | submit |
 | pending_review | submit (all earlier stages approved, evidence file exists) | approve, reject, request changes |
-| approved | approve (evidence unchanged since submission; Redevelop needs `"passed": true`) | reopen |
+| approved | approve (evidence unchanged since submission; Redevelop needs Person 1's `r_vs_statsmodels.overall_pass`) | reopen |
 | rejected | reject (comment required) | reopen by a risk manager |
 
 Reopening a stage invalidates every later stage. Each approval stores the SHA-256 of the evidence file, so
@@ -117,51 +117,69 @@ need a comment.
 Sections: Executive Overview, Discovery, Documentation, Migration, Validation, Risk & Evidence, Monitoring,
 Governance. Each stage page ends with its approval gate, which lists the reasons any action is unavailable
 for the current user. The sidebar picks the model, the acting user (prototype: no login) and a toggle that
-shows Person 1's sample data with a banner while their reports do not exist. Person 1's Migration and
-Validation Agents are called from the app when their modules exist.
+shows copies of Person 1's reports (from `ml-engineering` @ fdad799) with a banner while they are not on this
+branch. After the merge, the Migration and Validation buttons call Person 1's `MigrationAgent` and
+`ValidationAgent` classes.
 
 ```bash
 .venv/bin/streamlit run app.py
 ```
 
-## 7. Interface contract with Person 1
+## 7. How Person 2 reads Person 1's outputs (`ml-engineering` @ fdad799)
 
-**Person 1 provides:**
-| What | Path | Minimum shape |
+Model IDs follow Person 1's `inventory/models.json`: `legacy-r-logistic`, `python-gradient-boosting`,
+`python-random-forest`.
+
+| Use | Person 1 file | Fields used |
 |---|---|---|
-| R model source | chosen by Person 1; saved in the inventory from the Discovery page | text |
-| Preprocessing and split code | `engine/preprocessing.py` | text |
-| Outdated / current documents | `legacy_docs/lr_model_doc_outdated.md`, `legacy_docs/gb_model_doc_current.md` | Markdown |
-| Parity report | `reports/migration/<model_id>_parity.json` | `passed` (bool, required by the Redevelop gate), `r_source_path`, `python_code_path`, parity metrics |
-| Validation report | `reports/validation/<model_id>_validation.json` | `performance`, `stability`, `fairness` (`{grouping: {group: {n, selection_rate, tpr, fpr}}}`), `explainability` (`coefficients`), `findings` list |
-| Finding | inside the validation report | `finding_id`, `category`, `severity` (high/medium/low), `description`, `evidence`, `impact`, `remediation`, `review_status` |
-| Discovery score | `reports/validation/<model_id>_discovery_score.json` | `recall`, `precision`, `matched`, `missed`, `false_alarms` |
-| Monitoring report | `reports/monitoring/<model_id>_monitoring.json` | `batches[]` with `batch_id`, `scenario`, `n_records`, `feature_psi{}`, `prediction_psi`, `mean_predicted_pd`, `share_above_threshold`, `schema_changes[]`, `missing_values{}` |
-| Agent entry points | `agents/migration_agent.py`, `agents/validation_agent.py` | `run_migration(model_id, r_source, llm)` and `run_validation(model_id, llm)`, each writing its report above |
+| Discover input | `models/legacy_model.R`, `engine/data.py` | R `glm` (logit, threshold 0.5); split `test_size=0.2`, stratified, `random_state=42`; ID, SEX, AGE excluded from predictors |
+| Existing document | `models/outdated_model_document.md` | compared with the code by the Discovery Agent |
+| Redevelop gate | `reports/migration/migration_results.json` | `r_vs_statsmodels.overall_pass` (must be true to approve), parity metrics, `r_script` |
+| Validate | `reports/validation/validation_results.json` | `metrics`, `stability`, `fairness.{sex,age_groups}` (`by_group`, `demographic_parity_difference`, `disparate_impact`), `explainability` (`coefficients`, `*_shap.mean_abs_shap`) |
+| Risk & Evidence | `reports/risk_findings/risk_findings_results.json` | `id`, `risk_category`, `severity`, `description`, `evidence`, `remediation`, `review_status` |
+| Monitor | `reports/monitoring/monitoring_results.json` | `batches[]`: `batch`, `feature_psi`, `prediction_psi`, `mean_predicted_probability`, `percentage_above_threshold`, `schema_change`, `missing_values` |
 
-**Person 2 provides:** discovery report, model card, inventory, alert report (`reports/alerts/<model_id>_alerts.json`),
-approval and audit logs, the migration prompt and `MigrationCandidate` schema, and the dashboard.
+- Person 1's pipeline produces these reports for the migrated legacy model only, so the Gradient Boosting and
+  Random Forest models stay pending at Validate and Monitor.
+- Alert severity is recomputed with the same PSI bands as `engine/monitoring.py`; a test checks that both agree
+  for every batch.
+- Scoring the Discovery report against `models/discovery_answer_key.json` stays with Person 1 (the key is local
+  to them).
+- `engine/pipeline.py::generate_agent_reports` keeps calling the deterministic agent classes, so running the
+  pipeline never spends LLM tokens; the LLM agents run from the dashboard behind the approval gates.
 
-**Answer key** (Person 1 owns it): a list of `{"id", "field", "type", "description"}` with the same vocabularies.
-An entry counts as found when the report has a discrepancy with the same `field` and `type`; each reported
-discrepancy can match only one entry. Model IDs `legacy-r-logistic`, `python-gradient-boosting`, `python-random-forest` are used in every file name.
+## 8. Merging `agent-governance` with `ml-engineering` (Day 3)
 
-Example files in exactly this shape are in `tests/fixtures/p2/sample_data/` (marked `"_sample": true`).
+Trial merge, done locally and not pushed, on 11 November: 8 add/add conflicts. Resolved as below, Person 1's
+16 tests and Person 2's 132 tests passed together, `generate_agent_reports` ran, and all 8 dashboard pages
+rendered from Person 1's live reports.
 
-## 8. Coordination notes
+| File | Keep | Why |
+|---|---|---|
+| `.gitignore` | Person 2 | already contains Person 1's entries |
+| `agents/discovery_agent.py`, `documentation_agent.py`, `monitoring_agent.py` | Person 2 | include Person 1's classes verbatim plus the LLM agents |
+| `llm/schemas.py` | Person 2 | includes Person 1's `Evidence`, `Finding`, `AgentResult` verbatim |
+| `llm/client.py`, `llm/__init__.py` | Person 2 | Person 1's `__init__` imports `LLMConfig` / `LLMResponse`, which no longer exist |
+| `inventory/registry.py`, `inventory/__init__.py` | Person 2 | Person 1's `__init__` imports `ModelInventory` / `ModelRecord` |
+| `app.py` | Person 2 | full dashboard |
+| `agents/__init__.py`, `workflow/__init__.py` | Person 1 (merged automatically) | their imports work with Person 2's modules |
+
+Person 1's `governance/*.py`, `workflow/lifecycle.py`, `inventory/models.json` and `prompts.py` merge without
+conflict and stay; `tests/test_governance.py` uses them. The dashboard uses `workflow/state_machine.py`; the two
+lifecycle implementations can be reconciled later. Both `pytest.ini` and `pyproject.toml` configure pytest the
+same way. Install both dependency lists: `pip install -e ".[dev,validation,statsmodels]"` and
+`pip install -r requirements.txt`.
+
+## 9. Coordination notes
 - Person 2's tests and fixtures are new files under `tests/` (`tests/test_p2_*.py`, `tests/fixtures/p2/`).
-- Shared files: `requirements.txt`, `.env.example`, `.gitignore`, `pytest.ini`, `agents/__init__.py`.
 - Runtime state (`governance/*_log.json`, `alert_reviews.json`, `inventory/uploads/`) is git-ignored;
   `python -m inventory.registry --seed --force` resets the inventory.
-- Committed outputs in `reports/discovery/`, `reports/documentation/` and `docs/model_cards/` come from the live
-  Claude Opus 5.5 run on the dev fixture (not Person 1's real model) and are regenerated once Person 1's real model
-  and documents exist. Alerts from that run are not committed because their input was sample monitoring data.
-- Person 1 decides whether omissions count when precision is scored.
+- `tests/fixtures/p2/person1_reports/` holds copies of Person 1's reports for display and tests on this branch;
+  gates never read them.
 
-## 9. Verification
-- 116 tests: LLM client, evidence checks, discovery rules, documentation grounding, inventory and tier,
-  workflow transitions and every separation-of-duties rule, audit tamper detection, monitoring rules and
-  reviews, and dashboard flows driven through Streamlit's test runner.
-- Manual run in a browser against a scratch copy of the data: submit and approve Discover with two users,
-  run the Monitoring Agent, acknowledge an alert, confirm the audit chain.
-- Not verified: a live LLM call (no key on the development machine) and Person 1's real reports.
+## 10. Verification
+- 132 tests on this branch, including the compatibility tests for Person 1's interfaces and reports;
+  148 tests on the trial merge.
+- Live Claude Opus 5.5 run on the development fixture: $0.26 for seven calls.
+- Browser walkthrough: submit and approve Discover with two users, run the Monitoring Agent, acknowledge an
+  alert, confirm the audit chain.

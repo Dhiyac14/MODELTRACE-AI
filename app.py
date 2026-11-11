@@ -97,6 +97,8 @@ def table(rows: list[dict] | pd.DataFrame) -> None:
 
 def show_value(value: Any) -> str:
     """One text column: Arrow cannot hold a mix of floats, booleans and strings."""
+    if value is None:
+        return ""
     if isinstance(value, float):
         return f"{value:.6g}"
     return value if isinstance(value, str) else json.dumps(value)
@@ -258,7 +260,7 @@ def page_discovery(model_id: str) -> None:
                 facts = value if isinstance(value, list) else [value]
                 for fact in facts:
                     if hasattr(fact, "status"):
-                        rows.append({"Field": name, "Value": json.dumps(fact.value) if isinstance(fact.value, list) else fact.value,
+                        rows.append({"Field": name, "Value": show_value(fact.value),
                                      "Status": fact.status, "Evidence": "; ".join(f"{r.file}:L{r.line_start}-{r.line_end}" for r in fact.evidence),
                                      "Note": fact.note})
             table(rows)
