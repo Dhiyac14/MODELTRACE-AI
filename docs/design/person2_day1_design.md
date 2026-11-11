@@ -140,8 +140,9 @@ agent is not tuned to the answer key. The development fixture (`tests/fixtures/p
 | Migration prompt and schema | `llm/prompts.py::MIGRATION_SYSTEM`, `llm/schemas.py::MigrationCandidate` |
 
 **Answer key format proposal** (Person 1 owns the file): a list of
-`{"id", "field", "type", "description"}` using the same `field` and `type` vocabularies, so recall and
-precision are a set match on `(field, type)`.
+`{"id", "field", "type", "description"}` using the same `field` and `type` vocabularies. An answer-key
+entry counts as found when the report has a discrepancy with the same `field` and `type`; each reported
+discrepancy can match only one entry.
 
 Model IDs `LR-R-001`, `GB-PY-002`, `RF-PY-003` are used in every file name.
 
