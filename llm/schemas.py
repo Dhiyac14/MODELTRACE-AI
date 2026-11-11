@@ -190,6 +190,48 @@ class ModelCard(BaseModel):
     review_status: ReviewStatus = "pending_human_review"
 
 
+# --------------------------------------------------------------------------- monitoring
+AlertMetric = Literal["feature_psi", "prediction_psi", "schema_change", "missing_values"]
+Recommendation = Literal["monitor", "investigate", "consider_revalidation"]
+
+
+class AlertExplanation(BaseModel):
+    alert_id: str
+    summary: str = Field(description="Which feature or output changed and the evidence that triggered the alert.")
+    potential_impact: str = Field(description="What this could mean for predictions or decisions.")
+    investigate: list[str] = Field(description="2-4 concrete checks for the reviewer.")
+    recommendation: Recommendation
+    reason: str = Field(description="Why this recommendation, in one sentence.")
+
+
+class AlertExplanations(BaseModel):
+    items: list[AlertExplanation]
+
+
+class Alert(BaseModel):
+    alert_id: str = Field(description="Stable id <model>:<batch>:<metric>:<feature>, so reviews survive re-runs.")
+    model_id: str
+    batch_id: str
+    scenario: str = ""
+    metric: AlertMetric
+    feature: str | None = None
+    value: float | None = None
+    severity: Literal["warning", "high"]
+    rule: str
+    evidence_ref: str
+    explanation: AlertExplanation | None = None
+    explanation_source: Literal["llm_draft", "template"] = "template"
+
+
+class AlertReport(BaseModel):
+    model_id: str
+    source: str
+    alerts: list[Alert] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    generated_by: str
+    generated_at: str = Field(default_factory=utc_now)
+
+
 # --------------------------------------------------------------------------- inventory
 class TierRationaleDraft(BaseModel):
     rationale: str = Field(description="2-3 sentences explaining the given tier. Do not change the tier.")

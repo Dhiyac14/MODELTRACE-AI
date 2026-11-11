@@ -152,6 +152,15 @@ class LLMClient:
             f.write(json.dumps(record) + "\n")
 
 
+def llm_from_env(env_file: str | Path = ".env") -> tuple[LLMClient | None, str]:
+    """Return ``(client, status)``. The client is None when the LLM is not configured, so callers can fall back."""
+    try:
+        client = LLMClient.from_env(env_file)
+    except Exception as exc:  # missing model name or API key: report it, do not crash the app
+        return None, f"LLM not configured ({type(exc).__name__}: {exc})"
+    return client, f"LLM: {client.model}"
+
+
 class ReplayLLM:
     """Offline stand-in that returns canned replies from ``<replies_dir>/<SchemaName>.json``.
 

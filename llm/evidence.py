@@ -6,6 +6,7 @@ reference is downgraded to "inferred".
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path, PurePosixPath
 
 from pydantic import BaseModel
@@ -75,6 +76,29 @@ def verify_fact(fact: Fact, sources: Sources, label: str, warnings: list[str]) -
         update["note"] = f"{fact.note} Downgraded from verified: no source reference could be checked.".strip()
         warnings.append(f"{label}: downgraded from verified to inferred.")
     return fact.model_copy(update=update)
+
+
+_ANY_NUMBER = re.compile(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?")
+_PROSE_NUMBER = re.compile(r"(?<![\w.])(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?(%?)")
+
+
+def ungrounded_numbers(text: str, facts_text: str) -> list[str]:
+    """Decimals, percentages and numbers >= 100 in LLM prose that do not appear in ``facts_text``.
+
+    Rounding is allowed (0.82 matches 0.8213) and so is the percentage form (80% matches 0.8).
+    Numbers inside identifiers such as PAY_0 or BILL_AMT1 are ignored.
+    """
+    allowed = [float(x.replace(",", "")) for x in _ANY_NUMBER.findall(facts_text)]
+    bad = []
+    for match in _PROSE_NUMBER.finditer(text):
+        whole, frac, pct = match.group(1), match.group(2) or "", match.group(3)
+        value = float(whole.replace(",", "") + frac)
+        if not (frac or pct or value >= 100):
+            continue
+        tol = 0.5 * 10 ** -(len(frac) - 1) if frac else 0.5
+        if not any(abs(value - a) <= tol or abs(value - 100 * a) <= tol for a in allowed):
+            bad.append(match.group(0))
+    return bad
 
 
 def verify_facts(model: BaseModel, sources: Sources) -> tuple[BaseModel, list[str]]:

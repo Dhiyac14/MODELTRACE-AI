@@ -6,3 +6,9 @@ __pycache__/
 governance/llm_call_log.jsonl
 data/raw/
 .DS_Store
+# Runtime governance state written by the app (regenerated during a demo)
+governance/approval_log.json
+governance/audit_log.json
+governance/alert_reviews.json
+inventory/uploads/
+*.tmp

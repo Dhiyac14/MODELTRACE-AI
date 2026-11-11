@@ -16,7 +16,16 @@ from inventory.risk_tier import Rating, assign_tier, template_rationale
 from llm.schemas import utc_now
 
 Stage = Literal["discover", "document", "redevelop", "validate", "monitor"]
-Status = Literal["not_started", "in_progress", "pending_review", "approved", "rejected", "changes_requested"]
+Status = Literal[
+    "not_started",
+    "in_progress",
+    "pending_review",
+    "approved",
+    "rejected",
+    "changes_requested",
+    "invalidated",  # an upstream stage was reopened, so this stage must be reviewed again
+    "not_applicable",  # e.g. redevelopment of a model that is already in Python
+]
 INVENTORY_PATH = Path(__file__).with_name("model_inventory.json")
 
 
@@ -27,7 +36,8 @@ class InventoryRecord(BaseModel):
     version: str = "1.0.0"
     algorithm: str
     language: str
-    source_files: list[str] = Field(default_factory=list)
+    source_files: list[str] = Field(default_factory=list, description="Repository paths; the first is the main model file.")
+    legacy_document: str | None = Field(default=None, description="Existing model document compared at the Discover stage.")
     lifecycle_stage: Stage = "discover"
     documentation_status: Status = "not_started"
     migration_status: Status = "not_started"
@@ -42,7 +52,7 @@ class InventoryRecord(BaseModel):
     complexity_basis: str
     tier_rationale: str = ""
     tier_rationale_source: Literal["rule_template", "llm_draft"] = "rule_template"
-    tier_status: Status = "pending_review"
+    tier_status: Status = "not_started"  # set from the Discover gate, where the tier is approved
     updated_at: str = Field(default_factory=utc_now)
 
     @computed_field  # derived from the ratings, so it can never be stored out of sync
@@ -86,6 +96,7 @@ def seed_records() -> list[InventoryRecord]:
             business_purpose="Estimates the probability that a credit-card customer defaults next month; used in credit decisions.",
             algorithm="Logistic regression (glm, binomial family)",
             language="R",
+            legacy_document="legacy_docs/lr_model_doc_outdated.md",
             materiality="high",
             materiality_basis="drives credit decisions for customers",
             complexity="low",
@@ -97,6 +108,8 @@ def seed_records() -> list[InventoryRecord]:
             business_purpose="Challenger model compared against the production default model; informs but does not drive decisions.",
             algorithm="Gradient Boosting classifier (scikit-learn)",
             language="Python",
+            legacy_document="legacy_docs/gb_model_doc_current.md",
+            migration_status="not_applicable",
             materiality="medium",
             materiality_basis="informs model review but does not drive decisions",
             complexity="high",
@@ -108,6 +121,7 @@ def seed_records() -> list[InventoryRecord]:
             business_purpose="Benchmark model for internal analysis; not used in decisions.",
             algorithm="Random Forest classifier (scikit-learn)",
             language="Python",
+            migration_status="not_applicable",
             materiality="low",
             materiality_basis="internal benchmark only, not used in decisions",
             complexity="medium",

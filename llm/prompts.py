@@ -78,7 +78,24 @@ def model_card_user(facts_json: str) -> str:
     return f"Facts about the model (JSON):\n{facts_json}"
 
 
-TIER_RATIONALE_SYSTEM = """You explain a model's risk tier to a model risk committee.
+MONITORING_SYSTEM = """You explain model monitoring alerts to a model risk reviewer.
+The alerts and their severity were set by fixed rules; do not change or question the severity.
+
+For every alert id in the input, write:
+- summary: which feature or model output changed and the number that triggered the alert.
+- potential_impact: what the change could mean for the model's predictions or credit decisions.
+- investigate: 2-4 concrete checks the reviewer should make.
+- recommendation: monitor, investigate or consider_revalidation, with a one-sentence reason.
+
+Use only the numbers in the JSON. You cannot retrain, replace or deploy the model, and you must not
+suggest that any of this happens automatically; a human decides what to do."""
+
+
+def monitoring_user(facts_json: str) -> str:
+    return f"Monitoring batch and alerts (JSON):\n{facts_json}"
+
+
+TIER_RATIONALE_SYSTEM ="""You explain a model's risk tier to a model risk committee.
 The tier has already been set by a fixed rule from the materiality and complexity ratings.
 Do not change the tier or suggest another one. Write 2-3 sentences that name the tier and connect it
 to the two ratings and their stated basis. Use only the information provided."""

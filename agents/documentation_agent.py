@@ -20,6 +20,7 @@ from agents.discovery_agent import format_split
 from inventory.registry import InventoryRecord, get_record, load_inventory
 from inventory.risk_tier import TIER_RULE
 from llm.client import LLMClient, StructuredLLM
+from llm.evidence import ungrounded_numbers
 from llm.prompts import MODEL_CARD_SYSTEM, model_card_user
 from llm.schemas import CardRow, CardSection, DiscoveryReport, Fact, ModelCard, ModelCardNarrative, SourceRef
 
@@ -46,8 +47,6 @@ DATASET_ROWS = [
 DATASET_LIMITATION = ("The demonstration dataset is historical Taiwanese credit-card data and is not representative "
                       "of a UK bank's current credit portfolio.")
 APPROVAL_WORDS = re.compile(r"\b(approved|signed[ -]off|certified|independently validated)\b", re.IGNORECASE)
-_ANY_NUMBER = re.compile(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?")
-_PROSE_NUMBER = re.compile(r"(?<![\w.])(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?(%?)")
 
 
 # --------------------------------------------------------------------------- evidence files
@@ -89,22 +88,6 @@ def _validation_section(key: str, title: str, evidence: Evidence) -> CardSection
         return _pending(key, title, "Validate")
     file, data = evidence["validation"]
     return CardSection(key=key, title=title, source="evidence", rows=_rows_from(file, data[key], key))
-
-
-# --------------------------------------------------------------------------- grounding check
-def ungrounded_numbers(text: str, facts_text: str) -> list[str]:
-    """Decimals, percentages and numbers >= 100 in ``text`` that do not appear in ``facts_text`` (rounding allowed)."""
-    allowed = [float(x.replace(",", "")) for x in _ANY_NUMBER.findall(facts_text)]
-    bad = []
-    for match in _PROSE_NUMBER.finditer(text):
-        whole, frac, pct = match.group(1), match.group(2) or "", match.group(3)
-        value = float(whole.replace(",", "") + frac)
-        if not (frac or pct or value >= 100):
-            continue
-        tol = 0.5 * 10 ** -(len(frac) - 1) if frac else 0.5
-        if not any(abs(value - a) <= tol or abs(value - 100 * a) <= tol for a in allowed):
-            bad.append(match.group(0))
-    return bad
 
 
 # --------------------------------------------------------------------------- narrative
