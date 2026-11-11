@@ -1,0 +1,254 @@
+{
+  "model_id": "LR-R-001",
+  "model_name": "Credit default logistic regression (legacy)",
+  "version": "1.0.0",
+  "risk_tier": 1,
+  "sections": [
+    {
+      "key": "overview",
+      "title": "Model overview and intended purpose",
+      "status": "available",
+      "source": "llm_draft",
+      "text": "The legacy credit default logistic regression (LR-R-001) estimates the probability that a credit-card customer defaults next month and is used in credit decisions. It is implemented in R and predicts default.payment.next.month.",
+      "rows": []
+    },
+    {
+      "key": "dataset",
+      "title": "Dataset and data provenance",
+      "status": "available",
+      "source": "constant",
+      "text": "",
+      "rows": [
+        {
+          "label": "Dataset",
+          "value": "Default of Credit Card Clients (UCI Machine Learning Repository)",
+          "source": "UCI dataset description, https://archive.ics.uci.edu/dataset/350"
+        },
+        {
+          "label": "Records",
+          "value": "30,000",
+          "source": "UCI dataset description, https://archive.ics.uci.edu/dataset/350"
+        },
+        {
+          "label": "Input variables",
+          "value": "23",
+          "source": "UCI dataset description, https://archive.ics.uci.edu/dataset/350"
+        },
+        {
+          "label": "Origin",
+          "value": "Credit-card clients in Taiwan, payment history April to September 2005",
+          "source": "UCI dataset description, https://archive.ics.uci.edu/dataset/350"
+        },
+        {
+          "label": "Intended use here",
+          "value": "Public demonstration data only; not representative of a UK bank's current portfolio",
+          "source": "Project plan, step 2"
+        }
+      ]
+    },
+    {
+      "key": "methodology",
+      "title": "Algorithm and methodology",
+      "status": "available",
+      "source": "llm_draft",
+      "text": "The model is a logistic regression fitted with glm using a binomial family and logit link on 21 input features. ID, SEX and AGE are excluded from the predictors. Training uses a stratified 80% train / 20% test split, and a predicted probability above 0.35 is classed as default.",
+      "rows": []
+    },
+    {
+      "key": "features_and_target",
+      "title": "Input features and target",
+      "status": "available",
+      "source": "discovery",
+      "text": "",
+      "rows": [
+        {
+          "label": "Target variable",
+          "value": "default.payment.next.month",
+          "source": "tests/fixtures/p2/legacy_lr_model.R:L12 (verified)"
+        },
+        {
+          "label": "Input features (21)",
+          "value": "LIMIT_BAL, EDUCATION, MARRIAGE, PAY_0, PAY_2, PAY_3, PAY_4, PAY_5, PAY_6, BILL_AMT1, BILL_AMT2, BILL_AMT3, BILL_AMT4, BILL_AMT5, BILL_AMT6, PAY_AMT1, PAY_AMT2, PAY_AMT3, PAY_AMT4, PAY_AMT5, PAY_AMT6",
+          "source": "tests/fixtures/p2/legacy_lr_model.R:L12-14; tests/fixtures/p2/legacy_lr_model.R:L15 (verified)"
+        },
+        {
+          "label": "Excluded columns",
+          "value": "ID, SEX, AGE",
+          "source": "tests/fixtures/p2/legacy_lr_model.R:L10 (verified)"
+        },
+        {
+          "label": "Preprocessing",
+          "value": "Stratified train/test split on the target with random_state=42, Model reads the processed train and test CSV files",
+          "source": "tests/fixtures/p2/preprocessing_split.py:L8; tests/fixtures/p2/legacy_lr_model.R:L6-7 (verified)"
+        },
+        {
+          "label": "Train/test split",
+          "value": "80% train / 20% test",
+          "source": "tests/fixtures/p2/preprocessing_split.py:L8 (verified)"
+        },
+        {
+          "label": "Decision threshold",
+          "value": "0.35",
+          "source": "tests/fixtures/p2/legacy_lr_model.R:L22 (verified)"
+        }
+      ]
+    },
+    {
+      "key": "performance",
+      "title": "Performance metrics",
+      "status": "pending",
+      "source": "evidence",
+      "text": "Pending: produced at the Validate stage. No figures are shown until the report exists.",
+      "rows": []
+    },
+    {
+      "key": "fairness",
+      "title": "Fairness considerations",
+      "status": "pending",
+      "source": "evidence",
+      "text": "Pending: produced at the Validate stage. No figures are shown until the report exists.",
+      "rows": []
+    },
+    {
+      "key": "stability",
+      "title": "Stability",
+      "status": "pending",
+      "source": "evidence",
+      "text": "Pending: produced at the Validate stage. No figures are shown until the report exists.",
+      "rows": []
+    },
+    {
+      "key": "explainability",
+      "title": "Explainability",
+      "status": "pending",
+      "source": "evidence",
+      "text": "Pending: produced at the Validate stage. No figures are shown until the report exists.",
+      "rows": []
+    },
+    {
+      "key": "limitations",
+      "title": "Limitations and assumptions",
+      "status": "available",
+      "source": "llm_draft",
+      "text": "SEX and AGE are retained only for fairness review. No probability calibration step was found in the code. The business owner, change history and performance targets are not documented in the code, and the demonstration data is historical Taiwanese credit-card data.",
+      "rows": []
+    },
+    {
+      "key": "governance",
+      "title": "Risk tier, approval and governance",
+      "status": "available",
+      "source": "inventory",
+      "text": "",
+      "rows": [
+        {
+          "label": "Risk tier",
+          "value": "Tier 1",
+          "source": "inventory (computed by rule)"
+        },
+        {
+          "label": "Materiality",
+          "value": "high: drives credit decisions for customers",
+          "source": "inventory"
+        },
+        {
+          "label": "Complexity",
+          "value": "low: linear model with a small set of documented predictors",
+          "source": "inventory"
+        },
+        {
+          "label": "Tier rule",
+          "value": "Tier 1 if materiality is high; Tier 2 if materiality is medium or complexity is high; otherwise Tier 3.",
+          "source": "SS1/23 1.3"
+        },
+        {
+          "label": "Tier rationale",
+          "value": "Tier 1: materiality is high (drives credit decisions for customers) and complexity is low (linear model with a small set of documented predictors). Rule: Tier 1 if materiality is high; Tier 2 if materiality is medium or complexity is high; otherwise Tier 3.",
+          "source": "rule_template"
+        },
+        {
+          "label": "Tier review status",
+          "value": "pending_review",
+          "source": "inventory"
+        },
+        {
+          "label": "Approval records",
+          "value": "None recorded",
+          "source": "governance/approval_log.json"
+        },
+        {
+          "label": "Discovery report status",
+          "value": "pending_human_review",
+          "source": "reports/discovery/LR-R-001_discovery.json"
+        },
+        {
+          "label": "Model card status",
+          "value": "pending_human_review",
+          "source": "this card"
+        },
+        {
+          "label": "SS1/23 principles covered",
+          "value": "1. Model identification and model risk classification; 1.2 Model inventory; 1.3 Model tiering; 3. Model development, implementation and use; 3.5 Model development documentation",
+          "source": "governance/ss1_23_mapping.json"
+        }
+      ]
+    },
+    {
+      "key": "corrections",
+      "title": "Corrections to the existing model document",
+      "status": "available",
+      "source": "discovery",
+      "text": "Compared with tests/fixtures/p2/lr_doc_outdated_dev.md.",
+      "rows": [
+        {
+          "label": "D-001 input_features (contradiction)",
+          "value": "Document: SEX is a model input. Correction: Remove SEX from the documented input features.",
+          "source": "tests/fixtures/p2/legacy_lr_model.R:L10"
+        },
+        {
+          "label": "D-002 input_features (omission)",
+          "value": "Document: The documented feature list leaves out PAY_AMT4, PAY_AMT5, PAY_AMT6. Correction: Add PAY_AMT4, PAY_AMT5, PAY_AMT6 to the documented input features.",
+          "source": "tests/fixtures/p2/legacy_lr_model.R:L12-14; tests/fixtures/p2/legacy_lr_model.R:L15"
+        },
+        {
+          "label": "D-003 decision_threshold (contradiction)",
+          "value": "Document: The decision threshold is 0.4. Correction: Change the documented decision threshold to 0.35.",
+          "source": "tests/fixtures/p2/legacy_lr_model.R:L22"
+        },
+        {
+          "label": "D-004 train_test_split (contradiction)",
+          "value": "Document: The train/test split is 75% train / 25% test. Correction: Change the documented train/test split to 80% train / 20% test.",
+          "source": "tests/fixtures/p2/preprocessing_split.py:L8"
+        },
+        {
+          "label": "D-005 preprocessing (contradiction)",
+          "value": "Document: LIMIT_BAL is log-transformed before fitting. Correction: State that LIMIT_BAL enters the model untransformed.",
+          "source": "tests/fixtures/p2/legacy_lr_model.R:L12"
+        },
+        {
+          "label": "D-006 ownership (unverifiable)",
+          "value": "Document: The model owner is Retail Credit Analytics. Correction: Confirm the model owner and record it in the inventory.",
+          "source": "no code evidence"
+        },
+        {
+          "label": "D-007 validation_history (unverifiable)",
+          "value": "Document: The model was approved by the Credit Risk Committee in March 2021. Correction: Remove the approval claim or attach the approval record.",
+          "source": "no code evidence"
+        },
+        {
+          "label": "D-008 other (unverifiable)",
+          "value": "Document: The document is version 1.2, last updated March 2021. Correction: Replace with the current model version from the inventory.",
+          "source": "no code evidence"
+        },
+        {
+          "label": "D-009 preprocessing (omission)",
+          "value": "Document: Not mentioned in the document. Correction: Document that ID, SEX and AGE are excluded from the predictors and that SEX and AGE are used for fairness review.",
+          "source": "tests/fixtures/p2/legacy_lr_model.R:L9-10"
+        }
+      ]
+    }
+  ],
+  "grounding_warnings": [],
+  "generated_by": "Documentation Agent (LLM: replay)",
+  "generated_at": "2026-11-11T19:47:05+00:00",
+  "review_status": "pending_human_review"
+}

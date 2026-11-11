@@ -1,0 +1,27 @@
+{
+  "input_features": {"value": ["LIMIT_BAL", "SEX", "EDUCATION", "MARRIAGE", "PAY_0", "PAY_2", "PAY_3", "PAY_4", "PAY_5", "PAY_6",
+      "BILL_AMT1", "BILL_AMT2", "BILL_AMT3", "BILL_AMT4", "BILL_AMT5", "BILL_AMT6", "PAY_AMT1", "PAY_AMT2", "PAY_AMT3"],
+    "ref": {"file": "tests/fixtures/p2/lr_doc_outdated_dev.md", "line_start": 15, "line_end": 15, "quote": "LIMIT_BAL, SEX, EDUCATION, MARRIAGE, PAY_0, PAY_2 to PAY_6"}},
+  "decision_threshold": {"value": 0.40, "ref": {"file": "tests/fixtures/p2/lr_doc_outdated_dev.md", "line_start": 23, "line_end": 23, "quote": "above 0.40 are referred"}},
+  "train_fraction": {"value": 0.75, "ref": {"file": "tests/fixtures/p2/lr_doc_outdated_dev.md", "line_start": 12, "line_end": 12, "quote": "The data is split 75/25 into training and test sets."}},
+  "other_claims": [
+    {"claim_id": "C1", "field": "business_purpose", "statement": "The model estimates the probability that a credit-card customer defaults on next month's payment.",
+     "doc_ref": {"file": "tests/fixtures/p2/lr_doc_outdated_dev.md", "line_start": 8, "line_end": 8, "quote": "The model estimates the probability that a credit-card customer defaults on next month's payment."}},
+    {"claim_id": "C2", "field": "target_variable", "statement": "The target is default on next month's payment.",
+     "doc_ref": {"file": "tests/fixtures/p2/lr_doc_outdated_dev.md", "line_start": 8, "line_end": 8, "quote": "defaults on next month's payment"}},
+    {"claim_id": "C3", "field": "preprocessing", "statement": "LIMIT_BAL is log-transformed before fitting.",
+     "doc_ref": {"file": "tests/fixtures/p2/lr_doc_outdated_dev.md", "line_start": 17, "line_end": 17, "quote": "LIMIT_BAL is log-transformed before fitting."}},
+    {"claim_id": "C4", "field": "algorithm", "statement": "Logistic regression fitted by maximum likelihood.",
+     "doc_ref": {"file": "tests/fixtures/p2/lr_doc_outdated_dev.md", "line_start": 20, "line_end": 20, "quote": "Logistic regression fitted by maximum likelihood."}},
+    {"claim_id": "C5", "field": "ownership", "statement": "The model owner is Retail Credit Analytics.",
+     "doc_ref": {"file": "tests/fixtures/p2/lr_doc_outdated_dev.md", "line_start": 26, "line_end": 26, "quote": "Model owner: Retail Credit Analytics."}},
+    {"claim_id": "C6", "field": "validation_history", "statement": "The model was approved by the Credit Risk Committee in March 2021.",
+     "doc_ref": {"file": "tests/fixtures/p2/lr_doc_outdated_dev.md", "line_start": 27, "line_end": 27, "quote": "The model was approved by the Credit Risk Committee in March 2021."}},
+    {"claim_id": "C7", "field": "other", "statement": "The document is version 1.2, last updated March 2021.",
+     "doc_ref": {"file": "tests/fixtures/p2/lr_doc_outdated_dev.md", "line_start": 5, "line_end": 5, "quote": "Version 1.2, last updated March 2021."}},
+    {"claim_id": "C8", "field": "train_test_split", "statement": "The data is split 75/25.",
+     "doc_ref": {"file": "tests/fixtures/p2/lr_doc_outdated_dev.md", "line_start": 12, "line_end": 12, "quote": "split 75/25"}},
+    {"claim_id": "C9", "field": "monitoring", "statement": "Model performance is reviewed quarterly.",
+     "doc_ref": {"file": "tests/fixtures/p2/lr_doc_outdated_dev.md", "line_start": 28, "line_end": 28, "quote": "Performance is reviewed every quarter."}}
+  ]
+}

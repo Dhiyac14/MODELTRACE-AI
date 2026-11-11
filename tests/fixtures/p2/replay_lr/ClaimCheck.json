@@ -1,0 +1,27 @@
+{
+  "assessments": [
+    {"claim_id": "C1", "verdict": "consistent", "explanation": "The code predicts default probabilities and refers accounts above the cut-off.",
+     "code_evidence": [{"file": "tests/fixtures/p2/legacy_lr_model.R", "line_start": 21, "line_end": 21, "quote": "Accounts with a predicted default probability above the cut-off are referred for review."}]},
+    {"claim_id": "C2", "verdict": "consistent", "explanation": "The model target is default.payment.next.month.",
+     "code_evidence": [{"file": "tests/fixtures/p2/legacy_lr_model.R", "line_start": 12, "line_end": 12, "quote": "default.payment.next.month ~"}]},
+    {"claim_id": "C3", "verdict": "contradiction", "explanation": "LIMIT_BAL enters the formula untransformed; no log transform appears in the code.",
+     "code_evidence": [{"file": "tests/fixtures/p2/legacy_lr_model.R", "line_start": 12, "line_end": 12, "quote": "default.payment.next.month ~ LIMIT_BAL + EDUCATION + MARRIAGE"}],
+     "suggested_correction": "State that LIMIT_BAL enters the model untransformed."},
+    {"claim_id": "C4", "verdict": "consistent", "explanation": "glm with a binomial family is fitted by maximum likelihood.",
+     "code_evidence": [{"file": "tests/fixtures/p2/legacy_lr_model.R", "line_start": 17, "line_end": 17, "quote": "glm(model_formula, data = train, family = binomial(link = \"logit\"))"}]},
+    {"claim_id": "C5", "verdict": "unverifiable", "explanation": "The code does not record a model owner.",
+     "suggested_correction": "Confirm the model owner and record it in the inventory."},
+    {"claim_id": "C6", "verdict": "unverifiable", "explanation": "No approval record exists in the repository.",
+     "suggested_correction": "Remove the approval claim or attach the approval record."},
+    {"claim_id": "C7", "verdict": "unverifiable", "explanation": "The repository holds no version history for the document.",
+     "suggested_correction": "Replace with the current model version from the inventory."}
+  ],
+  "omissions": [
+    {"field": "preprocessing", "explanation": "The code excludes ID, SEX and AGE from the predictors and keeps SEX and AGE for fairness review; the document does not say so.",
+     "code_evidence": [{"file": "tests/fixtures/p2/legacy_lr_model.R", "line_start": 9, "line_end": 10, "quote": "SEX and AGE are kept for fairness review only."}],
+     "suggested_correction": "Document that ID, SEX and AGE are excluded from the predictors and that SEX and AGE are used for fairness review."},
+    {"field": "input_features", "explanation": "PAY_AMT4 to PAY_AMT6 are not documented.",
+     "code_evidence": [{"file": "tests/fixtures/p2/legacy_lr_model.R", "line_start": 15, "line_end": 15, "quote": "PAY_AMT4 + PAY_AMT5 + PAY_AMT6"}],
+     "suggested_correction": "Add PAY_AMT4 to PAY_AMT6."}
+  ]
+}
