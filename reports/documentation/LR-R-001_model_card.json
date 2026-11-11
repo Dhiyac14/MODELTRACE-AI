@@ -9,7 +9,7 @@
       "title": "Model overview and intended purpose",
       "status": "available",
       "source": "llm_draft",
-      "text": "The legacy credit default logistic regression (LR-R-001) estimates the probability that a credit-card customer defaults next month and is used in credit decisions. It is implemented in R and predicts default.payment.next.month.",
+      "text": "LR-R-001, recorded as 'Credit default logistic regression (legacy)', estimates the probability that a credit-card customer defaults in the next month and is described as being used in credit decisions; it is assigned risk tier 1. The model name, business purpose and train fraction are inferred fields, and the formal business purpose, intended use, portfolio scope, model owner and developer are not documented. The code is a development fixture standing in for the real model, not the production model, and it uses the public UCI 'Default of Credit Card Clients' dataset (30,000 records, 23 input variables, Taiwan credit-card clients, April to September 2005), which is described as demonstration data only and not representative of a UK bank's current portfolio.",
       "rows": []
     },
     {
@@ -51,7 +51,7 @@
       "title": "Algorithm and methodology",
       "status": "available",
       "source": "llm_draft",
-      "text": "The model is a logistic regression fitted with glm using a binomial family and logit link on 21 input features. ID, SEX and AGE are excluded from the predictors. Training uses a stratified 80% train / 20% test split, and a predicted probability above 0.35 is classed as default.",
+      "text": "The model is a logistic regression implemented in R using glm with a binomial family and logit link, predicting default.payment.next.month from 21 input features: LIMIT_BAL, EDUCATION, MARRIAGE, the repayment status variables PAY_0 and PAY_2 to PAY_6, bill amounts BILL_AMT1 to BILL_AMT6, and payment amounts PAY_AMT1 to PAY_AMT6. ID, SEX and AGE are excluded from modelling, with SEX and AGE recorded as retained only for fairness review. Data is read from data/processed/credit_default_clean.csv and split into train and test sets with a stratified split on the target (test_size=0.2, random_state=42), giving an 80/20 split, and the R model applies no further transformation. A decision threshold of 0.35 is applied, but the rationale for this threshold is not documented.",
       "rows": []
     },
     {
@@ -64,32 +64,32 @@
         {
           "label": "Target variable",
           "value": "default.payment.next.month",
-          "source": "tests/fixtures/p2/legacy_lr_model.R:L12 (verified)"
+          "source": "tests/fixtures/p2/legacy_lr_model.R:L12; tests/fixtures/p2/preprocessing_split.py:L5 (verified)"
         },
         {
           "label": "Input features (21)",
           "value": "LIMIT_BAL, EDUCATION, MARRIAGE, PAY_0, PAY_2, PAY_3, PAY_4, PAY_5, PAY_6, BILL_AMT1, BILL_AMT2, BILL_AMT3, BILL_AMT4, BILL_AMT5, BILL_AMT6, PAY_AMT1, PAY_AMT2, PAY_AMT3, PAY_AMT4, PAY_AMT5, PAY_AMT6",
-          "source": "tests/fixtures/p2/legacy_lr_model.R:L12-14; tests/fixtures/p2/legacy_lr_model.R:L15 (verified)"
+          "source": "tests/fixtures/p2/legacy_lr_model.R:L12-15 (verified)"
         },
         {
           "label": "Excluded columns",
           "value": "ID, SEX, AGE",
-          "source": "tests/fixtures/p2/legacy_lr_model.R:L10 (verified)"
+          "source": "tests/fixtures/p2/legacy_lr_model.R:L9-10 (verified)"
         },
         {
           "label": "Preprocessing",
-          "value": "Stratified train/test split on the target with random_state=42, Model reads the processed train and test CSV files",
-          "source": "tests/fixtures/p2/preprocessing_split.py:L8; tests/fixtures/p2/legacy_lr_model.R:L6-7 (verified)"
+          "value": "Read data/processed/credit_default_clean.csv, Stratified train/test split on target with test_size=0.2, random_state=42, Write train.csv and test.csv, R model reads processed train/test splits; no further transformation in model code",
+          "source": "tests/fixtures/p2/preprocessing_split.py:L7-10 (verified)"
         },
         {
           "label": "Train/test split",
           "value": "80% train / 20% test",
-          "source": "tests/fixtures/p2/preprocessing_split.py:L8 (verified)"
+          "source": "tests/fixtures/p2/preprocessing_split.py:L8 (inferred)"
         },
         {
           "label": "Decision threshold",
           "value": "0.35",
-          "source": "tests/fixtures/p2/legacy_lr_model.R:L22 (verified)"
+          "source": "tests/fixtures/p2/legacy_lr_model.R:L22-23 (verified)"
         }
       ]
     },
@@ -130,7 +130,7 @@
       "title": "Limitations and assumptions",
       "status": "available",
       "source": "llm_draft",
-      "text": "SEX and AGE are retained only for fairness review. No probability calibration step was found in the code. The business owner, change history and performance targets are not documented in the code, and the demonstration data is historical Taiwanese credit-card data.",
+      "text": "No validation metrics, calibration or threshold justification are computed, and no performance results, fairness review results for SEX and AGE, monitoring plan, or approval and version history are documented. EDUCATION, MARRIAGE and the PAY_x variables are assumed to enter the model as read by read_csv, likely as numeric rather than categorical, which may not reflect their nature. The data source, observation period, target definition details and the cleaning steps that produce credit_default_clean.csv are not documented. Because the code is a development fixture trained on public demonstration data, its outputs should not be taken as representative of the production model or of a UK bank's current portfolio.",
       "rows": []
     },
     {
@@ -167,7 +167,7 @@
         },
         {
           "label": "Tier review status",
-          "value": "pending_review",
+          "value": "not_started",
           "source": "inventory"
         },
         {
@@ -202,17 +202,17 @@
         {
           "label": "D-001 input_features (contradiction)",
           "value": "Document: SEX is a model input. Correction: Remove SEX from the documented input features.",
-          "source": "tests/fixtures/p2/legacy_lr_model.R:L10"
+          "source": "tests/fixtures/p2/legacy_lr_model.R:L9-10"
         },
         {
           "label": "D-002 input_features (omission)",
           "value": "Document: The documented feature list leaves out PAY_AMT4, PAY_AMT5, PAY_AMT6. Correction: Add PAY_AMT4, PAY_AMT5, PAY_AMT6 to the documented input features.",
-          "source": "tests/fixtures/p2/legacy_lr_model.R:L12-14; tests/fixtures/p2/legacy_lr_model.R:L15"
+          "source": "tests/fixtures/p2/legacy_lr_model.R:L12-15"
         },
         {
           "label": "D-003 decision_threshold (contradiction)",
           "value": "Document: The decision threshold is 0.4. Correction: Change the documented decision threshold to 0.35.",
-          "source": "tests/fixtures/p2/legacy_lr_model.R:L22"
+          "source": "tests/fixtures/p2/legacy_lr_model.R:L22-23"
         },
         {
           "label": "D-004 train_test_split (contradiction)",
@@ -220,35 +220,45 @@
           "source": "tests/fixtures/p2/preprocessing_split.py:L8"
         },
         {
-          "label": "D-005 preprocessing (contradiction)",
-          "value": "Document: LIMIT_BAL is log-transformed before fitting. Correction: State that LIMIT_BAL enters the model untransformed.",
-          "source": "tests/fixtures/p2/legacy_lr_model.R:L12"
-        },
-        {
-          "label": "D-006 ownership (unverifiable)",
-          "value": "Document: The model owner is Retail Credit Analytics. Correction: Confirm the model owner and record it in the inventory.",
+          "label": "D-005 model_name (unverifiable)",
+          "value": "Document: The model is called the Credit Default Scorecard. Correction: ",
           "source": "no code evidence"
         },
         {
-          "label": "D-007 validation_history (unverifiable)",
-          "value": "Document: The model was approved by the Credit Risk Committee in March 2021. Correction: Remove the approval claim or attach the approval record.",
+          "label": "D-006 other (unverifiable)",
+          "value": "Document: The document is version 1.2, last updated March 2021. Correction: ",
           "source": "no code evidence"
         },
         {
-          "label": "D-008 other (unverifiable)",
-          "value": "Document: The document is version 1.2, last updated March 2021. Correction: Replace with the current model version from the inventory.",
+          "label": "D-007 preprocessing (contradiction)",
+          "value": "Document: LIMIT_BAL is log-transformed before fitting. Correction: LIMIT_BAL is used in its raw (untransformed) form in the model formula.",
+          "source": "tests/fixtures/p2/legacy_lr_model.R:L12; tests/fixtures/p2/legacy_lr_model.R:L17"
+        },
+        {
+          "label": "D-008 ownership (unverifiable)",
+          "value": "Document: The model owner is Retail Credit Analytics. Correction: ",
           "source": "no code evidence"
         },
         {
-          "label": "D-009 preprocessing (omission)",
-          "value": "Document: Not mentioned in the document. Correction: Document that ID, SEX and AGE are excluded from the predictors and that SEX and AGE are used for fairness review.",
-          "source": "tests/fixtures/p2/legacy_lr_model.R:L9-10"
+          "label": "D-009 validation_history (unverifiable)",
+          "value": "Document: The model was approved by the Credit Risk Committee in March 2021. Correction: ",
+          "source": "no code evidence"
+        },
+        {
+          "label": "D-010 other (omission)",
+          "value": "Document: Not mentioned in the document. Correction: State that the fitted model is saved to models/lr_model.rds. Test-set predictions (ID, pd, predicted_default) are written to reports/lr_test_predictions.csv.",
+          "source": "tests/fixtures/p2/legacy_lr_model.R:L25-26"
+        },
+        {
+          "label": "D-011 other (omission)",
+          "value": "Document: Not mentioned in the document. Correction: State that the model data comes from data/processed/credit_default_clean.csv.",
+          "source": "tests/fixtures/p2/preprocessing_split.py:L7"
         }
       ]
     }
   ],
   "grounding_warnings": [],
-  "generated_by": "Documentation Agent (LLM: replay)",
-  "generated_at": "2026-11-11T19:47:05+00:00",
+  "generated_by": "Documentation Agent (LLM: claude-opus-5-5)",
+  "generated_at": "2026-11-11T22:52:25+00:00",
   "review_status": "pending_human_review"
 }

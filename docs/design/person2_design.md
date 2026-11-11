@@ -153,8 +153,9 @@ Example files in exactly this shape are in `tests/fixtures/p2/sample_data/` (mar
 - Shared files: `requirements.txt`, `.env.example`, `.gitignore`, `pytest.ini`, `agents/__init__.py`.
 - Runtime state (`governance/*_log.json`, `alert_reviews.json`, `inventory/uploads/`) is git-ignored;
   `python -m inventory.registry --seed --force` resets the inventory.
-- Committed outputs in `reports/discovery/`, `reports/documentation/` and `docs/model_cards/` come from the dev
-  fixture and are regenerated once Person 1's real model and documents exist.
+- Committed outputs in `reports/discovery/`, `reports/documentation/` and `docs/model_cards/` come from the live
+  Claude Opus 5.5 run on the dev fixture (not Person 1's real model) and are regenerated once Person 1's real model
+  and documents exist. Alerts from that run are not committed because their input was sample monitoring data.
 - Person 1 decides whether omissions count when precision is scored.
 
 ## 9. Verification

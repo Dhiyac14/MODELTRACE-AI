@@ -9,6 +9,20 @@
   "metadata": {
     "model_name": {
       "value": "lr_model",
+      "status": "inferred",
+      "evidence": [
+        {
+          "file": "tests/fixtures/p2/legacy_lr_model.R",
+          "line_start": 25,
+          "line_end": 25,
+          "quote": "saveRDS(lr_model, \"models/lr_model.rds\")",
+          "verified": true
+        }
+      ],
+      "note": "Taken from the R object name and saved file name; no formal model name is given. The file header calls it a dev fixture standing in for another person's R model."
+    },
+    "algorithm": {
+      "value": "Logistic regression (glm, binomial family, logit link)",
       "status": "verified",
       "evidence": [
         {
@@ -21,25 +35,19 @@
       ],
       "note": ""
     },
-    "algorithm": {
-      "value": "Logistic regression (glm, binomial family, logit link)",
-      "status": "verified",
+    "business_purpose": {
+      "value": "Predict probability of default next month and refer accounts above the cut-off for review",
+      "status": "inferred",
       "evidence": [
         {
           "file": "tests/fixtures/p2/legacy_lr_model.R",
-          "line_start": 17,
-          "line_end": 17,
-          "quote": "family = binomial(link = \"logit\")",
+          "line_start": 21,
+          "line_end": 21,
+          "quote": "# Accounts with a predicted default probability above the cut-off are referred for review.",
           "verified": true
         }
       ],
-      "note": ""
-    },
-    "business_purpose": {
-      "value": "Approves or declines credit-card applications",
-      "status": "inferred",
-      "evidence": [],
-      "note": "Downgraded from verified: no source reference could be checked."
+      "note": "Based on a code comment and the target name; no business use is formally documented."
     },
     "target_variable": {
       "value": "default.payment.next.month",
@@ -50,6 +58,13 @@
           "line_start": 12,
           "line_end": 12,
           "quote": "model_formula <- default.payment.next.month ~ LIMIT_BAL + EDUCATION + MARRIAGE +",
+          "verified": true
+        },
+        {
+          "file": "tests/fixtures/p2/preprocessing_split.py",
+          "line_start": 5,
+          "line_end": 5,
+          "quote": "TARGET = \"default.payment.next.month\"",
           "verified": true
         }
       ],
@@ -84,15 +99,8 @@
         {
           "file": "tests/fixtures/p2/legacy_lr_model.R",
           "line_start": 12,
-          "line_end": 14,
-          "quote": "LIMIT_BAL + EDUCATION + MARRIAGE +\n  PAY_0 + PAY_2 + PAY_3 + PAY_4 + PAY_5 + PAY_6",
-          "verified": true
-        },
-        {
-          "file": "tests/fixtures/p2/legacy_lr_model.R",
-          "line_start": 15,
           "line_end": 15,
-          "quote": "PAY_AMT1 + PAY_AMT2 + PAY_AMT3 + PAY_AMT4 + PAY_AMT5 + PAY_AMT6",
+          "quote": "model_formula <- default.payment.next.month ~ LIMIT_BAL + EDUCATION + MARRIAGE +\n  PAY_0 + PAY_2 + PAY_3 + PAY_4 + PAY_5 + PAY_6 +\n  BILL_AMT1 + BILL_AMT2 + BILL_AMT3 + BILL_AMT4 + BILL_AMT5 + BILL_AMT6 +\n  PAY_AMT1 + PAY_AMT2 + PAY_AMT3 + PAY_AMT4 + PAY_AMT5 + PAY_AMT6",
           "verified": true
         }
       ],
@@ -108,51 +116,46 @@
       "evidence": [
         {
           "file": "tests/fixtures/p2/legacy_lr_model.R",
-          "line_start": 10,
+          "line_start": 9,
           "line_end": 10,
-          "quote": "excluded <- c(\"ID\", \"SEX\", \"AGE\")",
+          "quote": "# ID is a row identifier; SEX and AGE are kept for fairness review only.\nexcluded <- c(\"ID\", \"SEX\", \"AGE\")",
           "verified": true
         }
       ],
-      "note": ""
+      "note": "The excluded vector is not used anywhere in the code. The exclusion actually takes effect because these columns are left out of the formula."
     },
     "preprocessing_steps": {
       "value": [
-        "Stratified train/test split on the target with random_state=42",
-        "Model reads the processed train and test CSV files"
+        "Read data/processed/credit_default_clean.csv",
+        "Stratified train/test split on target with test_size=0.2, random_state=42",
+        "Write train.csv and test.csv",
+        "R model reads processed train/test splits; no further transformation in model code"
       ],
       "status": "verified",
       "evidence": [
         {
           "file": "tests/fixtures/p2/preprocessing_split.py",
-          "line_start": 8,
-          "line_end": 8,
-          "quote": "train_test_split(df, test_size=0.2, stratify=df[TARGET], random_state=42)",
-          "verified": true
-        },
-        {
-          "file": "tests/fixtures/p2/legacy_lr_model.R",
-          "line_start": 6,
-          "line_end": 7,
-          "quote": "train <- read_csv(\"data/processed/train.csv\")",
+          "line_start": 7,
+          "line_end": 10,
+          "quote": "df = pd.read_csv(\"data/processed/credit_default_clean.csv\")\ntrain, test = train_test_split(df, test_size=0.2, stratify=df[TARGET], random_state=42)\ntrain.to_csv(\"data/processed/train.csv\", index=False)\ntest.to_csv(\"data/processed/test.csv\", index=False)",
           "verified": true
         }
       ],
-      "note": ""
+      "note": "The cleaning steps that produced credit_default_clean.csv are not shown."
     },
     "train_fraction": {
       "value": 0.8,
-      "status": "verified",
+      "status": "inferred",
       "evidence": [
         {
           "file": "tests/fixtures/p2/preprocessing_split.py",
           "line_start": 8,
           "line_end": 8,
-          "quote": "test_size=0.2",
+          "quote": "train, test = train_test_split(df, test_size=0.2, stratify=df[TARGET], random_state=42)",
           "verified": true
         }
       ],
-      "note": ""
+      "note": "Calculated as 1 - test_size (0.2)."
     },
     "decision_threshold": {
       "value": 0.35,
@@ -161,8 +164,8 @@
         {
           "file": "tests/fixtures/p2/legacy_lr_model.R",
           "line_start": 22,
-          "line_end": 22,
-          "quote": "threshold <- 0.35",
+          "line_end": 23,
+          "quote": "threshold <- 0.35\ntest$predicted_default <- as.integer(test$pd > threshold)",
           "verified": true
         }
       ],
@@ -170,38 +173,73 @@
     },
     "assumptions": [
       {
-        "value": "SEX and AGE are retained only for fairness review, not as predictors",
+        "value": "EDUCATION and MARRIAGE (and PAY_x) enter the model as read by read_csv, likely as numeric rather than categorical",
+        "status": "inferred",
+        "evidence": [
+          {
+            "file": "tests/fixtures/p2/legacy_lr_model.R",
+            "line_start": 6,
+            "line_end": 6,
+            "quote": "train <- read_csv(\"data/processed/train.csv\")",
+            "verified": true
+          }
+        ],
+        "note": "No factor conversion is shown in the code."
+      },
+      {
+        "value": "SEX and AGE are retained only for fairness review, not for modelling",
         "status": "verified",
         "evidence": [
           {
             "file": "tests/fixtures/p2/legacy_lr_model.R",
             "line_start": 9,
             "line_end": 9,
-            "quote": "SEX and AGE are kept for fairness review only.",
+            "quote": "# ID is a row identifier; SEX and AGE are kept for fairness review only.",
+            "verified": true
+          }
+        ],
+        "note": ""
+      }
+    ],
+    "limitations": [
+      {
+        "value": "The code is a development fixture standing in for the real model, not the production model",
+        "status": "verified",
+        "evidence": [
+          {
+            "file": "tests/fixtures/p2/legacy_lr_model.R",
+            "line_start": 1,
+            "line_end": 1,
+            "quote": "# DEV FIXTURE (Person 2): stand-in for Person 1's R model, used only to develop the Discovery Agent.",
             "verified": true
           }
         ],
         "note": ""
       },
       {
-        "value": "The train and test files are prepared upstream by the Python split",
+        "value": "No validation metrics, calibration or threshold justification are computed",
         "status": "inferred",
-        "evidence": [],
-        "note": "The R script reads files that preprocessing_split.py writes."
-      }
-    ],
-    "limitations": [
-      {
-        "value": "No probability calibration step is applied after fitting",
-        "status": "inferred",
-        "evidence": [],
-        "note": "No calibration code was found."
+        "evidence": [
+          {
+            "file": "tests/fixtures/p2/legacy_lr_model.R",
+            "line_start": 19,
+            "line_end": 26,
+            "quote": "test$pd <- predict(lr_model, newdata = test, type = \"response\")\n\n# Accounts with a predicted default probability above the cut-off are referred for review.\nthreshold <- 0.35\ntest$predicted_default <- as.integer(test$pd > threshold)\n\nsaveRDS(lr_model, \"models/lr_model.rds\")\nwrite_csv(test[, c(\"ID\", \"pd\", \"predicted_default\")], \"reports/lr_test_predictions.csv\")",
+            "verified": true
+          }
+        ],
+        "note": "The test set is scored but no performance evaluation appears in the code."
       }
     ],
     "missing_information": [
-      "Business owner and intended users",
-      "Model version and change history",
-      "Performance targets and monitoring thresholds"
+      "Model owner and developer",
+      "Formal business purpose, intended use and portfolio scope",
+      "Data source, observation period and target definition details",
+      "Data cleaning steps producing credit_default_clean.csv",
+      "Rationale for 0.35 decision threshold",
+      "Performance metrics and validation results",
+      "Fairness review results for SEX and AGE",
+      "Monitoring plan and approval/version history"
     ]
   },
   "discrepancies": [
@@ -214,15 +252,15 @@
         "file": "tests/fixtures/p2/lr_doc_outdated_dev.md",
         "line_start": 15,
         "line_end": 15,
-        "quote": "LIMIT_BAL, SEX, EDUCATION, MARRIAGE, PAY_0, PAY_2 to PAY_6",
+        "quote": "LIMIT_BAL, SEX, EDUCATION, MARRIAGE, PAY_0, PAY_2 to PAY_6, BILL_AMT1 to BILL_AMT6, PAY_AMT1 to PAY_AMT3.",
         "verified": true
       },
       "code_evidence": [
         {
           "file": "tests/fixtures/p2/legacy_lr_model.R",
-          "line_start": 10,
+          "line_start": 9,
           "line_end": 10,
-          "quote": "excluded <- c(\"ID\", \"SEX\", \"AGE\")",
+          "quote": "# ID is a row identifier; SEX and AGE are kept for fairness review only.\nexcluded <- c(\"ID\", \"SEX\", \"AGE\")",
           "verified": true
         }
       ],
@@ -239,22 +277,15 @@
         "file": "tests/fixtures/p2/lr_doc_outdated_dev.md",
         "line_start": 15,
         "line_end": 15,
-        "quote": "LIMIT_BAL, SEX, EDUCATION, MARRIAGE, PAY_0, PAY_2 to PAY_6",
+        "quote": "LIMIT_BAL, SEX, EDUCATION, MARRIAGE, PAY_0, PAY_2 to PAY_6, BILL_AMT1 to BILL_AMT6, PAY_AMT1 to PAY_AMT3.",
         "verified": true
       },
       "code_evidence": [
         {
           "file": "tests/fixtures/p2/legacy_lr_model.R",
           "line_start": 12,
-          "line_end": 14,
-          "quote": "LIMIT_BAL + EDUCATION + MARRIAGE +\n  PAY_0 + PAY_2 + PAY_3 + PAY_4 + PAY_5 + PAY_6",
-          "verified": true
-        },
-        {
-          "file": "tests/fixtures/p2/legacy_lr_model.R",
-          "line_start": 15,
           "line_end": 15,
-          "quote": "PAY_AMT1 + PAY_AMT2 + PAY_AMT3 + PAY_AMT4 + PAY_AMT5 + PAY_AMT6",
+          "quote": "model_formula <- default.payment.next.month ~ LIMIT_BAL + EDUCATION + MARRIAGE +\n  PAY_0 + PAY_2 + PAY_3 + PAY_4 + PAY_5 + PAY_6 +\n  BILL_AMT1 + BILL_AMT2 + BILL_AMT3 + BILL_AMT4 + BILL_AMT5 + BILL_AMT6 +\n  PAY_AMT1 + PAY_AMT2 + PAY_AMT3 + PAY_AMT4 + PAY_AMT5 + PAY_AMT6",
           "verified": true
         }
       ],
@@ -271,15 +302,15 @@
         "file": "tests/fixtures/p2/lr_doc_outdated_dev.md",
         "line_start": 23,
         "line_end": 23,
-        "quote": "above 0.40 are referred",
+        "quote": "Accounts with a predicted default probability above 0.40 are referred.",
         "verified": true
       },
       "code_evidence": [
         {
           "file": "tests/fixtures/p2/legacy_lr_model.R",
           "line_start": 22,
-          "line_end": 22,
-          "quote": "threshold <- 0.35",
+          "line_end": 23,
+          "quote": "threshold <- 0.35\ntest$predicted_default <- as.integer(test$pd > threshold)",
           "verified": true
         }
       ],
@@ -304,7 +335,7 @@
           "file": "tests/fixtures/p2/preprocessing_split.py",
           "line_start": 8,
           "line_end": 8,
-          "quote": "test_size=0.2",
+          "quote": "train, test = train_test_split(df, test_size=0.2, stratify=df[TARGET], random_state=42)",
           "verified": true
         }
       ],
@@ -314,6 +345,40 @@
     },
     {
       "discrepancy_id": "D-005",
+      "field": "model_name",
+      "type": "unverifiable",
+      "documented_claim": "The model is called the Credit Default Scorecard.",
+      "document_ref": {
+        "file": "tests/fixtures/p2/lr_doc_outdated_dev.md",
+        "line_start": 1,
+        "line_end": 1,
+        "quote": "# Credit Default Scorecard: Model Document",
+        "verified": true
+      },
+      "code_evidence": [],
+      "explanation": "The code never gives the model a business name. It only uses the object name lr_model and the file models/lr_model.rds.",
+      "suggested_correction": "",
+      "detected_by": "llm"
+    },
+    {
+      "discrepancy_id": "D-006",
+      "field": "other",
+      "type": "unverifiable",
+      "documented_claim": "The document is version 1.2, last updated March 2021.",
+      "document_ref": {
+        "file": "tests/fixtures/p2/lr_doc_outdated_dev.md",
+        "line_start": 5,
+        "line_end": 5,
+        "quote": "Version 1.2, last updated March 2021.",
+        "verified": true
+      },
+      "code_evidence": [],
+      "explanation": "The document version and update date are not recorded in the code.",
+      "suggested_correction": "",
+      "detected_by": "llm"
+    },
+    {
+      "discrepancy_id": "D-007",
       "field": "preprocessing",
       "type": "contradiction",
       "documented_claim": "LIMIT_BAL is log-transformed before fitting.",
@@ -329,16 +394,23 @@
           "file": "tests/fixtures/p2/legacy_lr_model.R",
           "line_start": 12,
           "line_end": 12,
-          "quote": "default.payment.next.month ~ LIMIT_BAL + EDUCATION + MARRIAGE",
+          "quote": "model_formula <- default.payment.next.month ~ LIMIT_BAL + EDUCATION + MARRIAGE +",
+          "verified": true
+        },
+        {
+          "file": "tests/fixtures/p2/legacy_lr_model.R",
+          "line_start": 17,
+          "line_end": 17,
+          "quote": "lr_model <- glm(model_formula, data = train, family = binomial(link = \"logit\"))",
           "verified": true
         }
       ],
-      "explanation": "LIMIT_BAL enters the formula untransformed; no log transform appears in the code.",
-      "suggested_correction": "State that LIMIT_BAL enters the model untransformed.",
+      "explanation": "LIMIT_BAL enters the formula untransformed. Neither file applies a log transformation.",
+      "suggested_correction": "LIMIT_BAL is used in its raw (untransformed) form in the model formula.",
       "detected_by": "llm"
     },
     {
-      "discrepancy_id": "D-006",
+      "discrepancy_id": "D-008",
       "field": "ownership",
       "type": "unverifiable",
       "documented_claim": "The model owner is Retail Credit Analytics.",
@@ -350,12 +422,12 @@
         "verified": true
       },
       "code_evidence": [],
-      "explanation": "The code does not record a model owner.",
-      "suggested_correction": "Confirm the model owner and record it in the inventory.",
+      "explanation": "The code does not record ownership.",
+      "suggested_correction": "",
       "detected_by": "llm"
     },
     {
-      "discrepancy_id": "D-007",
+      "discrepancy_id": "D-009",
       "field": "validation_history",
       "type": "unverifiable",
       "documented_claim": "The model was approved by the Credit Risk Committee in March 2021.",
@@ -367,53 +439,51 @@
         "verified": true
       },
       "code_evidence": [],
-      "explanation": "No approval record exists in the repository.",
-      "suggested_correction": "Remove the approval claim or attach the approval record.",
+      "explanation": "The code does not record approval history.",
+      "suggested_correction": "",
       "detected_by": "llm"
     },
     {
-      "discrepancy_id": "D-008",
+      "discrepancy_id": "D-010",
       "field": "other",
-      "type": "unverifiable",
-      "documented_claim": "The document is version 1.2, last updated March 2021.",
-      "document_ref": {
-        "file": "tests/fixtures/p2/lr_doc_outdated_dev.md",
-        "line_start": 5,
-        "line_end": 5,
-        "quote": "Version 1.2, last updated March 2021.",
-        "verified": true
-      },
-      "code_evidence": [],
-      "explanation": "The repository holds no version history for the document.",
-      "suggested_correction": "Replace with the current model version from the inventory.",
-      "detected_by": "llm"
-    },
-    {
-      "discrepancy_id": "D-009",
-      "field": "preprocessing",
       "type": "omission",
       "documented_claim": "Not mentioned in the document.",
       "document_ref": null,
       "code_evidence": [
         {
           "file": "tests/fixtures/p2/legacy_lr_model.R",
-          "line_start": 9,
-          "line_end": 10,
-          "quote": "SEX and AGE are kept for fairness review only.",
+          "line_start": 25,
+          "line_end": 26,
+          "quote": "saveRDS(lr_model, \"models/lr_model.rds\")\nwrite_csv(test[, c(\"ID\", \"pd\", \"predicted_default\")], \"reports/lr_test_predictions.csv\")",
           "verified": true
         }
       ],
-      "explanation": "The code excludes ID, SEX and AGE from the predictors and keeps SEX and AGE for fairness review; the document does not say so.",
-      "suggested_correction": "Document that ID, SEX and AGE are excluded from the predictors and that SEX and AGE are used for fairness review.",
+      "explanation": "The document does not mention the model's output artifacts: the fitted model object and the test-set predictions files.",
+      "suggested_correction": "State that the fitted model is saved to models/lr_model.rds. Test-set predictions (ID, pd, predicted_default) are written to reports/lr_test_predictions.csv.",
+      "detected_by": "llm"
+    },
+    {
+      "discrepancy_id": "D-011",
+      "field": "other",
+      "type": "omission",
+      "documented_claim": "Not mentioned in the document.",
+      "document_ref": null,
+      "code_evidence": [
+        {
+          "file": "tests/fixtures/p2/preprocessing_split.py",
+          "line_start": 7,
+          "line_end": 7,
+          "quote": "df = pd.read_csv(\"data/processed/credit_default_clean.csv\")",
+          "verified": true
+        }
+      ],
+      "explanation": "The document does not name the source dataset that feeds the model.",
+      "suggested_correction": "State that the model data comes from data/processed/credit_default_clean.csv.",
       "detected_by": "llm"
     }
   ],
-  "evidence_warnings": [
-    "business_purpose: 1 source reference(s) not found in the cited file and removed.",
-    "business_purpose: downgraded from verified to inferred.",
-    "document claim C9 not found in the document; dropped."
-  ],
-  "llm_model": "replay",
-  "generated_at": "2026-11-11T19:47:05+00:00",
+  "evidence_warnings": [],
+  "llm_model": "claude-opus-5-5",
+  "generated_at": "2026-11-11T22:52:15+00:00",
   "review_status": "pending_human_review"
 }
