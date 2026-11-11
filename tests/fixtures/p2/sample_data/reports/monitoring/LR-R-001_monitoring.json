@@ -1,0 +1,17 @@
+{
+  "_sample": true, "_note": "Placeholder written by Person 2 for dashboard development. These are NOT model results; Person 1 replaces this file.",
+  "model_id": "LR-R-001",
+  "baseline": "held-out test set",
+  "decision_threshold": 0.35,
+  "batches": [
+    {"batch_id": "batch_001", "scenario": "Baseline", "modification": "Original test distribution", "n_records": 6000,
+     "feature_psi": {"LIMIT_BAL": 0.002, "PAY_0": 0.001, "BILL_AMT1": 0.003, "PAY_AMT1": 0.002},
+     "prediction_psi": 0.002, "mean_predicted_pd": 0.221, "share_above_threshold": 0.186, "schema_changes": [], "missing_values": {}},
+    {"batch_id": "batch_002", "scenario": "Moderate drift", "modification": "LIMIT_BAL x 0.65, BILL_AMT1 x 1.5", "n_records": 6000,
+     "feature_psi": {"LIMIT_BAL": 0.163, "PAY_0": 0.002, "BILL_AMT1": 0.118, "PAY_AMT1": 0.003},
+     "prediction_psi": 0.048, "mean_predicted_pd": 0.236, "share_above_threshold": 0.204, "schema_changes": [], "missing_values": {}},
+    {"batch_id": "batch_003", "scenario": "Strong drift", "modification": "LIMIT_BAL x 0.4, PAY_0 + 2, BILL_AMT1 x 2", "n_records": 6000,
+     "feature_psi": {"LIMIT_BAL": 0.512, "PAY_0": 0.874, "BILL_AMT1": 0.287, "PAY_AMT1": 0.004},
+     "prediction_psi": 0.612, "mean_predicted_pd": 0.483, "share_above_threshold": 0.571, "schema_changes": [], "missing_values": {}}
+  ]
+}

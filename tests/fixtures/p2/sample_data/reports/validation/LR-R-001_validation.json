@@ -1,0 +1,29 @@
+{
+  "_sample": true, "_note": "Placeholder written by Person 2 for dashboard development. These are NOT model results; Person 1 replaces this file.",
+  "model_id": "LR-R-001",
+  "performance": {"accuracy": 0.81, "precision": 0.66, "recall": 0.36, "f1": 0.47, "roc_auc": 0.72, "pr_auc": 0.5, "brier": 0.14},
+  "stability": {"prediction_psi_train_vs_test": 0.003, "feature_psi_train_vs_test": {"LIMIT_BAL": 0.002, "PAY_0": 0.004, "BILL_AMT1": 0.003}},
+  "fairness": {
+    "SEX": {
+      "male": {"n": 2400, "selection_rate": 0.21, "tpr": 0.39, "fpr": 0.08},
+      "female": {"n": 3600, "selection_rate": 0.17, "tpr": 0.34, "fpr": 0.06}
+    },
+    "AGE_GROUP": {
+      "under_30": {"n": 1900, "selection_rate": 0.19, "tpr": 0.37, "fpr": 0.07},
+      "30_44": {"n": 2700, "selection_rate": 0.17, "tpr": 0.35, "fpr": 0.06},
+      "45_59": {"n": 1340, "selection_rate": 0.20, "tpr": 0.36, "fpr": 0.08},
+      "60_plus": {"n": 60, "selection_rate": 0.25, "tpr": 0.4, "fpr": 0.12}
+    }
+  },
+  "explainability": {"coefficients": {"PAY_0": 0.58, "PAY_2": 0.09, "PAY_3": 0.07, "LIMIT_BAL": -0.12, "BILL_AMT1": -0.05, "PAY_AMT1": -0.08, "EDUCATION": -0.06, "MARRIAGE": -0.09}},
+  "findings": [
+    {"finding_id": "F-001", "category": "performance", "severity": "medium",
+     "description": "Recall at the 0.35 threshold is low, so most defaulters are not referred.",
+     "evidence": "performance.recall = 0.36", "impact": "Missed defaults lead to credit losses.",
+     "remediation": "Review the threshold with the model owner.", "review_status": "open"},
+    {"finding_id": "F-002", "category": "fairness", "severity": "low",
+     "description": "The 60+ age group has only 60 test records, so its group metrics are unstable.",
+     "evidence": "fairness.AGE_GROUP.60_plus.n = 60", "impact": "Disparities for older customers cannot be assessed reliably.",
+     "remediation": "Collect more data or report the group with confidence intervals.", "review_status": "open"}
+  ]
+}

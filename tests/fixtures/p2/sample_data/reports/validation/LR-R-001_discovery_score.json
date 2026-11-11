@@ -1,0 +1,9 @@
+{
+  "_sample": true, "_note": "Placeholder written by Person 2 for dashboard development. These are NOT model results; Person 1 replaces this file.",
+  "model_id": "LR-R-001",
+  "recall": 0.8,
+  "precision": 0.67,
+  "matched": 4,
+  "missed": 1,
+  "false_alarms": 2
+}
