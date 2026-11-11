@@ -1,0 +1,31 @@
+{
+  "reference_model": "r_glm_binomial_logit",
+  "candidate_model": "statsmodels_logistic_regression",
+  "model_hash": "43afdbfaef44dd0093f0efdacf0c90b1266681e64d116452f189c184042ecfa0",
+  "n_rows": 6000,
+  "r_vs_statsmodels": {
+    "row_alignment_verified": true,
+    "mae": 9.442906431675003e-09,
+    "mean_probability_difference": 9.442906431675003e-09,
+    "max_probability_difference": 3.6460883068301086e-07,
+    "prediction_correlation": 0.9999999999999907,
+    "classification_agreement": 1.0,
+    "label_agreement": 1.0,
+    "label_disagreements": 0,
+    "tolerance": 1e-05,
+    "threshold": 0.5,
+    "mae_pass": true,
+    "max_difference_pass": true,
+    "overall_pass": true
+  },
+  "r_vs_python": {
+    "label_agreement": 1.0,
+    "label_disagreements": 0,
+    "max_probability_difference": 0.00737442914480857,
+    "mean_probability_difference": 0.00023386936189338092
+  },
+  "shared_train_csv": "data/processed/train.csv",
+  "shared_test_csv": "data/processed/test.csv",
+  "r_script": "models/legacy_model.R",
+  "r_stderr_warning": null
+}

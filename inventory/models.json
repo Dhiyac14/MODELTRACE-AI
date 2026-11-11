@@ -1,0 +1,26 @@
+[
+  {
+    "model_id": "legacy-r-logistic",
+    "name": "Legacy R Logistic Regression",
+    "framework": "R",
+    "algorithm": "glm binomial logit",
+    "risk_tier": "SS1/23-high",
+    "status": "active"
+  },
+  {
+    "model_id": "python-random-forest",
+    "name": "Python Random Forest",
+    "framework": "Python",
+    "algorithm": "RandomForestClassifier",
+    "risk_tier": "SS1/23-high",
+    "status": "candidate"
+  },
+  {
+    "model_id": "python-gradient-boosting",
+    "name": "Python Gradient Boosting",
+    "framework": "Python",
+    "algorithm": "GradientBoostingClassifier",
+    "risk_tier": "SS1/23-high",
+    "status": "candidate"
+  }
+]

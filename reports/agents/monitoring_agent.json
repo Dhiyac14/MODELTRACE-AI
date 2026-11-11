@@ -1,0 +1,46 @@
+{
+  "agent": "monitoring",
+  "summary": "Monitoring summary uses recorded batches and alerts only.",
+  "findings": [
+    {
+      "id": "monitoring-observations",
+      "title": "Monitoring observations",
+      "status": "observed",
+      "claim": "Counts are calculated from supplied batches only.",
+      "evidence": [
+        {
+          "source": "<mapping>",
+          "claim": "Observed monitoring batch count",
+          "excerpt": null,
+          "value": 3
+        },
+        {
+          "source": "<mapping>",
+          "claim": "Observed alert batch count",
+          "excerpt": null,
+          "value": 2
+        }
+      ],
+      "severity": "warning"
+    }
+  ],
+  "metrics": {
+    "batch_count": 3,
+    "alert_count": 2
+  },
+  "recommendations": [],
+  "evidence": [
+    {
+      "source": "<mapping>",
+      "claim": "Observed monitoring batch count",
+      "excerpt": null,
+      "value": 3
+    },
+    {
+      "source": "<mapping>",
+      "claim": "Observed alert batch count",
+      "excerpt": null,
+      "value": 2
+    }
+  ]
+}
