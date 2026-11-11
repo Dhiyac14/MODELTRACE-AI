@@ -231,7 +231,8 @@ def _governance_section(record: InventoryRecord, discovery: DiscoveryReport, map
         CardRow(label="Approval records", value=", ".join(record.approval_history) or "None recorded", source="governance/approval_log.json"),
         CardRow(label="Discovery report status", value=discovery.review_status, source=f"reports/discovery/{discovery.model_id}_discovery.json"),
         CardRow(label="Model card status", value="pending_human_review", source="this card"),
-        CardRow(label="SS1/23 principles covered", value="; ".join(principles), source=mapping_path.as_posix()),
+        # Cite the repository path, wherever the mapping was read from.
+        CardRow(label="SS1/23 principles covered", value="; ".join(principles), source=SS1_23_MAPPING.as_posix()),
     ]
     return CardSection(key="governance", title="Risk tier, approval and governance", source="inventory", rows=rows)
 

@@ -128,3 +128,9 @@ def test_markdown_and_files(tmp_path, discovery, record):
 def test_card_without_legacy_document(record):
     report = run_discovery("legacy-r-logistic", [f"{FIX}/legacy_lr_model.R"], ReplayLLM(f"{FIX}/replay_lr"))
     assert section(build_model_card(report, record), "corrections").text == "No existing model document was compared."
+
+
+def test_mapping_is_cited_by_repository_path(discovery, record):
+    card = build_model_card(discovery, record, mapping_path=(ROOT / "governance/ss1_23_mapping.json").resolve())
+    row = next(r for s in card.sections if s.key == "governance" for r in s.rows if r.label == "SS1/23 principles covered")
+    assert row.source == "governance/ss1_23_mapping.json"

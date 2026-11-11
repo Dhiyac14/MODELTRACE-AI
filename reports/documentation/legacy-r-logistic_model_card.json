@@ -941,7 +941,7 @@
         {
           "label": "SS1/23 principles covered",
           "value": "1. Model identification and model risk classification; 1.2 Model inventory; 1.3 Model tiering; 3. Model development, implementation and use; 3.5 Model development documentation",
-          "source": "/Users/zehua/Documents/Advanced_AI_2026-2027/SideProjects/EXL_Hackathon/MODELTRACE-AI-team/governance/ss1_23_mapping.json"
+          "source": "governance/ss1_23_mapping.json"
         }
       ]
     },

@@ -224,7 +224,7 @@ Categorical codes such as EDUCATION, MARRIAGE and the PAY_* status variables ent
 | Approval records | None recorded | governance/approval_log.json |
 | Discovery report status | pending_human_review | reports/discovery/legacy-r-logistic_discovery.json |
 | Model card status | pending_human_review | this card |
-| SS1/23 principles covered | 1. Model identification and model risk classification; 1.2 Model inventory; 1.3 Model tiering; 3. Model development, implementation and use; 3.5 Model development documentation | /Users/zehua/Documents/Advanced_AI_2026-2027/SideProjects/EXL_Hackathon/MODELTRACE-AI-team/governance/ss1_23_mapping.json |
+| SS1/23 principles covered | 1. Model identification and model risk classification; 1.2 Model inventory; 1.3 Model tiering; 3. Model development, implementation and use; 3.5 Model development documentation | governance/ss1_23_mapping.json |
 
 ## Corrections to the existing model document
 
