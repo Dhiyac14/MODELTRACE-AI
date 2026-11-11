@@ -19,7 +19,7 @@ from typing import Any
 from agents.discovery_agent import format_split
 from inventory.registry import InventoryRecord, get_record, load_inventory
 from inventory.risk_tier import TIER_RULE
-from llm.client import LLMClient, StructuredLLM
+from llm.client import StructuredLLM, llm_from_env
 from llm.evidence import ungrounded_numbers
 from llm.prompts import MODEL_CARD_SYSTEM, model_card_user
 from llm.schemas import CardRow, CardSection, DiscoveryReport, Fact, ModelCard, ModelCardNarrative, SourceRef
@@ -320,7 +320,8 @@ if __name__ == "__main__":
 
         client = ReplayLLM(args.replay)
     else:
-        client = LLMClient.from_env()
+        client, status = llm_from_env()
+        print(status if client else f"{status}; using template prose")
     card = build_model_card(report, get_record(load_inventory(), args.model_id), load_evidence(args.model_id), client)
     json_out, md_out = save_model_card(card)
     print(f"wrote {json_out} and {md_out}; {len(card.grounding_warnings)} grounding warning(s)")

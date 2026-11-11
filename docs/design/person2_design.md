@@ -44,9 +44,18 @@ Scope, from the work split (P2.1–P2.5) and the plan (steps 5, 6, 13–16):
 One LLM connection, plain Python orchestration, no agent framework.
 
 ## 3. LLM layer (`llm/`)
-- `LLMClient.from_env()` reads `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_JSON_MODE`, `LLM_TEMPERATURE`,
-  `LLM_CALL_LOG`; any OpenAI-compatible endpoint works. `llm_from_env()` returns `None` instead of failing,
-  so the app and the Documentation and Monitoring Agents fall back to templates.
+- `llm_from_env()` picks the backend from `LLM_PROVIDER` and returns `None` instead of failing, so the app and
+  the Documentation and Monitoring Agents fall back to templates.
+  - `anthropic` (`llm/claude_client.py`): Claude through the native Anthropic SDK. Default model
+    `claude-opus-5-5`, `LLM_EFFORT=medium`; schema enforced by the API (`messages.parse`); no temperature
+    (rejected by Opus 5.5); server-side refusal fallback on by default (`LLM_FALLBACKS=off` disables it);
+    refusals and truncated replies raise `LLMError`. The key and `https://api.anthropic.com` are passed
+    explicitly, so `ANTHROPIC_*` variables in the shell are never used.
+  - `openai` (`LLMClient`): any OpenAI-compatible endpoint, configured with `LLM_BASE_URL`, `LLM_MODEL`,
+    `LLM_JSON_MODE`, `LLM_TEMPERATURE`.
+- Live check (11 November): one run of all seven prompts on the dev fixture with Claude Opus 5.5 at medium effort
+  cost $0.26 (13.5k input, 10.1k output tokens). All planted discrepancies were found, and every LLM draft
+  passed the grounding checks.
 - `structured(system, user, schema)` sends the JSON schema in the prompt, validates the reply and resends
   validation errors once. Every call is logged (hashes, model, latency, tokens, outcome) for the AI-use
   declaration.

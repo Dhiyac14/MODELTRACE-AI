@@ -1,4 +1,5 @@
 # Shared (plan step 1). Person 2 Day 1 needs the first block only.
+anthropic>=2.8
 openai>=1.40
 pydantic>=2.7
 python-dotenv>=1.0

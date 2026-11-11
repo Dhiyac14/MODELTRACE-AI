@@ -21,7 +21,7 @@ import math
 import re
 from pathlib import Path
 
-from llm.client import LLMClient, StructuredLLM
+from llm.client import StructuredLLM, llm_from_env
 from llm.evidence import Sources, load_sources, render_listing, verify_facts, verify_ref, verify_refs
 from llm.prompts import (
     CLAIM_CHECK_SYSTEM,
@@ -262,6 +262,8 @@ if __name__ == "__main__":
 
         client: StructuredLLM = ReplayLLM(args.replay)
     else:
-        client = LLMClient.from_env()
+        client, status = llm_from_env()
+        if client is None:
+            parser.error(status)
     result = run_discovery(args.model_id, args.source, client, args.doc)
     print(f"wrote {save_report(result)}: {len(result.discrepancies)} discrepancies, {len(result.evidence_warnings)} warnings")

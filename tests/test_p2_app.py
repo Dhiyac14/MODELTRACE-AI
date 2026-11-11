@@ -28,7 +28,8 @@ def data_root(tmp_path, monkeypatch):
     save_inventory(seed_records(), tmp_path / "inventory/model_inventory.json")
     monkeypatch.chdir(ROOT)
     monkeypatch.setenv("MODELTRACE_ROOT", str(tmp_path))
-    monkeypatch.delenv("LLM_MODEL", raising=False)  # never call a real LLM from tests
+    for name in ("LLM_PROVIDER", "LLM_API_KEY", "LLM_MODEL"):  # never call a real LLM from tests
+        monkeypatch.delenv(name, raising=False)
     return tmp_path
 
 

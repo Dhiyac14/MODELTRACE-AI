@@ -38,8 +38,17 @@ def extract_json(text: str) -> str:
     return text[start : end + 1]
 
 
-def _sha256(text: str) -> str:
+def sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def write_call_log(path: Path | None, record: dict[str, Any]) -> None:
+    """Append one JSON line per LLM call (both backends); used for the audit trail and AI-use declaration."""
+    if path is None:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record) + "\n")
 
 
 class LLMClient:
@@ -135,26 +144,33 @@ class LLMClient:
         ok: bool,
         error: str = "",
     ) -> None:
-        if self.call_log is None:
-            return
-        record = {
+        write_call_log(self.call_log, {
             "timestamp": utc_now(),
+            "provider": "openai-compatible",
             "model": self.model,
             "schema": schema.__name__,
-            "prompt_sha256": _sha256(json.dumps(messages)),
-            "response_sha256": _sha256(reply),
+            "prompt_sha256": sha256_text(json.dumps(messages)),
+            "response_sha256": sha256_text(reply),
             **call,
             "ok": ok,
             "error": error,
-        }
-        self.call_log.parent.mkdir(parents=True, exist_ok=True)
-        with self.call_log.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(record) + "\n")
+        })
 
 
-def llm_from_env(env_file: str | Path = ".env") -> tuple[LLMClient | None, str]:
-    """Return ``(client, status)``. The client is None when the LLM is not configured, so callers can fall back."""
+def llm_from_env(env_file: str | Path = ".env") -> tuple[StructuredLLM | None, str]:
+    """Return ``(client, status)``. The client is None when the LLM is not configured, so callers can fall back.
+
+    LLM_PROVIDER selects the backend: ``openai`` (default, any OpenAI-compatible endpoint) or ``anthropic``
+    (native Claude SDK, see ``llm/claude_client.py``).
+    """
+    load_dotenv(env_file)
+    provider = os.getenv("LLM_PROVIDER", "openai").strip().lower()
     try:
+        if provider == "anthropic":
+            from llm.claude_client import ClaudeClient
+
+            client: StructuredLLM = ClaudeClient.from_env()
+            return client, f"LLM: Claude {client.model} (effort {client.effort})"
         client = LLMClient.from_env(env_file)
     except Exception as exc:  # missing model name or API key: report it, do not crash the app
         return None, f"LLM not configured ({type(exc).__name__}: {exc})"
