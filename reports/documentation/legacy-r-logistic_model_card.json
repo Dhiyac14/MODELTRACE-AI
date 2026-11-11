@@ -1,5 +1,5 @@
 {
-  "model_id": "LR-R-001",
+  "model_id": "legacy-r-logistic",
   "model_name": "Credit default logistic regression (legacy)",
   "version": "1.0.0",
   "risk_tier": 1,
@@ -9,7 +9,7 @@
       "title": "Model overview and intended purpose",
       "status": "available",
       "source": "llm_draft",
-      "text": "LR-R-001, recorded as 'Credit default logistic regression (legacy)', estimates the probability that a credit-card customer defaults in the next month and is described as being used in credit decisions; it is assigned risk tier 1. The model name, business purpose and train fraction are inferred fields, and the formal business purpose, intended use, portfolio scope, model owner and developer are not documented. The code is a development fixture standing in for the real model, not the production model, and it uses the public UCI 'Default of Credit Card Clients' dataset (30,000 records, 23 input variables, Taiwan credit-card clients, April to September 2005), which is described as demonstration data only and not representative of a UK bank's current portfolio.",
+      "text": "legacy-r-logistic, recorded as 'Credit default logistic regression (legacy)', estimates the probability that a credit-card customer defaults in the next month and is described as being used in credit decisions; it is assigned risk tier 1. The model name, business purpose and train fraction are inferred fields, and the formal business purpose, intended use, portfolio scope, model owner and developer are not documented. The code is a development fixture standing in for the real model, not the production model, and it uses the public UCI 'Default of Credit Card Clients' dataset (30,000 records, 23 input variables, Taiwan credit-card clients, April to September 2005), which is described as demonstration data only and not representative of a UK bank's current portfolio.",
       "rows": []
     },
     {
@@ -178,7 +178,7 @@
         {
           "label": "Discovery report status",
           "value": "pending_human_review",
-          "source": "reports/discovery/LR-R-001_discovery.json"
+          "source": "reports/discovery/legacy-r-logistic_discovery.json"
         },
         {
           "label": "Model card status",

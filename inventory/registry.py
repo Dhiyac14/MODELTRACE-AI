@@ -88,27 +88,32 @@ def update_record(records: list[InventoryRecord], model_id: str, **changes) -> l
 
 
 def seed_records() -> list[InventoryRecord]:
-    """The three demonstration models. Ratings are illustrative and are approved at the Discover gate."""
+    """The three models trained by Person 1's engine (ml-engineering branch), with their model IDs.
+
+    Ratings are illustrative and are approved at the Discover gate. Source paths point at Person 1's files:
+    the R script plus engine/data.py, where the split and the excluded columns are defined.
+    """
     records = [
         InventoryRecord(
-            model_id="LR-R-001",
-            name="Credit default logistic regression (legacy)",
+            model_id="legacy-r-logistic",
+            name="Legacy R Logistic Regression",
             business_purpose="Estimates the probability that a credit-card customer defaults next month; used in credit decisions.",
             algorithm="Logistic regression (glm, binomial family)",
             language="R",
-            legacy_document="legacy_docs/lr_model_doc_outdated.md",
+            source_files=["models/legacy_model.R", "engine/data.py"],
+            legacy_document="models/outdated_model_document.md",
             materiality="high",
             materiality_basis="drives credit decisions for customers",
             complexity="low",
             complexity_basis="linear model with a small set of documented predictors",
         ),
         InventoryRecord(
-            model_id="GB-PY-002",
-            name="Credit default gradient boosting (challenger)",
+            model_id="python-gradient-boosting",
+            name="Python Gradient Boosting",
             business_purpose="Challenger model compared against the production default model; informs but does not drive decisions.",
             algorithm="Gradient Boosting classifier (scikit-learn)",
             language="Python",
-            legacy_document="legacy_docs/gb_model_doc_current.md",
+            source_files=["engine/models.py", "engine/data.py"],
             migration_status="not_applicable",
             materiality="medium",
             materiality_basis="informs model review but does not drive decisions",
@@ -116,11 +121,12 @@ def seed_records() -> list[InventoryRecord]:
             complexity_basis="boosted tree ensemble that needs SHAP to explain",
         ),
         InventoryRecord(
-            model_id="RF-PY-003",
-            name="Credit default random forest (benchmark)",
+            model_id="python-random-forest",
+            name="Python Random Forest",
             business_purpose="Benchmark model for internal analysis; not used in decisions.",
             algorithm="Random Forest classifier (scikit-learn)",
             language="Python",
+            source_files=["engine/models.py", "engine/data.py"],
             migration_status="not_applicable",
             materiality="low",
             materiality_basis="internal benchmark only, not used in decisions",

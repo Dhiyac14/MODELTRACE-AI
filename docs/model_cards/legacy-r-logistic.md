@@ -1,4 +1,4 @@
-# Model card: Credit default logistic regression (legacy) (LR-R-001)
+# Model card: Credit default logistic regression (legacy) (legacy-r-logistic)
 
 Version 1.0.0 · Risk tier 1 · Review status: **pending_human_review**  
 Generated 2026-11-11T22:52:25+00:00 by Documentation Agent (LLM: claude-opus-5-5)
@@ -7,7 +7,7 @@ Generated 2026-11-11T22:52:25+00:00 by Documentation Agent (LLM: claude-opus-5-5
 
 ## Model overview and intended purpose
 
-LR-R-001, recorded as 'Credit default logistic regression (legacy)', estimates the probability that a credit-card customer defaults in the next month and is described as being used in credit decisions; it is assigned risk tier 1. The model name, business purpose and train fraction are inferred fields, and the formal business purpose, intended use, portfolio scope, model owner and developer are not documented. The code is a development fixture standing in for the real model, not the production model, and it uses the public UCI 'Default of Credit Card Clients' dataset (30,000 records, 23 input variables, Taiwan credit-card clients, April to September 2005), which is described as demonstration data only and not representative of a UK bank's current portfolio.
+legacy-r-logistic, recorded as 'Credit default logistic regression (legacy)', estimates the probability that a credit-card customer defaults in the next month and is described as being used in credit decisions; it is assigned risk tier 1. The model name, business purpose and train fraction are inferred fields, and the formal business purpose, intended use, portfolio scope, model owner and developer are not documented. The code is a development fixture standing in for the real model, not the production model, and it uses the public UCI 'Default of Credit Card Clients' dataset (30,000 records, 23 input variables, Taiwan credit-card clients, April to September 2005), which is described as demonstration data only and not representative of a UK bank's current portfolio.
 
 ## Dataset and data provenance
 
@@ -65,7 +65,7 @@ No validation metrics, calibration or threshold justification are computed, and 
 | Tier rationale | Tier 1: materiality is high (drives credit decisions for customers) and complexity is low (linear model with a small set of documented predictors). Rule: Tier 1 if materiality is high; Tier 2 if materiality is medium or complexity is high; otherwise Tier 3. | rule_template |
 | Tier review status | not_started | inventory |
 | Approval records | None recorded | governance/approval_log.json |
-| Discovery report status | pending_human_review | reports/discovery/LR-R-001_discovery.json |
+| Discovery report status | pending_human_review | reports/discovery/legacy-r-logistic_discovery.json |
 | Model card status | pending_human_review | this card |
 | SS1/23 principles covered | 1. Model identification and model risk classification; 1.2 Model inventory; 1.3 Model tiering; 3. Model development, implementation and use; 3.5 Model development documentation | governance/ss1_23_mapping.json |
 

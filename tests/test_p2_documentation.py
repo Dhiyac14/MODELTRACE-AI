@@ -11,7 +11,7 @@ from llm.schemas import ModelCardNarrative
 
 ROOT = Path(__file__).resolve().parents[1]
 FIX = "tests/fixtures/p2"
-VALIDATION_FILE = "reports/validation/LR-R-001_validation.json"
+VALIDATION_FILE = "reports/validation/validation_results.json"
 
 
 class OneShot:
@@ -33,13 +33,13 @@ def at_repo_root(monkeypatch):
 
 @pytest.fixture
 def discovery():
-    return run_discovery("LR-R-001", [f"{FIX}/legacy_lr_model.R", f"{FIX}/preprocessing_split.py"],
+    return run_discovery("legacy-r-logistic", [f"{FIX}/legacy_lr_model.R", f"{FIX}/preprocessing_split.py"],
                          ReplayLLM(f"{FIX}/replay_lr"), f"{FIX}/lr_doc_outdated_dev.md")
 
 
 @pytest.fixture
 def record():
-    return get_record(seed_records(), "LR-R-001")
+    return get_record(seed_records(), "legacy-r-logistic")
 
 
 def section(card, key):
@@ -57,28 +57,31 @@ def test_offline_card_marks_validation_pending(discovery, record):
     card = build_model_card(discovery, record)
     assert card.generated_by.endswith("(template, no LLM)")
     assert card.review_status == "pending_human_review" and card.risk_tier == 1
-    for key in ("performance", "fairness", "stability", "explainability"):
+    for key in ("metrics", "fairness", "stability", "explainability"):
         assert section(card, key).status == "pending" and section(card, key).rows == []
     assert all(s.key != "parity" for s in card.sections)
 
 
 def test_metrics_are_copied_from_evidence_with_references(discovery, record):
-    evidence = {"validation": (VALIDATION_FILE, {"performance": {"roc_auc": 0.77123, "accuracy": 0.81},
-                                                 "fairness": {"sex": {"selection_rate_ratio": 0.93}}})}
+    evidence = {"validation": (VALIDATION_FILE, {"metrics": {"roc_auc": 0.77123, "accuracy": 0.81},
+                                                 "fairness": {"sex": {"disparate_impact": 0.93,
+                                                                      "fairlearn": {"difference": 0.1}}}})}
     card = build_model_card(discovery, record, evidence)
-    perf = section(card, "performance")
+    perf = section(card, "metrics")
     assert [(r.label, r.value, r.source) for r in perf.rows] == [
-        ("roc_auc", "0.7712", f"{VALIDATION_FILE}#performance.roc_auc"),
-        ("accuracy", "0.81", f"{VALIDATION_FILE}#performance.accuracy"),
+        ("roc_auc", "0.7712", f"{VALIDATION_FILE}#metrics.roc_auc"),
+        ("accuracy", "0.81", f"{VALIDATION_FILE}#metrics.accuracy"),
     ]
-    assert section(card, "fairness").rows[0].label == "sex.selection_rate_ratio"
+    assert [r.label for r in section(card, "fairness").rows] == ["sex.disparate_impact"]  # fairlearn duplicate skipped
     assert section(card, "stability").status == "pending"
 
 
 def test_parity_section_appears_with_evidence(discovery, record):
-    evidence = {"parity": ("reports/migration/LR-R-001_parity.json", {"max_abs_diff": 3.2e-09, "passed": True})}
+    evidence = {"parity": ("reports/migration/migration_results.json",
+                           {"r_vs_statsmodels": {"max_probability_difference": 3.2e-09, "overall_pass": True}})}
     rows = section(build_model_card(discovery, record, evidence), "parity").rows
-    assert [(r.label, r.value) for r in rows] == [("max_abs_diff", "3.200e-09"), ("passed", "True")]
+    assert [(r.label, r.value) for r in rows] == [("r_vs_statsmodels.max_probability_difference", "3.200e-09"),
+                                                  ("r_vs_statsmodels.overall_pass", "True")]
 
 
 def test_invented_metric_falls_back_to_template(discovery, record):
@@ -117,11 +120,11 @@ def test_ungrounded_numbers(text, facts, expected):
 def test_markdown_and_files(tmp_path, discovery, record):
     card = build_model_card(discovery, record)
     json_path, md_path = save_model_card(card, reports_root=tmp_path, cards_dir=tmp_path / "cards")
-    assert json_path.exists() and md_path.name == "LR-R-001.md"
+    assert json_path.exists() and md_path.name == "legacy-r-logistic.md"
     markdown = render_markdown(card)
     assert "**pending_human_review**" in markdown and "| D-001 input_features (contradiction) |" in markdown
 
 
 def test_card_without_legacy_document(record):
-    report = run_discovery("LR-R-001", [f"{FIX}/legacy_lr_model.R"], ReplayLLM(f"{FIX}/replay_lr"))
+    report = run_discovery("legacy-r-logistic", [f"{FIX}/legacy_lr_model.R"], ReplayLLM(f"{FIX}/replay_lr"))
     assert section(build_model_card(report, record), "corrections").text == "No existing model document was compared."

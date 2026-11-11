@@ -12,7 +12,7 @@ from workflow.state_machine import STAGES, Workflow, WorkflowError
 ROOT = Path(__file__).resolve().parents[1]
 USERS = {u.user_id: u for u in load_users(ROOT / "governance/users.json")}
 DEV, VAL, MRM, MON, LEAD = (USERS[k] for k in ("dev.alex", "val.sam", "mrm.jordan", "mon.riley", "lead.taylor"))
-LR = "LR-R-001"
+LR = "legacy-r-logistic"
 SUBMITTER = {"discover": DEV, "document": DEV, "redevelop": DEV, "validate": VAL, "monitor": MON}
 
 
@@ -28,6 +28,8 @@ def evidence(wf: Workflow, stage: str, model_id: str = LR, **data) -> None:
             "validate": "validation", "monitor": "monitoring"}[stage]
     path = wf.artifacts.path(kind, model_id)
     path.parent.mkdir(parents=True, exist_ok=True)
+    if "passed" in data:  # Person 1's parity verdict lives in r_vs_statsmodels.overall_pass
+        data = {"r_vs_statsmodels": {"overall_pass": data.pop("passed")}, **data}
     path.write_text(json.dumps({"stage": stage, **data}))
 
 
@@ -45,7 +47,7 @@ def problems_of(fn) -> list[str]:
 
 def test_initial_state(wf):
     assert wf.statuses(LR) == dict.fromkeys(STAGES, "not_started")
-    assert wf.statuses("GB-PY-002")["redevelop"] == "not_applicable"
+    assert wf.statuses("python-gradient-boosting")["redevelop"] == "not_applicable"
     assert wf.current_stage(LR) == "discover"
 
 
@@ -63,8 +65,8 @@ def test_full_lifecycle_and_inventory_sync(wf):
 
 def test_python_model_skips_redevelopment(wf):
     for stage in ("discover", "document", "validate", "monitor"):
-        approve(wf, stage, "GB-PY-002")
-    assert wf.current_stage("GB-PY-002") is None
+        approve(wf, stage, "python-gradient-boosting")
+    assert wf.current_stage("python-gradient-boosting") is None
 
 
 def test_submission_needs_evidence_and_earlier_approvals(wf):

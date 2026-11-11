@@ -6,7 +6,7 @@ writes three prose fields only; a draft that contains numbers not found in the i
 replaced by the template text, and the replacement is recorded in ``grounding_warnings``.
 
 Usage:
-    python -m agents.documentation_agent --model-id LR-R-001 [--no-llm | --replay DIR]
+    python -m agents.documentation_agent --model-id legacy-r-logistic [--no-llm | --replay DIR]
 """
 from __future__ import annotations
 
@@ -19,18 +19,23 @@ from typing import Any
 from agents.discovery_agent import format_split
 from inventory.registry import InventoryRecord, get_record, load_inventory
 from inventory.risk_tier import TIER_RULE
+from llm.schemas import AgentResult, Evidence, Finding
+
+from ._common import read_source
 from llm.client import StructuredLLM, llm_from_env
 from llm.evidence import ungrounded_numbers
 from llm.prompts import MODEL_CARD_SYSTEM, model_card_user
 from llm.schemas import CardRow, CardSection, DiscoveryReport, Fact, ModelCard, ModelCardNarrative, SourceRef
+from workflow.artifacts import Artifacts
 
-Evidence = dict[str, tuple[str, dict[str, Any]]]  # kind -> (file path, parsed JSON)
+EvidenceFiles = dict[str, tuple[str, dict[str, Any]]]  # kind -> (file path, parsed JSON)
 
 REPORTS_ROOT = Path("reports")
 MODEL_CARDS_DIR = Path("docs/model_cards")
 SS1_23_MAPPING = Path("governance/ss1_23_mapping.json")
-VALIDATION_SECTIONS = (
-    ("performance", "Performance metrics"),
+SKIP_KEYS = frozenset({"fairlearn", "feature_names"})  # duplicates of by_group / long name lists in Person 1's report
+VALIDATION_SECTIONS = (  # keys of Person 1's reports/validation/validation_results.json
+    ("metrics", "Performance metrics"),
     ("fairness", "Fairness considerations"),
     ("stability", "Stability"),
     ("explainability", "Explainability"),
@@ -50,12 +55,11 @@ APPROVAL_WORDS = re.compile(r"\b(approved|signed[ -]off|certified|independently 
 
 
 # --------------------------------------------------------------------------- evidence files
-def load_evidence(model_id: str, reports_root: Path = REPORTS_ROOT) -> Evidence:
-    paths = {
-        "validation": reports_root / "validation" / f"{model_id}_validation.json",
-        "parity": reports_root / "migration" / f"{model_id}_parity.json",
-    }
-    return {kind: (p.as_posix(), json.loads(p.read_text(encoding="utf-8"))) for kind, p in paths.items() if p.exists()}
+def load_evidence(model_id: str, root: Path = Path(".")) -> EvidenceFiles:
+    """Person 1's live validation and parity reports for this model (never the sample copies)."""
+    artifacts = Artifacts(root)
+    return {kind: (artifacts.relpath(kind, model_id), data) for kind in ("validation", "parity")
+            if (data := artifacts.load(kind, model_id)) is not None}
 
 
 def _fmt(value: Any) -> str:
@@ -70,6 +74,8 @@ def _flatten(data: dict[str, Any], prefix: str = "") -> list[tuple[str, Any]]:
     rows: list[tuple[str, Any]] = []
     for key, value in data.items():
         path = f"{prefix}.{key}" if prefix else str(key)
+        if key in SKIP_KEYS:
+            continue
         rows += _flatten(value, path) if isinstance(value, dict) else [(path, value)]
     return rows
 
@@ -83,7 +89,7 @@ def _pending(key: str, title: str, stage: str) -> CardSection:
                        text=f"Pending: produced at the {stage} stage. No figures are shown until the report exists.")
 
 
-def _validation_section(key: str, title: str, evidence: Evidence) -> CardSection:
+def _validation_section(key: str, title: str, evidence: EvidenceFiles) -> CardSection:
     if "validation" not in evidence or not isinstance(evidence["validation"][1].get(key), dict):
         return _pending(key, title, "Validate")
     file, data = evidence["validation"]
@@ -95,7 +101,7 @@ def _value(fact: Fact) -> Any:
     return None if fact.status == "missing" else fact.value
 
 
-def _facts(discovery: DiscoveryReport, record: InventoryRecord, evidence: Evidence) -> dict[str, Any]:
+def _facts(discovery: DiscoveryReport, record: InventoryRecord, evidence: EvidenceFiles) -> dict[str, Any]:
     md = discovery.metadata
     train_fraction = _value(md.train_fraction)
     return {
@@ -117,8 +123,26 @@ def _facts(discovery: DiscoveryReport, record: InventoryRecord, evidence: Eviden
         "missing_information": md.missing_information,
         "risk_tier": record.risk_tier,
         "dataset": {row.label: row.value for row in DATASET_ROWS},
-        "results": {kind: data for kind, (_, data) in evidence.items()},
+        "results": _result_facts(evidence),
     }
+
+
+def _result_facts(evidence: EvidenceFiles) -> dict[str, Any]:
+    """The headline results the prose may mention; full tables stay in the evidence sections."""
+    out: dict[str, Any] = {}
+    if "validation" in evidence:
+        report = evidence["validation"][1]
+        out["validation_metrics"] = report.get("metrics", {})
+        out["fairness_summary"] = {
+            group: {k: d.get(k) for k in ("demographic_parity_difference", "disparate_impact")}
+            for group, d in (report.get("fairness") or {}).items() if isinstance(d, dict)
+        }
+        out["prediction_psi_train_vs_test"] = (report.get("stability") or {}).get("prediction_psi")
+    if "parity" in evidence:
+        parity = evidence["parity"][1].get("r_vs_statsmodels") or {}
+        out["parity_r_vs_statsmodels"] = {k: parity.get(k) for k in (
+            "overall_pass", "mae", "max_probability_difference", "tolerance", "classification_agreement")}
+    return out
 
 
 def _template_narrative(f: dict[str, Any]) -> dict[str, str]:
@@ -233,7 +257,7 @@ def _corrections_section(discovery: DiscoveryReport) -> CardSection:
 def build_model_card(
     discovery: DiscoveryReport,
     record: InventoryRecord,
-    evidence: Evidence | None = None,
+    evidence: EvidenceFiles | None = None,
     llm: StructuredLLM | None = None,
     mapping_path: Path = SS1_23_MAPPING,
 ) -> ModelCard:
@@ -301,6 +325,35 @@ def save_model_card(card: ModelCard, reports_root: Path = REPORTS_ROOT, cards_di
     json_path.write_text(card.model_dump_json(indent=2) + "\n", encoding="utf-8")
     md_path.write_text(render_markdown(card), encoding="utf-8")
     return json_path, md_path
+
+
+# ------------------------------------------------------------------ compatibility with Person 1's code
+# Verbatim from the ml-engineering branch (commit fdad799), where Person 1's engine/pipeline.py (generate_agent_reports) uses it.
+# Kept here so that code keeps working when the two branches are merged.
+class DocumentationAgent:
+    name = "documentation"
+    required_sections = ("preprocessing", "data split", "random seed", "dataset version", "fairness assumptions")
+
+    def run(self, source: str | Path) -> AgentResult:
+        source_name, text = read_source(source)
+        lower = text.lower()
+        missing = []
+        for section in self.required_sections:
+            explicitly_missing = any(
+                re.search(r"missing\s*:[^\n]*\b" + re.escape(section) + r"\b", line)
+                for line in lower.splitlines()
+            )
+            if section not in lower or explicitly_missing:
+                missing.append(section)
+        evidence = [Evidence(source_name, f"Required section '{section}' is absent", value=False) for section in missing]
+        findings = [
+            Finding("documentation-completeness", "Documentation completeness", "gap" if missing else "complete",
+                    f"{len(missing)} of {len(self.required_sections)} required sections are absent.", tuple(evidence),
+                    severity="warning" if missing else "info")
+        ]
+        return AgentResult(self.name, "Documentation was checked against explicit required sections.",
+                           findings, recommendations=[f"Document {item} from the authoritative artifact." for item in missing],
+                           evidence=evidence)
 
 
 if __name__ == "__main__":

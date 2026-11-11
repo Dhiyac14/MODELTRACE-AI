@@ -6,7 +6,7 @@ model: its only output is an alert report. Review actions (acknowledge, investig
 request re-validation) are taken by people through ``workflow.state_machine.Workflow.review_alert``.
 
 Usage:
-    python -m agents.monitoring_agent --model-id LR-R-001 [--no-llm]
+    python -m agents.monitoring_agent --model-id legacy-r-logistic [--no-llm]
 """
 from __future__ import annotations
 
@@ -15,15 +15,18 @@ import json
 from pathlib import Path
 from typing import Any
 
+from llm.schemas import AgentResult, Evidence, Finding
+
+from ._common import load_json
 from llm.client import StructuredLLM, llm_from_env
 from llm.evidence import ungrounded_numbers
 from llm.prompts import MONITORING_SYSTEM, monitoring_user
 from llm.schemas import Alert, AlertExplanation, AlertExplanations, AlertReport
+from workflow.artifacts import Artifacts
 
 PSI_WARNING, PSI_HIGH = 0.10, 0.25
 PSI_RULE = ("PSI below 0.10: low; 0.10 to 0.25: warning; above 0.25: high "
             "(illustrative monitoring heuristics, not regulatory thresholds)")
-REPORTS_ROOT = Path("reports")
 
 _IMPACT = {
     "feature_psi": "The distribution of {feature} has moved away from the baseline, so predictions that rely on it may be less reliable.",
@@ -53,11 +56,17 @@ def psi_severity(value: float) -> str:
     return "low"
 
 
+def batch_id_of(batch: dict[str, Any]) -> str:
+    """Person 1's monitoring report names batches "001", "002", "003"."""
+    return str(batch["batch"])
+
+
 def derive_alerts(model_id: str, report: dict[str, Any], source: str) -> list[Alert]:
-    """Deterministic alerts from the numbers in a monitoring report."""
+    """Deterministic alerts from the numbers in Person 1's monitoring report (engine/monitoring.py)."""
     alerts: list[Alert] = []
     for i, batch in enumerate(report.get("batches", [])):
-        batch_id, scenario = batch["batch_id"], batch.get("scenario", "")
+        batch_id = batch_id_of(batch)
+        scenario = batch.get("scenario") or batch.get("diagnostic_type", "")
         ref = f"{source}#batches[{i}]"
 
         def add(metric: str, feature: str | None, value: float | None, severity: str, rule: str, path: str) -> None:
@@ -71,12 +80,34 @@ def derive_alerts(model_id: str, report: dict[str, Any], source: str) -> list[Al
         prediction_psi = batch.get("prediction_psi")
         if prediction_psi is not None and psi_severity(prediction_psi) != "low":
             add("prediction_psi", None, prediction_psi, psi_severity(prediction_psi), PSI_RULE, "prediction_psi")
-        for j, change in enumerate(batch.get("schema_changes") or []):
-            add("schema_change", str(change), None, "high", "Any schema change is high severity.", f"schema_changes[{j}]")
-        for feature, count in (batch.get("missing_values") or {}).items():
+        schema = batch.get("schema_change") or {}
+        changes = [f"missing column {c}" for c in schema.get("missing_columns", [])] + \
+                  [f"extra column {c}" for c in schema.get("extra_columns", [])]
+        if schema.get("changed") and not changes:
+            changes = ["schema changed"]
+        for change in changes:
+            add("schema_change", change, None, "high", "Any schema change is high severity.", "schema_change")
+        for feature, missing in (batch.get("missing_values") or {}).items():
+            count = missing.get("count", 0) if isinstance(missing, dict) else missing
             if count:
-                add("missing_values", feature, float(count), "warning", "Any missing value is a warning.", f"missing_values.{feature}")
+                add("missing_values", feature, float(count), "warning", "Any missing value is a warning.",
+                    f"missing_values.{feature}")
     return alerts
+
+
+_FACT_KEYS = ("batch", "diagnostic_type", "observed_outcomes", "severity", "driving_feature", "driving_feature_psi",
+              "feature_psi", "prediction_psi", "mean_predicted_probability", "percentage_above_threshold",
+              "schema_change", "performance")
+
+
+def batch_facts(batch: dict[str, Any]) -> dict[str, Any]:
+    """The numbers the LLM may cite; per-feature flags and fairness tables are left out to keep the prompt small."""
+    facts = {k: batch[k] for k in _FACT_KEYS if k in batch}
+    missing = {f: v for f, v in (batch.get("missing_values") or {}).items()
+               if (v.get("count", 0) if isinstance(v, dict) else v)}
+    if missing:
+        facts["missing_values"] = missing
+    return facts
 
 
 def template_explanation(alert: Alert) -> AlertExplanation:
@@ -89,7 +120,7 @@ def template_explanation(alert: Alert) -> AlertExplanation:
     }[alert.metric]
     return AlertExplanation(
         alert_id=alert.alert_id,
-        summary=f"{measured} in {alert.batch_id} ({alert.scenario or 'no scenario'}), which the fixed rule classes as {alert.severity}.",
+        summary=f"{measured} in batch {alert.batch_id} ({alert.scenario or 'no scenario'}), which the fixed rule classes as {alert.severity}.",
         potential_impact=_IMPACT[alert.metric].format(feature=feature),
         investigate=[c.format(feature=feature) for c in _CHECKS[alert.metric]],
         recommendation="consider_revalidation" if alert.severity == "high" else "investigate",
@@ -104,13 +135,13 @@ def explain_alerts(alerts: list[Alert], report: dict[str, Any], llm: StructuredL
 
     if llm is None:
         return [templated(a) for a in alerts], []
-    batches = {b["batch_id"]: b for b in report.get("batches", [])}
+    batches = {batch_id_of(b): b for b in report.get("batches", [])}
     out: list[Alert] = []
     warnings: list[str] = []
     for batch_id in dict.fromkeys(a.batch_id for a in alerts):
         group = [a for a in alerts if a.batch_id == batch_id]
         facts = {
-            "batch": batches.get(batch_id, {}),
+            "batch": batch_facts(batches.get(batch_id, {})),
             "alerts": [a.model_dump(include={"alert_id", "metric", "feature", "value", "severity"}) for a in group],
             "psi_thresholds": {"warning": PSI_WARNING, "high": PSI_HIGH},
         }
@@ -145,16 +176,40 @@ def build_alert_report(model_id: str, report: dict[str, Any], source: str, llm: 
     )
 
 
-def run_monitoring_agent(model_id: str, llm: StructuredLLM | None, reports_root: Path = REPORTS_ROOT) -> AlertReport:
-    source = reports_root / "monitoring" / f"{model_id}_monitoring.json"
-    return build_alert_report(model_id, json.loads(source.read_text(encoding="utf-8")), source.as_posix(), llm)
+def run_monitoring_agent(model_id: str, llm: StructuredLLM | None, root: Path = Path(".")) -> AlertReport:
+    artifacts = Artifacts(root)
+    report = artifacts.load("monitoring", model_id)
+    if report is None:
+        raise FileNotFoundError(f"no monitoring report: {artifacts.relpath('monitoring', model_id)}")
+    return build_alert_report(model_id, report, artifacts.relpath("monitoring", model_id), llm)
 
 
-def save_alert_report(report: AlertReport, reports_root: Path = REPORTS_ROOT) -> Path:
-    path = reports_root / "alerts" / f"{report.model_id}_alerts.json"
+def save_alert_report(report: AlertReport, root: Path = Path(".")) -> Path:
+    path = Artifacts(root).path("alerts", report.model_id)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
     return path
+
+
+# ------------------------------------------------------------------ compatibility with Person 1's code
+# Verbatim from the ml-engineering branch (commit fdad799), where Person 1's engine/pipeline.py (generate_agent_reports) uses it.
+# Kept here so that code keeps working when the two branches are merged.
+class MonitoringAgent:
+    name = "monitoring"
+
+    def run(self, source: str | Path | dict) -> AgentResult:
+        source_name, report = load_json(source)
+        batches = report.get("batches", [])
+        if not isinstance(batches, list):
+            raise ValueError("monitoring report 'batches' must be an array")
+        alert_count = sum(bool(batch.get("alert")) for batch in batches if isinstance(batch, dict))
+        evidence = [Evidence(source_name, "Observed monitoring batch count", value=len(batches)),
+                    Evidence(source_name, "Observed alert batch count", value=alert_count)]
+        finding = Finding("monitoring-observations", "Monitoring observations", "observed" if batches else "unknown",
+                           "Counts are calculated from supplied batches only.", tuple(evidence),
+                           severity="warning" if alert_count else "info")
+        return AgentResult(self.name, "Monitoring summary uses recorded batches and alerts only.",
+                           [finding], metrics={"batch_count": len(batches), "alert_count": alert_count}, evidence=evidence)
 
 
 if __name__ == "__main__":

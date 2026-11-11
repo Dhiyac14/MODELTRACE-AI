@@ -7,7 +7,7 @@ from workflow.audit import GENESIS, AuditLog
 def make_log(tmp_path, n=3):
     log = AuditLog(tmp_path / "audit.json")
     for i in range(n):
-        log.record(actor=f"user{i}", role="developer", action="test", model_id="LR-R-001", details={"i": i})
+        log.record(actor=f"user{i}", role="developer", action="test", model_id="legacy-r-logistic", details={"i": i})
     return log
 
 

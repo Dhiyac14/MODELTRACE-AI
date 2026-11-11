@@ -25,7 +25,7 @@ from llm.schemas import AlertReport, DiscoveryReport, ModelCard
 from workflow.alerts import RULES as ALERT_RULES
 from workflow.alerts import alert_status, check_alert_action
 from workflow.approvals import check_duties, load_users
-from workflow.artifacts import SAMPLE_ROOT, STAGE_EVIDENCE, Artifacts
+from workflow.artifacts import PYTHON_CANDIDATE_SOURCE, SAMPLE_ROOT, STAGE_EVIDENCE, Artifacts, parity_passed
 from workflow.state_machine import REOPENABLE, STAGES, SUBMITTABLE, Workflow, WorkflowError
 
 ROOT = Path(os.environ.get("MODELTRACE_ROOT", "."))
@@ -95,21 +95,27 @@ def table(rows: list[dict] | pd.DataFrame) -> None:
     st.dataframe(pd.DataFrame(rows) if isinstance(rows, list) else rows, hide_index=True)
 
 
+def show_value(value: Any) -> str:
+    """One text column: Arrow cannot hold a mix of floats, booleans and strings."""
+    if isinstance(value, float):
+        return f"{value:.6g}"
+    return value if isinstance(value, str) else json.dumps(value)
+
+
 def kv_table(data: dict[str, Any]) -> None:
-    table([{"Metric": k, "Value": v if isinstance(v, (int, float, str, bool)) else json.dumps(v)}
-           for k, v in flatten(data) if not k.startswith("_")])
+    table([{"Metric": k, "Value": show_value(v)} for k, v in flatten(data) if not k.startswith("_")])
 
 
 def code_language(path: str) -> str:
     return {".r": "r", ".py": "python", ".sas": "sas", ".sql": "sql", ".md": "markdown"}.get(Path(path).suffix.lower(), "text")
 
 
-def optional_agent(module: str, function: str):
-    """Person 1's agents are integrated when present; their absence must not break the app."""
+def optional_agent(module: str, name: str):
+    """Person 1's agents are used when present (after the branches merge); their absence must not break the app."""
     try:
-        return getattr(importlib.import_module(module), function), ""
+        return getattr(importlib.import_module(module), name), ""
     except Exception as exc:  # ImportError, or an error inside Person 1's module
-        return None, f"{module}.{function} is not available yet ({type(exc).__name__})."
+        return None, f"{module}.{name} is not available on this branch yet ({type(exc).__name__})."
 
 
 # --------------------------------------------------------------------------- approval gate
@@ -259,11 +265,8 @@ def page_discovery(model_id: str) -> None:
             if report.metadata.missing_information:
                 st.markdown("**Missing from the code:** " + "; ".join(report.metadata.missing_information))
         with tabs[1]:
-            score, _, _ = load_display("discovery_score", model_id)
-            if score:
-                cols = st.columns(2)
-                cols[0].metric("Recall against the answer key", score.get("recall"))
-                cols[1].metric("Precision against the answer key", score.get("precision"))
+            st.caption("Scoring against the hidden answer key is done by Person 1 (models/discovery_answer_key.json is "
+                       "local to them).")
             table([{"ID": d.discrepancy_id, "Field": d.field, "Type": d.type, "Documented claim": d.documented_claim,
                     "Suggested correction": d.suggested_correction, "Detected by": d.detected_by,
                     "Code evidence": "; ".join(f"{r.file}:L{r.line_start}" for r in d.code_evidence)}
@@ -284,7 +287,7 @@ def page_documentation(model_id: str) -> None:
     discovery = ARTIFACTS.load("discovery", model_id)
     open_stage = WF.statuses(model_id)["document"] in SUBMITTABLE
     if st.button("Generate model card", type="primary", disabled=discovery is None or not open_stage, key="run-docs"):
-        card = build_model_card(DiscoveryReport.model_validate(discovery), record, load_evidence(model_id, ROOT / "reports"),
+        card = build_model_card(DiscoveryReport.model_validate(discovery), record, load_evidence(model_id, ROOT),
                                 LLM, mapping_path=ROOT / "governance/ss1_23_mapping.json")
         json_path, _ = save_model_card(card, ROOT / "reports", ROOT / "docs/model_cards")
         WF.log_agent_run(model_id, "document", "documentation", USER,
@@ -313,88 +316,117 @@ def page_migration(model_id: str) -> None:
         st.info(f"{model_id} is already implemented in {record.language}; redevelopment applies to legacy R or SAS models.")
         gate_panel(model_id, "redevelop")
         return
-    run_migration, missing = optional_agent("agents.migration_agent", "run_migration")
-    can_run = run_migration is not None and LLM is not None and "developer" in USER.roles and bool(record.source_files)
-    if st.button("Run Migration Agent (Person 1)", disabled=not can_run, key="run-migration"):
-        with st.spinner("Generating the Python candidate and running parity tests..."):
-            run_migration(model_id=model_id, r_source=str(ROOT / record.source_files[0]), llm=LLM)
-        WF.log_agent_run(model_id, "redevelop", "migration", USER, {"output": ARTIFACTS.relpath("parity", model_id)})
-        flash("Migration Agent finished.")
-        st.rerun()
-    st.caption(missing or "Runs Person 1's agent; needs the LLM, a developer role and saved source files.")
+    st.caption("Person 1's engine runs the R glm and the Statsmodels candidate on the same split and writes the parity "
+               "report (python -m engine.pipeline).")
+    MigrationAgent, missing = optional_agent("agents.migration_agent", "MigrationAgent")
+    if st.button("Run Migration Agent (Person 1)", disabled=MigrationAgent is None or not record.source_files,
+                 key="run-migration"):
+        plan = MigrationAgent().run(ROOT / record.source_files[0]).to_dict()
+        st.session_state[f"migration-plan-{model_id}"] = plan
+        WF.log_agent_run(model_id, "redevelop", "migration", USER, {"summary": plan["summary"]})
+    if missing:
+        st.caption(missing)
+    if f"migration-plan-{model_id}" in st.session_state:
+        with st.expander("Migration Agent result", expanded=True):
+            st.json(st.session_state[f"migration-plan-{model_id}"])
     parity, _, _ = load_display("parity", model_id)
     if parity is None:
-        st.info("No parity report yet.")
+        st.info(f"No parity report yet ({ARTIFACTS.relpath('parity', model_id)}).")
     else:
-        if parity.get("passed") is True:
-            st.success(f"Parity tests passed (tolerance {parity.get('tolerance')}).")
+        if parity_passed(parity):
+            st.success(f"Parity tests passed: R glm vs {parity.get('candidate_model')}, "
+                       f"tolerance {parity['r_vs_statsmodels'].get('tolerance')}.")
         else:
             st.error("Parity tests have NOT passed. The Redevelop gate cannot be approved.")
-        kv_table({k: v for k, v in parity.items() if not k.endswith("_path") and k not in ("model_id", "passed")})
         left, right = st.columns(2)
-        r_path = parity.get("r_source_path") or (record.source_files[0] if record.source_files else None)
+        with left:
+            st.markdown("**R glm vs Statsmodels candidate**")
+            kv_table(parity.get("r_vs_statsmodels") or {})
+        with right:
+            st.markdown("**R glm vs scikit-learn logistic regression (reference)**")
+            kv_table(parity.get("r_vs_python") or {})
+        st.caption(f"{parity.get('n_rows')} test rows · candidate hash `{str(parity.get('model_hash'))[:12]}` · "
+                   f"shared split `{parity.get('shared_test_csv')}`")
+        left, right = st.columns(2)
+        r_path = parity.get("r_script") or (record.source_files[0] if record.source_files else None)
         with left:
             st.markdown(f"**Original R** `{r_path}`")
-            st.code(ARTIFACTS.read_text(r_path) or "(not found)", language="r", line_numbers=True)
+            st.code(ARTIFACTS.read_text(r_path) or "(not found on this branch)", language="r", line_numbers=True)
         with right:
-            st.markdown(f"**Generated Python** `{parity.get('python_code_path')}`")
-            st.code(ARTIFACTS.read_text(parity.get("python_code_path")) or "(not found)", language="python", line_numbers=True)
+            st.markdown(f"**Python candidate** `{PYTHON_CANDIDATE_SOURCE}`")
+            st.code(ARTIFACTS.read_text(PYTHON_CANDIDATE_SOURCE) or "(not found on this branch)", language="python",
+                    line_numbers=True)
     gate_panel(model_id, "redevelop")
 
 
-def group_chart(grouping: str, groups: dict[str, Any], key: str) -> None:
-    frame = pd.DataFrame.from_dict(groups, orient="index")
+def group_chart(grouping: str, report: dict[str, Any], key: str) -> None:
+    """Person 1's fairness block: {by_group: {group: {count, selection_rate, ...}}, demographic_parity_difference, ...}."""
+    cols = st.columns(2)
+    cols[0].metric("Demographic parity difference", f"{report.get('demographic_parity_difference', float('nan')):.4f}")
+    cols[1].metric("Disparate impact", f"{report.get('disparate_impact', float('nan')):.4f}")
+    frame = pd.DataFrame.from_dict(report.get("by_group") or {}, orient="index")
+    if frame.empty:
+        return
     table(frame.reset_index(names="group"))
-    rates = [c for c in ("selection_rate", "tpr", "fpr") if c in frame.columns]
+    rates = [c for c in ("selection_rate", "true_positive_rate", "false_positive_rate") if c in frame.columns]
     if rates:
         long = frame[rates].reset_index(names="group").melt(id_vars="group", var_name="metric")
         st.plotly_chart(px.bar(long, x="group", y="value", color="metric", barmode="group",
                                title=f"{grouping}: selection rate, TPR and FPR by group"), key=key)
 
 
+def bar(values: dict[str, float], x: str, title: str, key: str) -> None:
+    frame = pd.DataFrame({"feature": list(values), x: list(values.values())}).sort_values(x)
+    st.plotly_chart(px.bar(frame, x=x, y="feature", orientation="h", title=title, height=520), key=key)
+
+
 def page_validation(model_id: str) -> None:
     record = WF.record(model_id)
     st.header(f"Validation · {record.name}")
-    run_validation, missing = optional_agent("agents.validation_agent", "run_validation")
+    ValidationAgent, missing = optional_agent("agents.validation_agent", "ValidationAgent")
     duties = check_duties("validate", "submit", USER, WF.history(model_id))
-    if st.button("Run Validation Agent (Person 1)", disabled=run_validation is None or bool(duties), key="run-validation"):
-        with st.spinner("Running independent validation..."):
-            run_validation(model_id=model_id, llm=LLM)
-        WF.log_agent_run(model_id, "validate", "validation", USER, {"output": ARTIFACTS.relpath("validation", model_id)})
-        flash("Validation Agent finished.")
-        st.rerun()
-    st.caption(missing or (" ".join(duties) if duties else "Runs Person 1's independent Validation Agent."))
     data, _, _ = load_display("validation", model_id)
+    if st.button("Run Validation Agent (Person 1)", disabled=ValidationAgent is None or bool(duties) or data is None,
+                 key="run-validation"):
+        summary = ValidationAgent().run(data).to_dict()
+        st.session_state[f"validation-summary-{model_id}"] = summary
+        WF.log_agent_run(model_id, "validate", "validation", USER, {"summary": summary["summary"]})
+    st.caption(missing or (" ".join(duties) if duties else "Summarises Person 1's measured validation report."))
+    if f"validation-summary-{model_id}" in st.session_state:
+        with st.expander("Validation Agent result", expanded=False):
+            st.json(st.session_state[f"validation-summary-{model_id}"])
     if data is None:
-        st.info("No validation report yet.")
+        st.info(f"No validation report yet ({ARTIFACTS.relpath('validation', model_id)}).")
         gate_panel(model_id, "validate")
         return
+    st.caption(f"Validated model: {data.get('model')} · hash `{str(data.get('model_hash'))[:12]}`")
     tabs = st.tabs(["Performance", "Stability", "Fairness", "Explainability"])
     with tabs[0]:
-        performance = data.get("performance") or {}
-        kv_table(performance)
-        numeric = {k: v for k, v in performance.items() if isinstance(v, (int, float))}
-        if numeric:
-            st.plotly_chart(px.bar(x=list(numeric), y=list(numeric.values()), labels={"x": "metric", "y": "value"},
+        metrics = data.get("metrics") or {}
+        kv_table(metrics)
+        if metrics:
+            st.plotly_chart(px.bar(x=list(metrics), y=list(metrics.values()), labels={"x": "metric", "y": "value"},
                                    title="Performance on the test set"), key="perf")
     with tabs[1]:
-        kv_table(data.get("stability") or {})
+        stability = data.get("stability") or {}
+        st.metric("Prediction PSI, train vs test", f"{stability.get('prediction_psi', float('nan')):.5f}")
+        if stability.get("feature_psi"):
+            bar(stability["feature_psi"], "psi", "Feature PSI, train vs test", key="stab")
     with tabs[2]:
         st.caption("Diagnostic evidence, not a pass/fail fairness verdict. Check group sizes before comparing rates.")
-        for grouping, groups in (data.get("fairness") or {}).items():
+        for grouping, report in (data.get("fairness") or {}).items():
             st.markdown(f"**{grouping}**")
-            if isinstance(groups, dict) and all(isinstance(g, dict) for g in groups.values()):
-                group_chart(grouping, groups, key=f"fair-{grouping}")
-            else:
-                kv_table({grouping: groups})
+            group_chart(grouping, report, key=f"fair-{grouping}")
     with tabs[3]:
         explain = data.get("explainability") or {}
-        coefficients = explain.get("coefficients")
-        if isinstance(coefficients, dict):
-            frame = pd.DataFrame({"feature": list(coefficients), "coefficient": list(coefficients.values())}).sort_values("coefficient")
-            st.plotly_chart(px.bar(frame, x="coefficient", y="feature", orientation="h", title="Logistic regression coefficients"),
-                            key="coef")
-        kv_table({k: v for k, v in explain.items() if k != "coefficients"})
+        if isinstance(explain.get("coefficients"), dict):
+            bar(explain["coefficients"], "coefficient", "Statsmodels logistic regression coefficients", key="coef")
+        for name in ("random_forest_shap", "gradient_boosting_shap"):
+            shap = explain.get(name) or {}
+            if isinstance(shap.get("mean_abs_shap"), dict):
+                bar(shap["mean_abs_shap"], "mean |SHAP|",
+                    f"{name.replace('_shap', '').replace('_', ' ').title()}: mean absolute SHAP ({shap.get('n_rows')} rows)",
+                    key=f"shap-{name}")
     gate_panel(model_id, "validate")
 
 
@@ -402,11 +434,13 @@ def page_risk() -> None:
     st.header("Risk & Evidence")
     rows = []
     for record in RECORDS:
-        validation, _, is_sample = ARTIFACTS.load_for_display("validation", record.model_id)
-        for f in (validation or {}).get("findings", []):
-            rows.append({"Model": record.model_id, "ID": f.get("finding_id"), "Source": "Validation" + (" (SAMPLE)" if is_sample else ""),
-                         "Category": f.get("category"), "Severity": f.get("severity"), "Description": f.get("description"),
-                         "Evidence": f.get("evidence"), "Remediation": f.get("remediation"), "Status": f.get("review_status")})
+        findings, _, is_sample = ARTIFACTS.load_for_display("risk_findings", record.model_id)
+        for f in findings or []:
+            rows.append({"Model": record.model_id, "ID": f.get("id"),
+                         "Source": "Person 1 risk findings" + (" (SAMPLE COPY)" if is_sample else ""),
+                         "Category": f.get("risk_category") or f.get("category"), "Severity": f.get("severity"),
+                         "Description": f.get("description"), "Evidence": json.dumps(f.get("evidence"))[:300],
+                         "Remediation": f.get("remediation"), "Status": f.get("review_status")})
         for d in (ARTIFACTS.load("discovery", record.model_id) or {}).get("discrepancies", []):
             rows.append({"Model": record.model_id, "ID": d["discrepancy_id"], "Source": "Discovery: document vs code",
                          "Category": f"documentation · {d['field']}", "Severity": "medium" if d["type"] == "contradiction" else "low",
@@ -425,10 +459,11 @@ def page_risk() -> None:
         return
     frame = pd.DataFrame(rows)
     sources = st.multiselect("Source", sorted(frame["Source"].unique()), default=sorted(frame["Source"].unique()))
-    severities = st.multiselect("Severity", ["high", "medium", "low", "warning"], default=["high", "medium", "low", "warning"])
+    levels = [s for s in ("high", "medium", "warning", "review", "low", "info") if s in set(frame["Severity"])]
+    severities = st.multiselect("Severity", levels, default=levels)
     frame = frame[frame["Source"].isin(sources) & frame["Severity"].isin(severities)]
     st.plotly_chart(px.histogram(frame, x="Severity", color="Source", title="Risk register by severity",
-                                 category_orders={"Severity": ["high", "medium", "warning", "low"]}), key="risk")
+                                 category_orders={"Severity": levels}), key="risk")
     table(frame)
     st.caption("Discrepancy severity is a fixed rule: contradiction = medium, omission or unverifiable = low. "
                "Every row points to the file and line, or report key, that supports it.")
@@ -439,21 +474,25 @@ def page_monitoring(model_id: str) -> None:
     st.header(f"Monitoring · {record.name}")
     monitoring, path, is_sample = load_display("monitoring", model_id)
     if monitoring is None:
-        st.info("No monitoring report yet (Person 1 produces reports/monitoring/<model_id>_monitoring.json).")
+        st.info(f"No monitoring report yet ({ARTIFACTS.relpath('monitoring', model_id)}, written by Person 1's engine).")
         gate_panel(model_id, "monitor")
         return
     batches = monitoring.get("batches", [])
-    table([{k: b.get(k) for k in ("batch_id", "scenario", "modification", "n_records", "mean_predicted_pd",
-                                  "share_above_threshold", "prediction_psi")} for b in batches])
-    psi = pd.DataFrame([{"batch": b["batch_id"], "feature": f, "psi": v}
-                        for b in batches for f, v in (b.get("feature_psi") or {}).items()])
+    table([{"batch": b.get("batch"), "Person 1 severity": b.get("severity"), "driving feature": b.get("driving_feature"),
+            "driving PSI": b.get("driving_feature_psi"), "prediction PSI": b.get("prediction_psi"),
+            "mean predicted PD": b.get("mean_predicted_probability"),
+            "share above threshold": b.get("percentage_above_threshold"), "type": b.get("diagnostic_type")}
+           for b in batches])
+    psi = pd.DataFrame([{"batch": str(b["batch"]), "feature": f, "psi": v}
+                        for b in batches for f, v in (b.get("feature_psi") or {}).items() if v >= 0.01])
     if not psi.empty:
-        fig = px.bar(psi, x="feature", y="psi", color="batch", barmode="group", title="Feature PSI by batch")
+        fig = px.bar(psi, x="feature", y="psi", color="batch", barmode="group", log_y=True,
+                     title="Feature PSI by batch (features with PSI ≥ 0.01, log scale)")
         fig.add_hline(y=PSI_WARNING, line_dash="dot", annotation_text="warning 0.10")
         fig.add_hline(y=PSI_HIGH, line_dash="dash", annotation_text="high 0.25")
         st.plotly_chart(fig, key="psi")
-    outputs = pd.DataFrame([{"batch": b["batch_id"], "mean predicted PD": b.get("mean_predicted_pd"),
-                             "share above threshold": b.get("share_above_threshold")} for b in batches])
+    outputs = pd.DataFrame([{"batch": str(b["batch"]), "mean predicted PD": b.get("mean_predicted_probability"),
+                             "share above threshold": b.get("percentage_above_threshold")} for b in batches])
     st.plotly_chart(px.line(outputs.melt(id_vars="batch"), x="batch", y="value", color="variable", markers=True,
                             title="Prediction distribution by batch"), key="outputs")
     st.caption("PSI bands are illustrative monitoring heuristics, not regulatory thresholds. Severity is set by rule; "
@@ -462,12 +501,12 @@ def page_monitoring(model_id: str) -> None:
     st.subheader("Alerts")
     if is_sample:
         report = build_alert_report(model_id, monitoring, path, None)
-        st.caption("Alerts derived in memory from sample data, for layout only. Review actions are disabled.")
+        st.caption("Alerts derived in memory from the copy of Person 1's report, for layout only. Review actions are disabled.")
     else:
         if st.button("Run Monitoring Agent", type="primary", key="run-monitoring"):
             with st.spinner("Raising and explaining alerts..."):
                 report = build_alert_report(model_id, monitoring, ARTIFACTS.relpath("monitoring", model_id), LLM)
-            out = save_alert_report(report, ROOT / "reports")
+            out = save_alert_report(report, ROOT)
             WF.log_agent_run(model_id, "monitor", "monitoring", USER, {"output": out.as_posix(), "alerts": len(report.alerts),
                                                                       "generated_by": report.generated_by})
             flash(f"{len(report.alerts)} alert(s) raised.")

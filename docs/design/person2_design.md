@@ -144,7 +144,7 @@ approval and audit logs, the migration prompt and `MigrationCandidate` schema, a
 
 **Answer key** (Person 1 owns it): a list of `{"id", "field", "type", "description"}` with the same vocabularies.
 An entry counts as found when the report has a discrepancy with the same `field` and `type`; each reported
-discrepancy can match only one entry. Model IDs `LR-R-001`, `GB-PY-002`, `RF-PY-003` are used in every file name.
+discrepancy can match only one entry. Model IDs `legacy-r-logistic`, `python-gradient-boosting`, `python-random-forest` are used in every file name.
 
 Example files in exactly this shape are in `tests/fixtures/p2/sample_data/` (marked `"_sample": true`).
 

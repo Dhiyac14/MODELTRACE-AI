@@ -1,5 +1,5 @@
 {
-  "overview": "The legacy credit default logistic regression (LR-R-001) estimates the probability that a credit-card customer defaults next month and is used in credit decisions. It is implemented in R and predicts default.payment.next.month.",
+  "overview": "The legacy credit default logistic regression (legacy-r-logistic) estimates the probability that a credit-card customer defaults next month and is used in credit decisions. It is implemented in R and predicts default.payment.next.month.",
   "methodology": "The model is a logistic regression fitted with glm using a binomial family and logit link on 21 input features. ID, SEX and AGE are excluded from the predictors. Training uses a stratified 80% train / 20% test split, and a predicted probability above 0.35 is classed as default.",
   "limitations": "SEX and AGE are retained only for fairness review. No probability calibration step was found in the code. The business owner, change history and performance targets are not documented in the code, and the demonstration data is historical Taiwanese credit-card data."
 }

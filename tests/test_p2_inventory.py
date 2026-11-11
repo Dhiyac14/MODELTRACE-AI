@@ -40,7 +40,7 @@ def test_tier_rule(materiality, complexity, tier):
 
 
 def test_seed_tiers_match_the_plan():
-    assert {r.model_id: r.risk_tier for r in seed_records()} == {"LR-R-001": 1, "GB-PY-002": 2, "RF-PY-003": 3}
+    assert {r.model_id: r.risk_tier for r in seed_records()} == {"legacy-r-logistic": 1, "python-gradient-boosting": 2, "python-random-forest": 3}
 
 
 def test_committed_inventory_matches_seed():
@@ -49,7 +49,7 @@ def test_committed_inventory_matches_seed():
 
 
 def test_stored_tier_cannot_override_the_rule():
-    data = get_record(seed_records(), "LR-R-001").model_dump()
+    data = get_record(seed_records(), "legacy-r-logistic").model_dump()
     data["risk_tier"] = 3
     assert InventoryRecord.model_validate(data).risk_tier == 1
 
@@ -64,31 +64,31 @@ def test_round_trip(tmp_path):
 
 def test_update_record_validates_and_recomputes():
     records = seed_records()
-    updated = update_record(records, "RF-PY-003", materiality="high", documentation_status="pending_review")
-    assert get_record(updated, "RF-PY-003").risk_tier == 1
-    assert get_record(records, "RF-PY-003").risk_tier == 3  # original list unchanged
+    updated = update_record(records, "python-random-forest", materiality="high", documentation_status="pending_review")
+    assert get_record(updated, "python-random-forest").risk_tier == 1
+    assert get_record(records, "python-random-forest").risk_tier == 3  # original list unchanged
     with pytest.raises(ValidationError):
-        update_record(records, "LR-R-001", documentation_status="done")
+        update_record(records, "legacy-r-logistic", documentation_status="done")
     with pytest.raises(ValueError, match="derived"):
-        update_record(records, "LR-R-001", risk_tier=3)
+        update_record(records, "legacy-r-logistic", risk_tier=3)
     with pytest.raises(KeyError):
         get_record(records, "XX-000")
 
 
 def test_rationale_template_without_llm():
-    text, source = draft_rationale(get_record(seed_records(), "GB-PY-002"))
+    text, source = draft_rationale(get_record(seed_records(), "python-gradient-boosting"))
     assert source == "rule_template" and text.startswith("Tier 2")
 
 
 def test_llm_rationale_kept_only_if_it_names_the_computed_tier():
-    lr = get_record(seed_records(), "LR-R-001")
+    lr = get_record(seed_records(), "legacy-r-logistic")
     assert draft_rationale(lr, OneShot("This is Tier 1 because materiality is high."))[1] == "llm_draft"
     assert draft_rationale(lr, OneShot("This should be Tier 2."))[1] == "rule_template"
     assert draft_rationale(lr, OneShot("High materiality model."))[1] == "rule_template"
 
 
 def test_replayed_rationale_is_accepted():
-    lr = get_record(seed_records(), "LR-R-001")
+    lr = get_record(seed_records(), "legacy-r-logistic")
     assert draft_rationale(lr, ReplayLLM(ROOT / "tests/fixtures/p2/replay_lr"))[1] == "llm_draft"
 
 

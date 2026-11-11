@@ -1,5 +1,5 @@
 {
-  "model_id": "LR-R-001",
+  "model_id": "legacy-r-logistic",
   "language": "R",
   "source_files": [
     "tests/fixtures/p2/legacy_lr_model.R",

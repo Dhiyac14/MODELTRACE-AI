@@ -7,7 +7,7 @@ Rules:
 - a stage can be submitted only when every earlier stage is approved and its evidence file exists;
 - approve / reject / request changes need a pending review and pass the separation-of-duties checks;
 - approval is refused if the evidence file changed after submission, and Redevelop can only be
-  approved when the parity report says ``"passed": true``;
+  approved when Person 1's parity report says ``r_vs_statsmodels.overall_pass`` is true;
 - reject needs a reopen by a risk manager before resubmission; request changes allows resubmission;
 - reopening a stage invalidates every later stage, which must then be reviewed again.
 """
@@ -22,7 +22,7 @@ from workflow.alerts import RULES as ALERT_RULES
 from workflow.alerts import STATUS_AFTER as ALERT_STATUS_AFTER
 from workflow.alerts import AlertReview, AlertReviewLog, alert_status, check_alert_action
 from workflow.approvals import DECISIONS, ApprovalLog, ApprovalRecord, User, acting_role, check_duties
-from workflow.artifacts import STAGE_EVIDENCE, Artifacts
+from workflow.artifacts import STAGE_EVIDENCE, Artifacts, parity_passed
 from workflow.audit import AuditLog
 from workflow.store import new_id
 
@@ -119,8 +119,7 @@ class Workflow:
                 if self.artifacts.sha256(kind, model_id) != submitted.evidence_sha256:
                     problems.append("The evidence file changed after it was submitted; it must be resubmitted.")
             if action == "approve" and stage == "redevelop":
-                parity = self.artifacts.load("parity", model_id) or {}
-                if parity.get("passed") is not True:
+                if not parity_passed(self.artifacts.load("parity", model_id)):
                     problems.append("Parity tests have not passed, so the migration cannot be approved.")
         elif action == "reopen" and status not in REOPENABLE:
             problems.append(f"{stage} is {status}; only an approved or rejected stage can be reopened.")

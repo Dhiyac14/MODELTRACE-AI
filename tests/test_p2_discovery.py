@@ -31,7 +31,7 @@ def at_repo_root(monkeypatch):
 
 @pytest.fixture
 def report() -> DiscoveryReport:
-    return run_discovery("LR-R-001", SOURCES, ReplayLLM(f"{FIX}/replay_lr"), f"{FIX}/lr_doc_outdated_dev.md")
+    return run_discovery("legacy-r-logistic", SOURCES, ReplayLLM(f"{FIX}/replay_lr"), f"{FIX}/lr_doc_outdated_dev.md")
 
 
 # --------------------------------------------------------------------------- end to end
@@ -86,13 +86,13 @@ def test_report_header(report):
 
 
 def test_without_document_there_are_no_discrepancies():
-    result = run_discovery("LR-R-001", SOURCES, ReplayLLM(f"{FIX}/replay_lr"))
+    result = run_discovery("legacy-r-logistic", SOURCES, ReplayLLM(f"{FIX}/replay_lr"))
     assert result.discrepancies == [] and result.legacy_document is None
 
 
 def test_saved_report_round_trips(tmp_path, report):
     path = save_report(report, tmp_path)
-    assert path.name == "LR-R-001_discovery.json"
+    assert path.name == "legacy-r-logistic_discovery.json"
     assert DiscoveryReport.model_validate_json(path.read_text()) == report
 
 

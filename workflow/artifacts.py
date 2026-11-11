@@ -1,7 +1,11 @@
-"""Where each stage's evidence lives (the interface contract with Person 1).
+"""Where each stage's evidence lives.
 
-Approval gates read live files only. Sample files are a labelled display fallback for the
-dashboard while Person 1's reports do not exist yet; they can never satisfy a gate.
+Person 2's agents write one file per model. Person 1's engine (``engine/pipeline.py`` on the
+``ml-engineering`` branch) writes one report per kind, for the migrated legacy model only; the other
+models have no Person 1 reports yet, so their Redevelop/Validate/Monitor evidence stays missing.
+
+Approval gates read live files only. Copies of Person 1's reports are a labelled display fallback
+for development on this branch; they can never satisfy a gate.
 """
 from __future__ import annotations
 
@@ -10,16 +14,19 @@ import json
 from pathlib import Path
 from typing import Any
 
-KINDS = {
+PERSON2_REPORTS = {
     "discovery": "reports/discovery/{model_id}_discovery.json",
     "model_card": "reports/documentation/{model_id}_model_card.json",
-    "parity": "reports/migration/{model_id}_parity.json",
-    "validation": "reports/validation/{model_id}_validation.json",
-    "discovery_score": "reports/validation/{model_id}_discovery_score.json",
-    "monitoring": "reports/monitoring/{model_id}_monitoring.json",
     "alerts": "reports/alerts/{model_id}_alerts.json",
 }
-PERSON1_KINDS = frozenset({"parity", "validation", "discovery_score", "monitoring"})
+PERSON1_MODEL = "legacy-r-logistic"
+PERSON1_REPORTS = {
+    "parity": "reports/migration/migration_results.json",
+    "validation": "reports/validation/validation_results.json",
+    "monitoring": "reports/monitoring/monitoring_results.json",
+    "risk_findings": "reports/risk_findings/risk_findings_results.json",
+}
+PYTHON_CANDIDATE_SOURCE = "engine/models.py"  # Person 1's Statsmodels candidate (train_statsmodels_logistic)
 STAGE_EVIDENCE = {
     "discover": "discovery",
     "document": "model_card",
@@ -27,7 +34,13 @@ STAGE_EVIDENCE = {
     "validate": "validation",
     "monitor": "monitoring",
 }
-SAMPLE_ROOT = Path("tests/fixtures/p2/sample_data")
+# Copies of Person 1's reports from ml-engineering @ fdad799, used only when the sample toggle is on.
+SAMPLE_ROOT = Path("tests/fixtures/p2/person1_reports")
+
+
+def parity_passed(report: dict[str, Any] | None) -> bool:
+    """Person 1's verdict on R glm vs Statsmodels parity (row alignment, MAE and max difference within tolerance)."""
+    return ((report or {}).get("r_vs_statsmodels") or {}).get("overall_pass") is True
 
 
 class Artifacts:
@@ -36,7 +49,11 @@ class Artifacts:
         self.sample_root = Path(sample_root) if sample_root else None
 
     def relpath(self, kind: str, model_id: str) -> str:
-        return KINDS[kind].format(model_id=model_id)
+        if kind in PERSON2_REPORTS:
+            return PERSON2_REPORTS[kind].format(model_id=model_id)
+        if model_id == PERSON1_MODEL:
+            return PERSON1_REPORTS[kind]
+        return f"reports/{kind}/{model_id}_{kind}.json"  # Person 1's pipeline does not cover this model yet
 
     def path(self, kind: str, model_id: str) -> Path:
         return self.root / self.relpath(kind, model_id)
@@ -48,17 +65,17 @@ class Artifacts:
         path = self.path(kind, model_id)
         return hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else ""
 
-    def load(self, kind: str, model_id: str) -> dict[str, Any] | None:
+    def load(self, kind: str, model_id: str) -> Any:
         """Live file only (what the approval gates use)."""
         path = self.path(kind, model_id)
         return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
-    def load_for_display(self, kind: str, model_id: str) -> tuple[dict[str, Any] | None, str | None, bool]:
-        """Return ``(data, path, is_sample)``; falls back to sample data for Person 1's reports if enabled."""
+    def load_for_display(self, kind: str, model_id: str) -> tuple[Any, str | None, bool]:
+        """Return ``(data, path, is_sample)``; falls back to the copies of Person 1's reports if enabled."""
         data = self.load(kind, model_id)
         if data is not None:
             return data, self.relpath(kind, model_id), False
-        if self.sample_root is not None and kind in PERSON1_KINDS:
+        if self.sample_root is not None and kind in PERSON1_REPORTS:
             sample = self.root / self.sample_root / self.relpath(kind, model_id)
             if sample.exists():
                 return json.loads(sample.read_text(encoding="utf-8")), sample.relative_to(self.root).as_posix(), True

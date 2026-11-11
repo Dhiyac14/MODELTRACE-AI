@@ -1,13 +1,16 @@
 [
   {
-    "model_id": "LR-R-001",
-    "name": "Credit default logistic regression (legacy)",
+    "model_id": "legacy-r-logistic",
+    "name": "Legacy R Logistic Regression",
     "business_purpose": "Estimates the probability that a credit-card customer defaults next month; used in credit decisions.",
     "version": "1.0.0",
     "algorithm": "Logistic regression (glm, binomial family)",
     "language": "R",
-    "source_files": [],
-    "legacy_document": "legacy_docs/lr_model_doc_outdated.md",
+    "source_files": [
+      "models/legacy_model.R",
+      "engine/data.py"
+    ],
+    "legacy_document": "models/outdated_model_document.md",
     "lifecycle_stage": "discover",
     "documentation_status": "not_started",
     "migration_status": "not_started",
@@ -21,18 +24,21 @@
     "tier_rationale": "Tier 1: materiality is high (drives credit decisions for customers) and complexity is low (linear model with a small set of documented predictors). Rule: Tier 1 if materiality is high; Tier 2 if materiality is medium or complexity is high; otherwise Tier 3.",
     "tier_rationale_source": "rule_template",
     "tier_status": "not_started",
-    "updated_at": "2026-11-11T21:57:42+00:00",
+    "updated_at": "2026-11-11T23:29:30+00:00",
     "risk_tier": 1
   },
   {
-    "model_id": "GB-PY-002",
-    "name": "Credit default gradient boosting (challenger)",
+    "model_id": "python-gradient-boosting",
+    "name": "Python Gradient Boosting",
     "business_purpose": "Challenger model compared against the production default model; informs but does not drive decisions.",
     "version": "1.0.0",
     "algorithm": "Gradient Boosting classifier (scikit-learn)",
     "language": "Python",
-    "source_files": [],
-    "legacy_document": "legacy_docs/gb_model_doc_current.md",
+    "source_files": [
+      "engine/models.py",
+      "engine/data.py"
+    ],
+    "legacy_document": null,
     "lifecycle_stage": "discover",
     "documentation_status": "not_started",
     "migration_status": "not_applicable",
@@ -46,17 +52,20 @@
     "tier_rationale": "Tier 2: materiality is medium (informs model review but does not drive decisions) and complexity is high (boosted tree ensemble that needs SHAP to explain). Rule: Tier 1 if materiality is high; Tier 2 if materiality is medium or complexity is high; otherwise Tier 3.",
     "tier_rationale_source": "rule_template",
     "tier_status": "not_started",
-    "updated_at": "2026-11-11T21:57:42+00:00",
+    "updated_at": "2026-11-11T23:29:30+00:00",
     "risk_tier": 2
   },
   {
-    "model_id": "RF-PY-003",
-    "name": "Credit default random forest (benchmark)",
+    "model_id": "python-random-forest",
+    "name": "Python Random Forest",
     "business_purpose": "Benchmark model for internal analysis; not used in decisions.",
     "version": "1.0.0",
     "algorithm": "Random Forest classifier (scikit-learn)",
     "language": "Python",
-    "source_files": [],
+    "source_files": [
+      "engine/models.py",
+      "engine/data.py"
+    ],
     "legacy_document": null,
     "lifecycle_stage": "discover",
     "documentation_status": "not_started",
@@ -71,7 +80,7 @@
     "tier_rationale": "Tier 3: materiality is low (internal benchmark only, not used in decisions) and complexity is medium (bagged tree ensemble with standard settings). Rule: Tier 1 if materiality is high; Tier 2 if materiality is medium or complexity is high; otherwise Tier 3.",
     "tier_rationale_source": "rule_template",
     "tier_status": "not_started",
-    "updated_at": "2026-11-11T21:57:42+00:00",
+    "updated_at": "2026-11-11T23:29:30+00:00",
     "risk_tier": 3
   }
 ]
