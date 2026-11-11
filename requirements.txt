@@ -1,0 +1,17 @@
+# Shared (plan step 1). Person 2 Day 1 needs the first block only.
+openai>=1.40
+pydantic>=2.7
+python-dotenv>=1.0
+pytest>=8
+
+# Person 1 engine and Day 2 application
+pandas
+numpy
+scikit-learn
+statsmodels
+fairlearn
+shap
+ucimlrepo
+joblib
+streamlit
+plotly
