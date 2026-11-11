@@ -180,6 +180,9 @@ same way. Install both dependency lists: `pip install -e ".[dev,validation,stats
 ## 10. Verification
 - 132 tests on this branch, including the compatibility tests for Person 1's interfaces and reports;
   148 tests on the trial merge.
-- Live Claude Opus 5.5 run on the development fixture: $0.26 for seven calls.
+- Live Claude Opus 5.5 runs: development fixture $0.26 (seven calls); Person 1's real R model, `engine/data.py`
+  and outdated document $0.26 (four calls). The committed discovery report and model card come from the second
+  run: no false alarm on the 0.5 threshold, the missing feature list, split and preprocessing reported, and
+  every evidence section of the card filled from Person 1's reports with no grounding warnings.
 - Browser walkthrough: submit and approve Discover with two users, run the Monitoring Agent, acknowledge an
   alert, confirm the audit chain.
