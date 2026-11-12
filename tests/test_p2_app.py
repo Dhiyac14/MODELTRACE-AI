@@ -8,7 +8,7 @@ from streamlit.testing.v1 import AppTest
 
 from agents.llm_migration_agent import save_migration_report
 from inventory.registry import save_inventory, seed_records
-from llm.schemas import CandidateParity, MigrationAttempt, MigrationReport
+from llm.schemas import CandidateParity, DiscoveryReport, MigrationAttempt, MigrationReport
 from workflow.approvals import load_users
 from workflow.state_machine import Workflow
 
@@ -121,3 +121,24 @@ def test_documentation_agent_runs_from_the_ui(data_root):
     assert card["generated_by"] == "Documentation Agent (template, no LLM)"
     events = json.loads((data_root / "governance/audit_log.json").read_text())
     assert events[-1]["actor"] == "agent:documentation" and events[-1]["details"]["triggered_by"] == "dev.alex"
+
+
+def test_discovery_page_shows_the_discrepancy_score(data_root):
+    from agents.discovery_agent import score_discovery
+    report = DiscoveryReport.model_validate_json((data_root / "reports/discovery/legacy-r-logistic_discovery.json").read_text())
+    key = {"discrepancies": {"legacy-r-logistic": [  # fabricated; the real key stays with Person 1
+        {"id": "K-1", "field": "input_features", "type": "omission", "description": ""},
+        {"id": "K-2", "field": "decision_threshold", "type": "contradiction", "description": ""}]}}
+    score_path = data_root / "reports/discovery/legacy-r-logistic_score.json"
+    score_path.write_text(json.dumps(score_discovery(report, key)))
+
+    at = app("Discovery")
+    assert not at.exception
+    metrics = {m.label: m.value for m in at.metric}
+    assert metrics["Discrepancy recall"] == "0.50" and metrics["Detected without evidence"] == "0"
+    rows = next(d.value for d in at.dataframe if "Score" in d.value.columns).set_index("ID")
+    assert rows.loc["D-001", "Score"] == "detected" and rows.loc["D-001", "Evidence check"] == "verified"
+    assert not any("earlier Discovery report" in w.value for w in at.warning)
+
+    score_path.write_text(json.dumps({**json.loads(score_path.read_text()), "report_generated_at": "2026-01-01T00:00:00+00:00"}))
+    assert any("earlier Discovery report" in w.value for w in app("Discovery").warning)

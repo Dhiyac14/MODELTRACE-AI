@@ -97,6 +97,11 @@ def table(rows: list[dict] | pd.DataFrame) -> None:
     st.dataframe(pd.DataFrame(rows) if isinstance(rows, list) else rows, hide_index=True)
 
 
+def rate(value: float | None) -> str:
+    """A score ratio; None when there was nothing to divide by (no expected or no scored findings)."""
+    return "n/a" if value is None else f"{value:.2f}"
+
+
 def show_value(value: Any) -> str:
     """One text column: Arrow cannot hold a mix of floats, booleans and strings."""
     if value is None:
@@ -271,19 +276,41 @@ def page_discovery(model_id: str) -> None:
                 st.markdown("**Missing from the code:** " + "; ".join(report.metadata.missing_information))
         with tabs[1]:
             score = ARTIFACTS.load("discovery_score", model_id)
+            scored = {}
             if score:
                 cols = st.columns(3)
-                cols[0].metric("Recall vs answer key", f"{score['recall']:.2f}")
-                cols[1].metric("Precision vs answer key", f"{score['precision']:.2f}")
-                cols[2].metric("Missed", len(score.get("missed", [])))
+                cols[0].metric("Fact recall vs answer key", f"{score['recall']:.2f}")
+                cols[1].metric("Fact precision vs answer key", f"{score['precision']:.2f}")
+                cols[2].metric("Facts missed", len(score.get("missed", [])))
                 st.caption(f"Scored by Person 1 at {score.get('scored_at')}; missed: {', '.join(score.get('missed', [])) or 'none'}.")
+                if score.get("report_generated_at") != report.generated_at:
+                    st.warning("This score is for an earlier Discovery report; ask Person 1 to score the current one.")
+                disc = score.get("discrepancies")
+                if disc:
+                    counts = disc["counts"]
+                    cols = st.columns(4)
+                    cols[0].metric("Discrepancy recall", rate(disc["recall"]))
+                    cols[1].metric("Discrepancy precision", rate(disc["precision"]))
+                    cols[2].metric("Unsupported", counts["unsupported"], help="Reported discrepancies that match no expected one")
+                    cols[3].metric("Detected without evidence", counts["detected_without_evidence"],
+                                   help="Matched an expected discrepancy, but the code evidence did not resolve")
+                    missed = [f"{e['id']} ({e['field']}, {e['type']})" for e in disc["key_entries"] if e["outcome"] == "missed"]
+                    st.caption(f"Scored types: {', '.join(disc['scored_types'])}. Recall with evidence: "
+                               f"{rate(disc['recall_with_evidence'])}. Misclassified: {counts['misclassified']}. "
+                               f"Missed: {', '.join(missed) or 'none'}. Other types, reported separately: {counts['not_scored']}.")
+                    scored = {f["discrepancy_id"]: f for f in disc["findings"]}
             else:
                 st.caption("Not scored yet. Person 1 holds the answer key and runs: python -m agents.discovery_agent "
                            f"--model-id {model_id} --score models/discovery_answer_key.json")
-            table([{"ID": d.discrepancy_id, "Field": d.field, "Type": d.type, "Documented claim": d.documented_claim,
-                    "Suggested correction": d.suggested_correction, "Detected by": d.detected_by,
-                    "Code evidence": "; ".join(f"{r.file}:L{r.line_start}" for r in d.code_evidence)}
-                   for d in report.discrepancies])
+            rows = [{"ID": d.discrepancy_id, "Field": d.field, "Type": d.type, "Documented claim": d.documented_claim,
+                     "Suggested correction": d.suggested_correction, "Detected by": d.detected_by,
+                     "Code evidence": "; ".join(f"{r.file}:L{r.line_start}" for r in d.code_evidence)}
+                    for d in report.discrepancies]
+            if scored:
+                for row in rows:
+                    row["Score"] = scored.get(row["ID"], {}).get("outcome", "not in score")
+                    row["Evidence check"] = scored.get(row["ID"], {}).get("evidence", "")
+            table(rows)
         with tabs[2]:
             for file in report.source_files:
                 with st.expander(file, expanded=False):
