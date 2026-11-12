@@ -38,8 +38,10 @@ Statsmodels `Logit`, and compares predictions in
 uses the downloaded UCI workbook and requires `Rscript` and the Python
 dependencies to be installed.
 
-`models/discovery_answer_key.json` is intentionally local-only and ignored by
-Git. Do not share it with the Discovery Agent operator or Person 2.
+The Discovery answer key is private: keep it outside the repository and point
+`MODELTRACE_ANSWER_KEY` at it. The scorer refuses a key path inside any git
+repository; the pipeline then warns and runs Discovery unscored. Do not share it
+with the Discovery Agent operator or Person 2.
 
 ## Person 2 agents, governance and dashboard
 
@@ -85,11 +87,23 @@ python -m agents.monitoring_agent --model-id legacy-r-logistic
 The LLM Migration Agent needs Person 1's shared split and R predictions (`python -m engine.pipeline`). Its
 report is evidence for the reviewer; the Redevelop gate still reads Person 1's parity report.
 
-Person 1 scores the Discovery report with the local answer key; the dashboard shows the result:
+Person 1 scores the Discovery report with the private answer key; the dashboard shows the result:
 
 ```bash
-python -m agents.discovery_agent --model-id legacy-r-logistic --score models/discovery_answer_key.json
+export MODELTRACE_ANSWER_KEY=~/modeltrace-private/discovery_answer_key.json  # outside the repository
+python -m agents.discovery_agent --model-id legacy-r-logistic --score "$MODELTRACE_ANSWER_KEY"
+python -m agents.discovery_agent --model-id python-gradient-boosting --score "$MODELTRACE_ANSWER_KEY"
 ```
+
+The key holds `expected_*` metadata values and a `discrepancies` mapping from model id to a list of
+`{id, field, type, description}`. Top-level `expected_*` values belong to the legacy R model; other models are
+fact-scored only from their own entry under `metadata` (model id to `expected_*` values), so Gradient Boosting
+is never scored against the R facts. Discrepancies match one-to-one on field and type; the same field with another
+type is `misclassified`, and a finding that matches nothing is `unsupported`. Contradictions and unverifiable
+claims are always scored; omissions only when the key lists one. Code evidence counts only when each quote is
+still at its cited lines in the model's source files (as registered in the inventory) and covers most of those
+lines. The score (`reports/discovery/<model_id>_score.json`) lists key entries by id and outcome only, never their
+field, type or description, so it can be committed without revealing what was missed.
 
 ### Optional: MLflow tracking
 

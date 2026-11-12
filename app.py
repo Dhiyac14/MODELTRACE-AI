@@ -97,6 +97,11 @@ def table(rows: list[dict] | pd.DataFrame) -> None:
     st.dataframe(pd.DataFrame(rows) if isinstance(rows, list) else rows, hide_index=True)
 
 
+def rate(value: float | None) -> str:
+    """A score ratio; None when there was nothing to divide by (no expected or no scored findings)."""
+    return "n/a" if value is None else f"{value:.2f}"
+
+
 def show_value(value: Any) -> str:
     """One text column: Arrow cannot hold a mix of floats, booleans and strings."""
     if value is None:
@@ -192,6 +197,49 @@ def page_overview() -> None:
     st.caption("Counts use live report files only; sample data is never counted here.")
 
 
+def discovery_score_panel(model_id: str, score: dict[str, Any], report: DiscoveryReport) -> dict[str, dict]:
+    """Show Person 1's score of the Discovery report. Returns the per-discrepancy results that label the table rows,
+    or {} when no rows should be labelled."""
+    scored_at = score.get("scored_at")
+    if "metadata_scored" in score:
+        metadata_scored = score["metadata_scored"]
+    elif model_id == PERSON1_MODEL:
+        metadata_scored = True  # files from before per-model metadata were scored against this model's facts
+    else:
+        metadata_scored = False
+        st.warning("This score file predates per-model metadata and compared this model with the R model's facts, "
+                   "so its fact scores are hidden. Ask Person 1 to re-score it.")
+    if metadata_scored:
+        cols = st.columns(3)
+        cols[0].metric("Fact recall vs answer key", rate(score["recall"]))
+        cols[1].metric("Fact precision vs answer key", rate(score["precision"]))
+        cols[2].metric("Facts missed", len(score.get("missed", [])))
+        st.caption(f"Scored by Person 1 at {scored_at}; missed: {', '.join(score.get('missed', [])) or 'none'}.")
+    else:
+        st.caption(f"Scored by Person 1 at {scored_at}. Facts not scored for this model.")
+    stale = score.get("report_generated_at") != report.generated_at
+    if stale:  # discrepancy ids are renumbered on every run, so per-row results would land on the wrong rows
+        st.warning("This score is for an earlier Discovery report, so per-row results are hidden; "
+                   "ask Person 1 to score the current one.")
+    disc = score.get("discrepancies")
+    if disc is None:
+        st.caption("Discrepancies not scored: the answer key has no list for this model.")
+        return {}
+    counts = disc["counts"]
+    cols = st.columns(4)
+    cols[0].metric("Discrepancy recall", rate(disc["recall"]))
+    cols[1].metric("Discrepancy precision", rate(disc["precision"]))
+    cols[2].metric("Unsupported", counts["unsupported"], help="Reported discrepancies that match no expected one")
+    cols[3].metric("Detected without evidence", counts["detected_without_evidence"],
+                   help="Matched an expected discrepancy, but the code evidence did not resolve")
+    missed = [e["id"] for e in disc["key_entries"] if e["outcome"] == "missed"]
+    st.caption(f"Scored types: {', '.join(disc['scored_types'])}. Recall with evidence: "
+               f"{rate(disc['recall_with_evidence'])}. Misclassified: {counts['misclassified']}. "
+               f"Missed key entries: {', '.join(missed) or 'none'} (the private key says what they are). "
+               f"Other types, reported separately: {counts['not_scored']}.")
+    return {} if stale else {f["discrepancy_id"]: f for f in disc["findings"]}
+
+
 def page_discovery(model_id: str) -> None:
     record = WF.record(model_id)
     st.header(f"Discovery · {record.name}")
@@ -271,19 +319,25 @@ def page_discovery(model_id: str) -> None:
                 st.markdown("**Missing from the code:** " + "; ".join(report.metadata.missing_information))
         with tabs[1]:
             score = ARTIFACTS.load("discovery_score", model_id)
+            scored = {}
             if score:
-                cols = st.columns(3)
-                cols[0].metric("Recall vs answer key", f"{score['recall']:.2f}")
-                cols[1].metric("Precision vs answer key", f"{score['precision']:.2f}")
-                cols[2].metric("Missed", len(score.get("missed", [])))
-                st.caption(f"Scored by Person 1 at {score.get('scored_at')}; missed: {', '.join(score.get('missed', [])) or 'none'}.")
+                try:
+                    scored = discovery_score_panel(model_id, score, report)
+                except (KeyError, TypeError, AttributeError):  # a truncated or hand-edited file must not break the page
+                    st.warning("The score file is incomplete; ask Person 1 to re-score this model.")
             else:
                 st.caption("Not scored yet. Person 1 holds the answer key and runs: python -m agents.discovery_agent "
-                           f"--model-id {model_id} --score models/discovery_answer_key.json")
-            table([{"ID": d.discrepancy_id, "Field": d.field, "Type": d.type, "Documented claim": d.documented_claim,
-                    "Suggested correction": d.suggested_correction, "Detected by": d.detected_by,
-                    "Code evidence": "; ".join(f"{r.file}:L{r.line_start}" for r in d.code_evidence)}
-                   for d in report.discrepancies])
+                           f"--model-id {model_id} --score \"$MODELTRACE_ANSWER_KEY\" (a path outside the repository)")
+            rows = []
+            for d in report.discrepancies:
+                row = {"ID": d.discrepancy_id, "Field": d.field, "Type": d.type}
+                if scored:  # next to the type, so the outcome is visible without scrolling
+                    result = scored.get(d.discrepancy_id, {})
+                    row |= {"Score": result.get("outcome", "not in score"), "Evidence check": result.get("evidence", "")}
+                rows.append(row | {"Documented claim": d.documented_claim, "Suggested correction": d.suggested_correction,
+                                   "Detected by": d.detected_by,
+                                   "Code evidence": "; ".join(f"{r.file}:L{r.line_start}" for r in d.code_evidence)})
+            table(rows)
         with tabs[2]:
             for file in report.source_files:
                 with st.expander(file, expanded=False):

@@ -8,7 +8,7 @@ from streamlit.testing.v1 import AppTest
 
 from agents.llm_migration_agent import save_migration_report
 from inventory.registry import save_inventory, seed_records
-from llm.schemas import CandidateParity, MigrationAttempt, MigrationReport
+from llm.schemas import CandidateParity, DiscoveryReport, MigrationAttempt, MigrationReport
 from workflow.approvals import load_users
 from workflow.state_machine import Workflow
 
@@ -121,3 +121,67 @@ def test_documentation_agent_runs_from_the_ui(data_root):
     assert card["generated_by"] == "Documentation Agent (template, no LLM)"
     events = json.loads((data_root / "governance/audit_log.json").read_text())
     assert events[-1]["actor"] == "agent:documentation" and events[-1]["details"]["triggered_by"] == "dev.alex"
+
+
+def test_discovery_page_shows_the_discrepancy_score(data_root):
+    from agents.discovery_agent import score_discovery
+    report = DiscoveryReport.model_validate_json((data_root / "reports/discovery/legacy-r-logistic_discovery.json").read_text())
+    key = {"expected_link": "logit", "expected_target": "not_target", "expected_owner": "x",  # fabricated
+           "discrepancies": {"legacy-r-logistic": [
+               {"id": "K-1", "field": "input_features", "type": "omission", "description": ""},
+               {"id": "K-2", "field": "decision_threshold", "type": "contradiction", "description": ""}]}}
+    score_path = data_root / "reports/discovery/legacy-r-logistic_score.json"
+    score_path.write_text(json.dumps(score_discovery(report, key)))
+
+    at = app("Discovery")
+    assert not at.exception
+    metrics = {m.label: m.value for m in at.metric}
+    assert (metrics["Fact recall vs answer key"], metrics["Fact precision vs answer key"]) == ("0.33", "0.50")
+    assert (metrics["Discrepancy recall"], metrics["Discrepancy precision"]) == ("0.50", "0.11")  # 1 of 2, 1 of 9
+    assert (metrics["Unsupported"], metrics["Detected without evidence"]) == ("8", "0")
+    assert any("Missed key entries: K-2 (" in c.value for c in at.caption)
+    rows = next(d.value for d in at.dataframe if "Score" in d.value.columns).set_index("ID")
+    assert rows.loc["D-001", "Score"] == "detected" and rows.loc["D-001", "Evidence check"] == "verified"
+    assert not any("earlier Discovery report" in w.value for w in at.warning)
+
+    score_path.write_text(json.dumps({**json.loads(score_path.read_text()), "report_generated_at": "2026-01-01T00:00:00+00:00"}))
+    stale = app("Discovery")
+    assert any("per-row results are hidden" in w.value for w in stale.warning)
+    assert not any("Score" in d.value.columns for d in stale.dataframe)  # ids may now name other discrepancies
+
+
+def test_gradient_boosting_score_without_expected_metadata(data_root):
+    from agents.discovery_agent import score_discovery
+    rel = "reports/discovery/python-gradient-boosting_discovery.json"
+    shutil.copy(ROOT / rel, data_root / rel)
+    report = DiscoveryReport.model_validate_json((data_root / rel).read_text())
+    key = {"expected_link": "logit", "discrepancies": {"python-gradient-boosting": []}}  # fabricated control key
+    (data_root / "reports/discovery/python-gradient-boosting_score.json").write_text(json.dumps(score_discovery(report, key)))
+
+    at = app("Discovery", model="python-gradient-boosting")
+    assert not at.exception
+    assert any("Facts not scored" in c.value for c in at.caption)
+    metrics = {m.label: m.value for m in at.metric}
+    assert "Fact recall vs answer key" not in metrics and metrics["Discrepancy precision"] == "n/a"
+
+
+
+def test_old_and_incomplete_score_files(data_root):
+    rel = "reports/discovery/python-gradient-boosting_discovery.json"
+    shutil.copy(ROOT / rel, data_root / rel)
+    old = {"model_id": "x", "recall": 0.25, "precision": 0.5, "matched": [], "missed": ["expected_link"],  # pre-PR format
+           "unmapped_keys": [], "report_generated_at": "2026-01-01T00:00:00+00:00", "scored_at": "2026-01-02"}
+    for model in ("legacy-r-logistic", "python-gradient-boosting"):
+        (data_root / f"reports/discovery/{model}_score.json").write_text(json.dumps(old))
+    r_page = app("Discovery")
+    assert not r_page.exception and {m.label: m.value for m in r_page.metric}["Fact recall vs answer key"] == "0.25"
+    gb_page = app("Discovery", model="python-gradient-boosting")  # an old file compared GB with the R facts
+    assert not gb_page.exception and "Fact recall vs answer key" not in {m.label for m in gb_page.metric}
+    assert any("predates per-model metadata" in w.value for w in gb_page.warning)
+    assert any("Discrepancies not scored" in c.value for c in gb_page.caption)
+
+    broken = {**old, "metadata_scored": True, "discrepancies": {"recall": 0.5}}  # truncated by hand
+    (data_root / "reports/discovery/legacy-r-logistic_score.json").write_text(json.dumps(broken))
+    page = app("Discovery")
+    assert not page.exception and any("score file is incomplete" in w.value for w in page.warning)
+    assert any("legacy_model.R" in e.label for e in page.expander)  # the later tabs still render

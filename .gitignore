@@ -20,6 +20,11 @@ data/provenance.json
 data/processed/
 models/artifacts/
 models/discovery_answer_key.json
+# The real answer key lives outside the repository; these catch a copy left here by mistake,
+# including editor backups and swap files (key.json~, .bak, .swp).
+*answer_key*
+*answer-key*
+*answerkey*
 reports/migration/shared_data/
 reports/migration/r_predictions.csv
 # Optional MLflow export (governance/mlflow_export.py)
