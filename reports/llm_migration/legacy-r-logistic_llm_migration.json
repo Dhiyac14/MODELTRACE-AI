@@ -1,0 +1,93 @@
+{
+  "model_id": "legacy-r-logistic",
+  "r_source": "models/legacy_model.R",
+  "train_csv": "data/processed/train.csv",
+  "test_csv": "data/processed/test.csv",
+  "r_predictions_csv": "reports/migration/r_predictions.csv",
+  "tolerance": 0.00001,
+  "isolation": "separate process, environment without credentials, 120 s timeout, own temporary folder; macOS sandbox: no network, no .env reads, writes only inside that folder",
+  "attempts": [
+    {
+      "round": 1,
+      "python_code": "\"\"\"Python port of models/legacy_model.R (logistic regression via statsmodels GLM).\n\nR reference:\n    feature_names <- setdiff(names(train), c(\"row_id\", \"target\", \"SEX\", \"AGE\", \"ID\"))\n    formula <- reformulate(feature_names, response = \"target\")\n    legacy_model <- glm(formula, data = train, family = binomial(link = \"logit\"))\n    probability <- predict(legacy_model, newdata = test, type = \"response\")\n    prediction <- as.integer(probability >= 0.5)\n\"\"\"\n\nfrom typing import List, Optional, Tuple\n\nimport numpy as np\nimport pandas as pd\nimport statsmodels.api as sm\n\nEXCLUDED_COLUMNS = (\"row_id\", \"target\", \"SEX\", \"AGE\", \"ID\")\nRESPONSE = \"target\"\nTHRESHOLD = 0.5\n\n\nclass LegacyModel:\n    \"\"\"Container for the fitted GLM plus the design specification.\"\"\"\n\n    def __init__(self, result, specs, exog_names):\n        self.result = result\n        self.specs = specs  # list of (column_name, levels or None)\n        self.exog_names = exog_names\n        self.params = result.params\n\n    def summary(self):\n        return self.result.summary()\n\n\ndef _feature_names(train_df: pd.DataFrame) -> List[str]:\n    # setdiff() keeps the original column order and removes duplicates.\n    seen = []\n    for name in train_df.columns:\n        if name not in EXCLUDED_COLUMNS and name not in seen:\n            seen.append(name)\n    return seen\n\n\ndef _is_categorical(series: pd.Series) -> bool:\n    # Numeric and logical columns enter the model as-is; character columns\n    # are turned into factors by R's model.frame.\n    return not (pd.api.types.is_numeric_dtype(series) or pd.api.types.is_bool_dtype(series))\n\n\ndef _design(df: pd.DataFrame, specs: List[Tuple[str, Optional[List[str]]]]) -> pd.DataFrame:\n    n = len(df)\n    cols = {\"(Intercept)\": np.ones(n, dtype=float)}\n    for name, levels in specs:\n        if levels is None:\n            cols[name] = pd.to_numeric(df[name], errors=\"coerce\").astype(float).to_numpy()\n        else:\n            values = df[name]\n            missing = values.isna().to_numpy()\n            str_values = values.astype(str)\n            unseen = set(str_values[~missing]) - set(levels)\n            if unseen:\n                raise ValueError(\n                    \"factor %s has new levels %s\" % (name, \", \".join(sorted(unseen)))\n                )\n            for level in levels[1:]:\n                col = (str_values == level).astype(float).to_numpy()\n                col[missing] = np.nan\n                cols[name + level] = col\n    return pd.DataFrame(cols, index=df.index)\n\n\ndef _response(y: pd.Series) -> np.ndarray:\n    if pd.api.types.is_bool_dtype(y):\n        return y.astype(float).to_numpy()\n    if pd.api.types.is_numeric_dtype(y):\n        return y.astype(float).to_numpy()\n    # Factor response: first (sorted) level is failure, all others success.\n    levels = sorted(y.astype(str).unique())\n    return (y.astype(str) != levels[0]).astype(float).to_numpy()\n\n\ndef fit(train_df: pd.DataFrame) -> LegacyModel:\n    if RESPONSE not in train_df.columns:\n        raise ValueError(\"Train data must contain target\")\n    features = _feature_names(train_df)\n\n    # na.action = na.omit: drop rows with NA in any model variable.\n    used = [RESPONSE] + features\n    complete = train_df.loc[train_df[used].notna().all(axis=1)]\n\n    specs: List[Tuple[str, Optional[List[str]]]] = []\n    for name in features:\n        if _is_categorical(complete[name]):\n            levels = sorted(complete[name].astype(str).unique())\n            specs.append((name, levels))\n        else:\n            specs.append((name, None))\n\n    X = _design(complete, specs)\n    y = _response(complete[RESPONSE])\n    model = sm.GLM(y, X, family=sm.families.Binomial(link=sm.families.links.Logit()))\n    result = model.fit(method=\"IRLS\")\n    return LegacyModel(result, specs, list(X.columns))\n\n\ndef predict_proba(model: LegacyModel, df: pd.DataFrame) -> np.ndarray:\n    X = _design(df, model.specs)[model.exog_names].to_numpy(dtype=float)\n    params = np.asarray(model.params, dtype=float)\n    eta = X @ params  # rows with missing predictors give NaN, like R's NA\n    with np.errstate(over=\"ignore\", invalid=\"ignore\"):\n        prob = 1.0 / (1.0 + np.exp(-eta))\n    return np.asarray(prob, dtype=float).reshape(-1)\n\n\ndef classify(p) -> np.ndarray:\n    p = np.asarray(p, dtype=float).reshape(-1)\n    return (p >= THRESHOLD).astype(int)\n",
+      "code_sha256": "de97ef5aa2d9807d55cb52d9f3d69de0abb06e8c8d37507c355d73fc10d70b79",
+      "static_problems": [],
+      "run_error": null,
+      "parity": {
+        "row_alignment_verified": true,
+        "n_rows": 6000,
+        "mae": 9.442951737853535e-9,
+        "max_probability_difference": 3.646100487919579e-7,
+        "label_agreement": 1.0,
+        "label_disagreements": 0,
+        "tolerance": 0.00001,
+        "mae_pass": true,
+        "max_difference_pass": true,
+        "overall_pass": true
+      },
+      "passed": true
+    }
+  ],
+  "passed": true,
+  "candidate_path": "reports/llm_migration/legacy-r-logistic_candidate.py",
+  "explanation": "The R script fits glm(target ~ <all train columns except row_id, target, SEX, AGE, ID>) with a binomial logit family and an intercept, predicts response-scale probabilities on test data and labels them with probability >= 0.5. The Python module reproduces this: fit() selects the same feature columns in the same order, drops incomplete rows (R's default na.omit), builds a design matrix with an explicit '(Intercept)' column, numeric/logical columns as-is and character columns as treatment-coded dummies (first sorted level as reference, like R factors), and fits statsmodels GLM with Binomial(Logit) by IRLS. predict_proba() rebuilds the same design for new data and applies the inverse logit to X·beta; classify() applies the >= 0.5 threshold.",
+  "assumptions": [
+    "The target column is coded 0/1 (numeric or logical); if it is character, the first alphabetically sorted level is treated as failure, as R does for factor responses.",
+    "Character columns are converted to factors with alphabetically sorted levels (Python sort order, which may differ from R's locale collation for mixed case/special characters), using treatment contrasts with the first level as reference; levels are taken from complete-case training rows.",
+    "Numeric and boolean columns enter linearly with no transformations, matching the formula built by reformulate().",
+    "Rows with missing values in the response or any feature are dropped before fitting (glm default na.action = na.omit).",
+    "Test rows with missing predictor values get NaN probability (R returns NA); classify() maps NaN to 0 since the output must be a 0/1 integer array, whereas R would produce NA.",
+    "Unseen factor levels in new data raise an error, mirroring R's 'factor has new levels' error.",
+    "The design matrix is full rank; R would drop aliased columns (NA coefficients) while statsmodels would use a pseudo-inverse.",
+    "Columns named row_id, target, SEX, AGE and ID are excluded exactly by name (case-sensitive); duplicate column names are not expected.",
+    "Convergence criteria of statsmodels IRLS differ slightly from R's glm.control (epsilon 1e-8, maxit 25), giving coefficients equal to within numerical tolerance."
+  ],
+  "term_mapping": [
+    {
+      "r_term": "target",
+      "python_term": "target",
+      "note": "Response variable, 0/1 outcome passed as endog to sm.GLM."
+    },
+    {
+      "r_term": "feature_names",
+      "python_term": "_feature_names(train_df)",
+      "note": "All train columns except row_id, target, SEX, AGE, ID, in original order; each becomes a linear term (character columns expand to treatment dummies named column+level)."
+    },
+    {
+      "r_term": "setdiff(names(train), c(\"row_id\", \"target\", \"SEX\", \"AGE\", \"ID\"))",
+      "python_term": "EXCLUDED_COLUMNS filter in _feature_names",
+      "note": "Order-preserving set difference."
+    },
+    {
+      "r_term": "reformulate(feature_names, response = \"target\")",
+      "python_term": "_design(...) with explicit '(Intercept)' column",
+      "note": "Additive main-effects formula with intercept."
+    },
+    {
+      "r_term": "(Intercept)",
+      "python_term": "(Intercept)",
+      "note": "Implicit R intercept added as a column of ones."
+    },
+    {
+      "r_term": "binomial(link = \"logit\")",
+      "python_term": "sm.families.Binomial(link=sm.families.links.Logit())",
+      "note": "Same family and link, fitted by IRLS."
+    },
+    {
+      "r_term": "predict(legacy_model, newdata = test, type = \"response\")",
+      "python_term": "predict_proba(model, df)",
+      "note": "Inverse logit of the linear predictor."
+    },
+    {
+      "r_term": "as.integer(probability >= 0.5)",
+      "python_term": "classify(p)",
+      "note": "Threshold 0.5, inclusive."
+    }
+  ],
+  "warnings": [
+    "term_mapping: R term '(Intercept)' does not appear in models/legacy_model.R."
+  ],
+  "llm_model": "claude-opus-5-5",
+  "generated_at": "2026-11-12T12:32:40+00:00",
+  "review_status": "pending_human_review"
+}
