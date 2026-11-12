@@ -263,20 +263,21 @@ def generate_agent_reports(
     monitoring: dict,
 ) -> None:
     """Persist deterministic agent envelopes over the latest measured artifacts."""
-    from agents.discovery_agent import DiscoveryAgent
+    from agents.discovery_agent import DiscoveryAgent, private_key_path
     from agents.documentation_agent import DocumentationAgent
     from agents.migration_agent import MigrationAgent
     from agents.monitoring_agent import MonitoringAgent
     from agents.validation_agent import ValidationAgent
 
     source = Path("models") / "legacy_model.R"
-    # The answer key is git-ignored and held only by Person 1; without it Discovery runs unscored.
-    answer_key = Path("models") / "discovery_answer_key.json"
+    # The private answer key lives outside the repository; MODELTRACE_ANSWER_KEY points at it.
+    # Without it Discovery runs unscored.
+    key_path = os.environ.get("MODELTRACE_ANSWER_KEY")
     outputs = {
         "discovery": DiscoveryAgent().run(
             source,
             document=Path("models") / "outdated_model_document.md",
-            answer_key=answer_key if answer_key.exists() else None,
+            answer_key=private_key_path(key_path) if key_path else None,
         ).to_dict(),
         "documentation": DocumentationAgent().run(Path("models") / "outdated_model_document.md").to_dict(),
         "migration_agent": MigrationAgent().run(source).to_dict(),

@@ -207,10 +207,21 @@ def test_agent_reports_run_with_or_without_the_answer_key(tmp_path, monkeypatch,
     models.mkdir()
     for name in ("legacy_model.R", "outdated_model_document.md"):
         (models / name).write_text(Path("models", name).read_text(encoding="utf-8"), encoding="utf-8")
-    if with_key:
-        (models / "discovery_answer_key.json").write_text(json.dumps({"expected_target": "target"}))
+    monkeypatch.delenv("MODELTRACE_ANSWER_KEY", raising=False)
+    if with_key:  # a fabricated key, outside the repository like the real one
+        key = tmp_path / "private" / "discovery_answer_key.json"
+        key.parent.mkdir()
+        key.write_text(json.dumps({"expected_target": "target"}))
+        monkeypatch.setenv("MODELTRACE_ANSWER_KEY", str(key))
     monkeypatch.chdir(tmp_path)
     generate_agent_reports(tmp_path / "reports", {}, {}, {})
     discovery = json.loads((tmp_path / "reports" / "agents" / "discovery.json").read_text())
     assert bool(discovery["metrics"]) is with_key
 
+
+
+def test_pipeline_refuses_an_answer_key_inside_the_repository(monkeypatch):
+    inside = Path(__file__).resolve().parents[1] / "models" / "discovery_answer_key.json"
+    monkeypatch.setenv("MODELTRACE_ANSWER_KEY", str(inside))
+    with pytest.raises(ValueError, match="inside the repository"):
+        generate_agent_reports(Path("unused"), {}, {}, {})

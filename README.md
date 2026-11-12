@@ -38,8 +38,9 @@ Statsmodels `Logit`, and compares predictions in
 uses the downloaded UCI workbook and requires `Rscript` and the Python
 dependencies to be installed.
 
-`models/discovery_answer_key.json` is intentionally local-only and ignored by
-Git. Do not share it with the Discovery Agent operator or Person 2.
+The Discovery answer key is private: keep it outside the repository and point
+`MODELTRACE_ANSWER_KEY` at it. The pipeline and the scorer refuse a key path
+inside the repository. Do not share it with the Discovery Agent operator or Person 2.
 
 ## Person 2 agents, governance and dashboard
 
@@ -85,10 +86,12 @@ python -m agents.monitoring_agent --model-id legacy-r-logistic
 The LLM Migration Agent needs Person 1's shared split and R predictions (`python -m engine.pipeline`). Its
 report is evidence for the reviewer; the Redevelop gate still reads Person 1's parity report.
 
-Person 1 scores the Discovery report with the local answer key; the dashboard shows the result:
+Person 1 scores the Discovery report with the private answer key; the dashboard shows the result:
 
 ```bash
-python -m agents.discovery_agent --model-id legacy-r-logistic --score models/discovery_answer_key.json
+export MODELTRACE_ANSWER_KEY=~/modeltrace-private/discovery_answer_key.json  # outside the repository
+python -m agents.discovery_agent --model-id legacy-r-logistic --score "$MODELTRACE_ANSWER_KEY"
+python -m agents.discovery_agent --model-id python-gradient-boosting --score "$MODELTRACE_ANSWER_KEY"
 ```
 
 The key holds `expected_*` metadata values and a `discrepancies` mapping from model id to a list of

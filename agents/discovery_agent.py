@@ -55,6 +55,7 @@ from workflow.artifacts import PERSON1_MODEL
 from ._common import read_source
 
 REPORTS_DIR = Path("reports/discovery")
+REPO_ROOT = Path(__file__).resolve().parents[1]
 LANGUAGES = {".r": "R", ".py": "Python", ".sas": "SAS", ".sql": "SQL"}
 
 
@@ -385,6 +386,14 @@ def score_discrepancies(report: DiscoveryReport, expected: list[ExpectedDiscrepa
     }
 
 
+def private_key_path(path: str | Path) -> Path:
+    """Resolve the answer key's path, refusing one inside the repository so the real key can never be committed."""
+    resolved = Path(path).expanduser().resolve()
+    if resolved.is_relative_to(REPO_ROOT):
+        raise ValueError(f"answer key {path} is inside the repository; keep it outside, e.g. in ~/modeltrace-private/")
+    return resolved
+
+
 def score_discovery(report: DiscoveryReport, answer_key: dict, code: Sources | None = None) -> dict:
     """Score a Discovery report against Person 1's answer key; run by Person 1, who holds the key.
 
@@ -502,8 +511,12 @@ if __name__ == "__main__":
                         help="score the saved report against an answer key instead of running the agent (Person 1)")
     args = parser.parse_args()
     if args.score:
+        try:
+            key_path = private_key_path(args.score)
+        except ValueError as error:
+            parser.error(str(error))
         saved = DiscoveryReport.model_validate_json((REPORTS_DIR / f"{args.model_id}_discovery.json").read_text())
-        score = score_discovery(saved, json.loads(Path(args.score).read_text()))
+        score = score_discovery(saved, json.loads(key_path.read_text()))
         out = REPORTS_DIR / f"{args.model_id}_score.json"
         out.write_text(json.dumps(score, indent=2) + "\n")
         summary = (f"facts recall {score['recall']:.2f}, precision {score['precision']:.2f}" if score["metadata_scored"]
@@ -511,7 +524,8 @@ if __name__ == "__main__":
         if score["discrepancies"] is not None:
             counts = score["discrepancies"]["counts"]
             summary += "; discrepancies " + ", ".join(f"{k} {v}" for k, v in counts.items())
-        raise SystemExit(f"wrote {out}: {summary}")
+        print(f"wrote {out}: {summary}")
+        raise SystemExit(0)
     if not args.source:
         parser.error("--source is required (or pass --score)")
     if args.replay:

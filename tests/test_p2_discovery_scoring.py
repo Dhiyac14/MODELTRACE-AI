@@ -167,3 +167,40 @@ def test_an_empty_metadata_entry_disables_fact_scoring_but_not_discrepancy_scori
     score = score_discovery(report(finding("D-001", "decision_threshold", "contradiction", THRESHOLD)), k)
     assert score["metadata_scored"] is False and score["recall"] is None
     assert score["discrepancies"]["counts"]["unsupported"] == 1
+
+
+# --------------------------------------------------------------------------- answer-key location
+def test_the_answer_key_must_live_outside_the_repository(tmp_path):
+    from agents.discovery_agent import private_key_path
+    outside = tmp_path / "discovery_answer_key.json"
+    assert private_key_path(outside) == outside.resolve()
+    for inside in (ROOT / "models/discovery_answer_key.json", "models/discovery_answer_key.json", "tests/../key.json"):
+        with pytest.raises(ValueError, match="inside the repository"):
+            private_key_path(inside)
+
+
+def test_cli_scores_with_a_key_outside_the_repository(tmp_path):
+    import os
+    import shutil
+    import subprocess
+    import sys
+    work = tmp_path / "work"  # a copy of what the scorer reads, so the repository's reports stay untouched
+    for rel in ("reports/discovery/legacy-r-logistic_discovery.json", R_FILE, "engine/data.py"):
+        (work / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(ROOT / rel, work / rel)
+    private = tmp_path / "private" / "discovery_answer_key.json"
+    private.parent.mkdir()
+    private.write_text(json.dumps(key(("K-1", "input_features", "omission"))))
+
+    def run(key_path):
+        return subprocess.run([sys.executable, "-m", "agents.discovery_agent", "--model-id", "legacy-r-logistic",
+                               "--score", str(key_path)], cwd=work, env={**os.environ, "PYTHONPATH": str(ROOT)},
+                              capture_output=True, text=True)
+
+    done = run(private)
+    assert done.returncode == 0, done.stderr
+    assert "facts recall 1.00" in done.stdout and "detected 1" in done.stdout
+    written = (work / "reports/discovery/legacy-r-logistic_score.json").read_text()
+    assert SECRET not in written and json.loads(written)["discrepancies"]["counts"]["detected"] == 1
+    refused = run(ROOT / "models" / "discovery_answer_key.json")
+    assert refused.returncode == 2 and "inside the repository" in refused.stderr

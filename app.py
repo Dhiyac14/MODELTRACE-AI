@@ -306,7 +306,7 @@ def page_discovery(model_id: str) -> None:
                     scored = {f["discrepancy_id"]: f for f in disc["findings"]}
             else:
                 st.caption("Not scored yet. Person 1 holds the answer key and runs: python -m agents.discovery_agent "
-                           f"--model-id {model_id} --score models/discovery_answer_key.json")
+                           f"--model-id {model_id} --score \"$MODELTRACE_ANSWER_KEY\" (a path outside the repository)")
             rows = [{"ID": d.discrepancy_id, "Field": d.field, "Type": d.type, "Documented claim": d.documented_claim,
                      "Suggested correction": d.suggested_correction, "Detected by": d.detected_by,
                      "Code evidence": "; ".join(f"{r.file}:L{r.line_start}" for r in d.code_evidence)}
