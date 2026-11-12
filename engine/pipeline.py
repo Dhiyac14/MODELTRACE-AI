@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -273,6 +274,10 @@ def generate_agent_reports(
     # The private answer key lives outside the repository; MODELTRACE_ANSWER_KEY points at it.
     # Without it Discovery runs unscored.
     key_path = os.environ.get("MODELTRACE_ANSWER_KEY")
+    old_location = Path("models") / "discovery_answer_key.json"
+    if key_path is None and old_location.exists():
+        warnings.warn(f"{old_location} is no longer read, so Discovery runs unscored. Move the answer key outside "
+                      "the repository and set MODELTRACE_ANSWER_KEY to its path.", stacklevel=2)
     outputs = {
         "discovery": DiscoveryAgent().run(
             source,

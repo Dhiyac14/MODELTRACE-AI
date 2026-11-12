@@ -225,3 +225,16 @@ def test_pipeline_refuses_an_answer_key_inside_the_repository(monkeypatch):
     monkeypatch.setenv("MODELTRACE_ANSWER_KEY", str(inside))
     with pytest.raises(ValueError, match="inside the repository"):
         generate_agent_reports(Path("unused"), {}, {}, {})
+
+
+def test_pipeline_warns_about_a_key_left_at_the_old_location(tmp_path, monkeypatch):
+    models = tmp_path / "models"
+    models.mkdir()
+    for name in ("legacy_model.R", "outdated_model_document.md"):
+        (models / name).write_text(Path("models", name).read_text(encoding="utf-8"), encoding="utf-8")
+    (models / "discovery_answer_key.json").write_text(json.dumps({"expected_target": "target"}))
+    monkeypatch.delenv("MODELTRACE_ANSWER_KEY", raising=False)
+    monkeypatch.chdir(tmp_path)
+    with pytest.warns(UserWarning, match="no longer read"):
+        generate_agent_reports(tmp_path / "reports", {}, {}, {})
+    assert json.loads((tmp_path / "reports" / "agents" / "discovery.json").read_text())["metrics"] == {}
