@@ -1,0 +1,85 @@
+{
+  "agent": "documentation",
+  "summary": "Documentation was checked against explicit required sections.",
+  "findings": [
+    {
+      "id": "documentation-completeness",
+      "title": "Documentation completeness",
+      "status": "gap",
+      "claim": "5 of 5 required sections are absent.",
+      "evidence": [
+        {
+          "source": "models\\outdated_model_document.md",
+          "claim": "Required section 'preprocessing' is absent",
+          "excerpt": null,
+          "value": false
+        },
+        {
+          "source": "models\\outdated_model_document.md",
+          "claim": "Required section 'data split' is absent",
+          "excerpt": null,
+          "value": false
+        },
+        {
+          "source": "models\\outdated_model_document.md",
+          "claim": "Required section 'random seed' is absent",
+          "excerpt": null,
+          "value": false
+        },
+        {
+          "source": "models\\outdated_model_document.md",
+          "claim": "Required section 'dataset version' is absent",
+          "excerpt": null,
+          "value": false
+        },
+        {
+          "source": "models\\outdated_model_document.md",
+          "claim": "Required section 'fairness assumptions' is absent",
+          "excerpt": null,
+          "value": false
+        }
+      ],
+      "severity": "warning"
+    }
+  ],
+  "metrics": {},
+  "recommendations": [
+    "Document preprocessing from the authoritative artifact.",
+    "Document data split from the authoritative artifact.",
+    "Document random seed from the authoritative artifact.",
+    "Document dataset version from the authoritative artifact.",
+    "Document fairness assumptions from the authoritative artifact."
+  ],
+  "evidence": [
+    {
+      "source": "models\\outdated_model_document.md",
+      "claim": "Required section 'preprocessing' is absent",
+      "excerpt": null,
+      "value": false
+    },
+    {
+      "source": "models\\outdated_model_document.md",
+      "claim": "Required section 'data split' is absent",
+      "excerpt": null,
+      "value": false
+    },
+    {
+      "source": "models\\outdated_model_document.md",
+      "claim": "Required section 'random seed' is absent",
+      "excerpt": null,
+      "value": false
+    },
+    {
+      "source": "models\\outdated_model_document.md",
+      "claim": "Required section 'dataset version' is absent",
+      "excerpt": null,
+      "value": false
+    },
+    {
+      "source": "models\\outdated_model_document.md",
+      "claim": "Required section 'fairness assumptions' is absent",
+      "excerpt": null,
+      "value": false
+    }
+  ]
+}

@@ -1,0 +1,712 @@
+{
+  "model_hash": "43afdbfaef44dd0093f0efdacf0c90b1266681e64d116452f189c184042ecfa0",
+  "thresholds": {
+    "bands": {
+      "low": "<0.10",
+      "warning": "0.10-0.25",
+      "high": ">0.25"
+    },
+    "alert_rule": "alert is true when batch severity is warning or high"
+  },
+  "summary": {
+    "alert_count": 2,
+    "severity_counts": {
+      "low": 1,
+      "warning": 0,
+      "high": 2
+    }
+  },
+  "batches": [
+    {
+      "batch": "001",
+      "feature_psi": {
+        "LIMIT_BAL": 0.0,
+        "EDUCATION": 0.0,
+        "MARRIAGE": 0.0,
+        "PAY_0": 0.0,
+        "PAY_2": 0.0,
+        "PAY_3": 0.0,
+        "PAY_4": 0.0,
+        "PAY_5": 0.0,
+        "PAY_6": 0.0,
+        "BILL_AMT1": 0.0,
+        "BILL_AMT2": 0.0,
+        "BILL_AMT3": 0.0,
+        "BILL_AMT4": 0.0,
+        "BILL_AMT5": 0.0,
+        "BILL_AMT6": 0.0,
+        "PAY_AMT1": 0.0,
+        "PAY_AMT2": 0.0,
+        "PAY_AMT3": 0.0,
+        "PAY_AMT4": 0.0,
+        "PAY_AMT5": 0.0,
+        "PAY_AMT6": 0.0
+      },
+      "feature_severity": {
+        "LIMIT_BAL": "low",
+        "EDUCATION": "low",
+        "MARRIAGE": "low",
+        "PAY_0": "low",
+        "PAY_2": "low",
+        "PAY_3": "low",
+        "PAY_4": "low",
+        "PAY_5": "low",
+        "PAY_6": "low",
+        "BILL_AMT1": "low",
+        "BILL_AMT2": "low",
+        "BILL_AMT3": "low",
+        "BILL_AMT4": "low",
+        "BILL_AMT5": "low",
+        "BILL_AMT6": "low",
+        "PAY_AMT1": "low",
+        "PAY_AMT2": "low",
+        "PAY_AMT3": "low",
+        "PAY_AMT4": "low",
+        "PAY_AMT5": "low",
+        "PAY_AMT6": "low"
+      },
+      "feature_alerts": {
+        "LIMIT_BAL": false,
+        "EDUCATION": false,
+        "MARRIAGE": false,
+        "PAY_0": false,
+        "PAY_2": false,
+        "PAY_3": false,
+        "PAY_4": false,
+        "PAY_5": false,
+        "PAY_6": false,
+        "BILL_AMT1": false,
+        "BILL_AMT2": false,
+        "BILL_AMT3": false,
+        "BILL_AMT4": false,
+        "BILL_AMT5": false,
+        "BILL_AMT6": false,
+        "PAY_AMT1": false,
+        "PAY_AMT2": false,
+        "PAY_AMT3": false,
+        "PAY_AMT4": false,
+        "PAY_AMT5": false,
+        "PAY_AMT6": false
+      },
+      "prediction_psi": 0.0,
+      "prediction_severity": "low",
+      "driving_feature": "LIMIT_BAL",
+      "driving_feature_psi": 0.0,
+      "severity_driver": "feature",
+      "prediction_psi_drove_severity": false,
+      "schema_change": {
+        "changed": false,
+        "missing_columns": [],
+        "extra_columns": []
+      },
+      "missing_values": {
+        "LIMIT_BAL": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "EDUCATION": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "MARRIAGE": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_0": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_2": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_3": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_4": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_5": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_6": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "BILL_AMT1": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "BILL_AMT2": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "BILL_AMT3": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "BILL_AMT4": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "BILL_AMT5": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "BILL_AMT6": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_AMT1": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_AMT2": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_AMT3": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_AMT4": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_AMT5": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_AMT6": {
+          "count": 0,
+          "rate": 0.0
+        }
+      },
+      "mean_predicted_probability": 0.22087738376139804,
+      "percentage_above_threshold": 0.07783333333333334,
+      "alerts": [],
+      "severity": "low",
+      "alert": false,
+      "diagnostic_type": "simulated_diagnostic",
+      "observed_outcomes": false,
+      "performance": {
+        "accuracy": 0.809,
+        "precision": 0.6937901498929336,
+        "recall": 0.24415975885455915,
+        "f1": 0.3612040133779264,
+        "roc_auc": 0.7069738437118362,
+        "pr_auc": 0.49540701679156546,
+        "brier": 0.1467338961000436,
+        "specificity": 0.9693986732291889
+      },
+      "fairness": {
+        "by_group": {
+          "1": {
+            "count": 2402,
+            "selection_rate": 0.08243130724396336,
+            "true_positive_rate": 0.24064171122994651,
+            "false_positive_rate": 0.034220532319391636
+          },
+          "2": {
+            "count": 3598,
+            "selection_rate": 0.07476375764313507,
+            "true_positive_rate": 0.24673629242819844,
+            "false_positive_rate": 0.02824858757062147
+          }
+        },
+        "demographic_parity_difference": 0.007667549600828286,
+        "disparate_impact": 0.906982554842477,
+        "fairlearn": {
+          "by_group": {
+            "1": {
+              "selection_rate": 0.08243130724396336,
+              "true_positive_rate": 0.24064171122994651,
+              "false_positive_rate": 0.034220532319391636
+            },
+            "2": {
+              "selection_rate": 0.07476375764313507,
+              "true_positive_rate": 0.24673629242819844,
+              "false_positive_rate": 0.02824858757062147
+            }
+          },
+          "difference": {
+            "selection_rate": 0.007667549600828286,
+            "true_positive_rate": 0.0060945811982519305,
+            "false_positive_rate": 0.005971944748770167
+          },
+          "ratio": {
+            "selection_rate": 0.906982554842477,
+            "true_positive_rate": 0.9752992105933281,
+            "false_positive_rate": 0.8254865034526051
+          }
+        }
+      }
+    },
+    {
+      "batch": "002",
+      "feature_psi": {
+        "LIMIT_BAL": 0.586449302647903,
+        "EDUCATION": 0.0,
+        "MARRIAGE": 0.0,
+        "PAY_0": 0.0,
+        "PAY_2": 0.0,
+        "PAY_3": 0.0,
+        "PAY_4": 0.0,
+        "PAY_5": 0.0,
+        "PAY_6": 0.0,
+        "BILL_AMT1": 0.07216790116855684,
+        "BILL_AMT2": 0.0,
+        "BILL_AMT3": 0.0,
+        "BILL_AMT4": 0.0,
+        "BILL_AMT5": 0.0,
+        "BILL_AMT6": 0.0,
+        "PAY_AMT1": 0.0,
+        "PAY_AMT2": 0.0,
+        "PAY_AMT3": 0.0,
+        "PAY_AMT4": 0.0,
+        "PAY_AMT5": 0.0,
+        "PAY_AMT6": 0.0
+      },
+      "feature_severity": {
+        "LIMIT_BAL": "high",
+        "EDUCATION": "low",
+        "MARRIAGE": "low",
+        "PAY_0": "low",
+        "PAY_2": "low",
+        "PAY_3": "low",
+        "PAY_4": "low",
+        "PAY_5": "low",
+        "PAY_6": "low",
+        "BILL_AMT1": "low",
+        "BILL_AMT2": "low",
+        "BILL_AMT3": "low",
+        "BILL_AMT4": "low",
+        "BILL_AMT5": "low",
+        "BILL_AMT6": "low",
+        "PAY_AMT1": "low",
+        "PAY_AMT2": "low",
+        "PAY_AMT3": "low",
+        "PAY_AMT4": "low",
+        "PAY_AMT5": "low",
+        "PAY_AMT6": "low"
+      },
+      "feature_alerts": {
+        "LIMIT_BAL": true,
+        "EDUCATION": false,
+        "MARRIAGE": false,
+        "PAY_0": false,
+        "PAY_2": false,
+        "PAY_3": false,
+        "PAY_4": false,
+        "PAY_5": false,
+        "PAY_6": false,
+        "BILL_AMT1": false,
+        "BILL_AMT2": false,
+        "BILL_AMT3": false,
+        "BILL_AMT4": false,
+        "BILL_AMT5": false,
+        "BILL_AMT6": false,
+        "PAY_AMT1": false,
+        "PAY_AMT2": false,
+        "PAY_AMT3": false,
+        "PAY_AMT4": false,
+        "PAY_AMT5": false,
+        "PAY_AMT6": false
+      },
+      "prediction_psi": 0.014344213036345428,
+      "prediction_severity": "low",
+      "driving_feature": "LIMIT_BAL",
+      "driving_feature_psi": 0.586449302647903,
+      "severity_driver": "feature",
+      "prediction_psi_drove_severity": false,
+      "schema_change": {
+        "changed": false,
+        "missing_columns": [],
+        "extra_columns": []
+      },
+      "missing_values": {
+        "LIMIT_BAL": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "EDUCATION": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "MARRIAGE": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_0": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_2": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_3": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_4": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_5": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_6": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "BILL_AMT1": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "BILL_AMT2": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "BILL_AMT3": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "BILL_AMT4": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "BILL_AMT5": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "BILL_AMT6": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_AMT1": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_AMT2": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_AMT3": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_AMT4": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_AMT5": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_AMT6": {
+          "count": 0,
+          "rate": 0.0
+        }
+      },
+      "mean_predicted_probability": 0.21260584292317192,
+      "percentage_above_threshold": 0.06833333333333333,
+      "alerts": [
+        "feature:LIMIT_BAL"
+      ],
+      "severity": "high",
+      "alert": true,
+      "diagnostic_type": "simulated_diagnostic",
+      "observed_outcomes": false,
+      "performance": {
+        "accuracy": 0.8065,
+        "precision": 0.7024390243902439,
+        "recall": 0.21703089675960813,
+        "f1": 0.3316062176165803,
+        "roc_auc": 0.7053913751350372,
+        "pr_auc": 0.49121086235795514,
+        "brier": 0.14735614377373488,
+        "specificity": 0.973892574363364
+      },
+      "fairness": {
+        "by_group": {
+          "1": {
+            "count": 2402,
+            "selection_rate": 0.07368859283930058,
+            "true_positive_rate": 0.21390374331550802,
+            "false_positive_rate": 0.030961434003259097
+          },
+          "2": {
+            "count": 3598,
+            "selection_rate": 0.06475819899944414,
+            "true_positive_rate": 0.2193211488250653,
+            "false_positive_rate": 0.022951977401129944
+          }
+        },
+        "demographic_parity_difference": 0.008930393839856443,
+        "disparate_impact": 0.8788090056308747,
+        "fairlearn": {
+          "by_group": {
+            "1": {
+              "selection_rate": 0.07368859283930058,
+              "true_positive_rate": 0.21390374331550802,
+              "false_positive_rate": 0.030961434003259097
+            },
+            "2": {
+              "selection_rate": 0.06475819899944414,
+              "true_positive_rate": 0.2193211488250653,
+              "false_positive_rate": 0.022951977401129944
+            }
+          },
+          "difference": {
+            "selection_rate": 0.008930393839856443,
+            "true_positive_rate": 0.0054174055095572715,
+            "false_positive_rate": 0.008009456602129154
+          },
+          "ratio": {
+            "selection_rate": 0.8788090056308747,
+            "true_positive_rate": 0.9752992105933281,
+            "false_positive_rate": 0.7413086034294777
+          }
+        }
+      }
+    },
+    {
+      "batch": "003",
+      "feature_psi": {
+        "LIMIT_BAL": 2.410715535681309,
+        "EDUCATION": 0.0,
+        "MARRIAGE": 0.0,
+        "PAY_0": 5.282053461559873,
+        "PAY_2": 0.0,
+        "PAY_3": 0.0,
+        "PAY_4": 0.0,
+        "PAY_5": 0.0,
+        "PAY_6": 0.0,
+        "BILL_AMT1": 0.17009508251855657,
+        "BILL_AMT2": 0.0,
+        "BILL_AMT3": 0.0,
+        "BILL_AMT4": 0.0,
+        "BILL_AMT5": 0.0,
+        "BILL_AMT6": 0.0,
+        "PAY_AMT1": 0.0,
+        "PAY_AMT2": 0.0,
+        "PAY_AMT3": 0.0,
+        "PAY_AMT4": 0.0,
+        "PAY_AMT5": 0.0,
+        "PAY_AMT6": 0.0
+      },
+      "feature_severity": {
+        "LIMIT_BAL": "high",
+        "EDUCATION": "low",
+        "MARRIAGE": "low",
+        "PAY_0": "high",
+        "PAY_2": "low",
+        "PAY_3": "low",
+        "PAY_4": "low",
+        "PAY_5": "low",
+        "PAY_6": "low",
+        "BILL_AMT1": "warning",
+        "BILL_AMT2": "low",
+        "BILL_AMT3": "low",
+        "BILL_AMT4": "low",
+        "BILL_AMT5": "low",
+        "BILL_AMT6": "low",
+        "PAY_AMT1": "low",
+        "PAY_AMT2": "low",
+        "PAY_AMT3": "low",
+        "PAY_AMT4": "low",
+        "PAY_AMT5": "low",
+        "PAY_AMT6": "low"
+      },
+      "feature_alerts": {
+        "LIMIT_BAL": true,
+        "EDUCATION": false,
+        "MARRIAGE": false,
+        "PAY_0": true,
+        "PAY_2": false,
+        "PAY_3": false,
+        "PAY_4": false,
+        "PAY_5": false,
+        "PAY_6": false,
+        "BILL_AMT1": true,
+        "BILL_AMT2": false,
+        "BILL_AMT3": false,
+        "BILL_AMT4": false,
+        "BILL_AMT5": false,
+        "BILL_AMT6": false,
+        "PAY_AMT1": false,
+        "PAY_AMT2": false,
+        "PAY_AMT3": false,
+        "PAY_AMT4": false,
+        "PAY_AMT5": false,
+        "PAY_AMT6": false
+      },
+      "prediction_psi": 1.5366301797595217,
+      "prediction_severity": "high",
+      "driving_feature": "PAY_0",
+      "driving_feature_psi": 5.282053461559873,
+      "severity_driver": "feature",
+      "prediction_psi_drove_severity": false,
+      "schema_change": {
+        "changed": false,
+        "missing_columns": [],
+        "extra_columns": []
+      },
+      "missing_values": {
+        "LIMIT_BAL": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "EDUCATION": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "MARRIAGE": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_0": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_2": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_3": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_4": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_5": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_6": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "BILL_AMT1": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "BILL_AMT2": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "BILL_AMT3": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "BILL_AMT4": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "BILL_AMT5": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "BILL_AMT6": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_AMT1": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_AMT2": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_AMT3": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_AMT4": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_AMT5": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "PAY_AMT6": {
+          "count": 0,
+          "rate": 0.0
+        }
+      },
+      "mean_predicted_probability": 0.4110464243562155,
+      "percentage_above_threshold": 0.272,
+      "alerts": [
+        "feature:LIMIT_BAL",
+        "feature:PAY_0",
+        "feature:BILL_AMT1",
+        "prediction"
+      ],
+      "severity": "high",
+      "alert": true,
+      "diagnostic_type": "simulated_diagnostic",
+      "observed_outcomes": false,
+      "performance": {
+        "accuracy": 0.7468333333333333,
+        "precision": 0.4411764705882353,
+        "recall": 0.5425772418990203,
+        "f1": 0.48665089557282865,
+        "roc_auc": 0.7023465785184526,
+        "pr_auc": 0.48521067323516875,
+        "brier": 0.1916111121371394,
+        "specificity": 0.8048362936015407
+      },
+      "fairness": {
+        "by_group": {
+          "1": {
+            "count": 2402,
+            "selection_rate": 0.2768526228143214,
+            "true_positive_rate": 0.5365418894830659,
+            "false_positive_rate": 0.19771863117870722
+          },
+          "2": {
+            "count": 3598,
+            "selection_rate": 0.2687604224569205,
+            "true_positive_rate": 0.5469973890339426,
+            "false_positive_rate": 0.19350282485875706
+          }
+        },
+        "demographic_parity_difference": 0.00809220035740088,
+        "disparate_impact": 0.9707707289346211,
+        "fairlearn": {
+          "by_group": {
+            "1": {
+              "selection_rate": 0.2768526228143214,
+              "true_positive_rate": 0.5365418894830659,
+              "false_positive_rate": 0.19771863117870722
+            },
+            "2": {
+              "selection_rate": 0.2687604224569205,
+              "true_positive_rate": 0.5469973890339426,
+              "false_positive_rate": 0.19350282485875706
+            }
+          },
+          "difference": {
+            "selection_rate": 0.00809220035740088,
+            "true_positive_rate": 0.010455499550876657,
+            "false_positive_rate": 0.004215806319950166
+          },
+          "ratio": {
+            "selection_rate": 0.9707707289346211,
+            "true_positive_rate": 0.9808856499857481,
+            "false_positive_rate": 0.9786777488048675
+          }
+        }
+      }
+    }
+  ]
+}
