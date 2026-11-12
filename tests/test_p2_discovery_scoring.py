@@ -3,8 +3,8 @@ import json
 from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
 
+import agents.discovery_agent as discovery
 from agents.discovery_agent import score_discovery
 from llm.evidence import load_sources
 from llm.schemas import Discrepancy, DiscoveryReport, SourceRef
@@ -133,10 +133,15 @@ def test_model_without_a_discrepancy_list_keeps_metadata_scoring_only():
 
 def test_malformed_key_entries_are_rejected():
     r = report()
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValueError, match=r"entry 1 for legacy-r-logistic is invalid \(field: ") as error:
         score_discovery(r, key(("K-1", "threshold", "contradiction")))  # not in the field vocabulary
-    with pytest.raises(ValidationError):
-        score_discovery(r, key(("K-1", "decision_threshold", "wrong")))
+    assert SECRET not in str(error.value)  # the entry's content is never echoed
+    with pytest.raises(ValueError, match=r"entry 2 for legacy-r-logistic is invalid \(type: "):
+        score_discovery(r, key(("K-1", "decision_threshold", "contradiction"), ("K-2", "decision_threshold", "wrong")))
+    with pytest.raises(ValueError, match=r"entry 1 for legacy-r-logistic is invalid \(id: Field required") as error:
+        score_discovery(r, {"discrepancies": {"legacy-r-logistic": [
+            {"ID": "K-1", "field": "other", "type": "omission", "description": SECRET}]}})
+    assert SECRET not in str(error.value)
     with pytest.raises(ValueError, match=r"repeats id\(s\): \['K-1'\]"):
         score_discovery(r, key(("K-1", "decision_threshold", "contradiction"), ("K-1", "monitoring", "omission")))
 
@@ -175,11 +180,38 @@ def test_wrongly_shaped_keys_give_a_clear_error(bad, message):
         score_discovery(report(), bad)
 
 
-def test_missing_source_files_stop_the_scoring():
-    r = report(finding("D-001", "decision_threshold", "contradiction", THRESHOLD)).model_copy(
-        update={"source_files": [R_FILE, "engine/renamed.py"]})
-    with pytest.raises(FileNotFoundError, match="engine/renamed.py"):
-        score_discovery(r, key(("K-1", "decision_threshold", "contradiction")))
+def test_missing_source_files_stop_the_scoring(tmp_path, monkeypatch):
+    (tmp_path / "models").mkdir()
+    (tmp_path / R_FILE).write_text((ROOT / R_FILE).read_text())  # engine/data.py, also registered, is absent
+    monkeypatch.setattr(discovery, "REPO_ROOT", tmp_path)
+    with pytest.raises(FileNotFoundError, match="engine/data.py"):
+        score_discovery(report(), key(("K-1", "decision_threshold", "contradiction")))
+
+
+def test_a_model_missing_from_the_inventory_cannot_be_scored():
+    with pytest.raises(ValueError, match="not in the inventory"):
+        score_discovery(report(model_id="unknown-model"), key(model_id="unknown-model"))
+
+
+@pytest.mark.parametrize("ref_file, quote, line", [
+    ("models/outdated_model_document.md", "- Threshold: 0.5", 9),  # the legacy document is not code
+    ("elsewhere/legacy_model.R", THRESHOLD, 23),                   # same base name, wrong path
+    (R_FILE, "e", 1),                                               # a fragment of the cited line
+    (R_FILE, "0.5", 23),
+])
+def test_only_substantial_quotes_from_the_registered_code_count(ref_file, quote, line):
+    ref = SourceRef(file=ref_file, line_start=line, line_end=line, quote=quote, verified=True)
+    r = report(finding("D-001", "decision_threshold", "contradiction").model_copy(update={"code_evidence": [ref]}))
+    r = r.model_copy(update={"source_files": [R_FILE, "models/outdated_model_document.md"]})  # the report's own list is not trusted
+    assert outcomes(score_discovery(r, key(("K-1", "decision_threshold", "contradiction"))))["D-001"][2] == "unresolved"
+
+
+def test_every_cited_reference_must_resolve():
+    good = SourceRef(file=R_FILE, line_start=23, line_end=23, quote=THRESHOLD, verified=True)
+    fake = SourceRef(file=R_FILE, line_start=24, line_end=24, quote="threshold <- 0.4", verified=True)
+    r = report(finding("D-001", "decision_threshold", "contradiction").model_copy(update={"code_evidence": [good, fake]}))
+    disc = score_discovery(r, key(("K-1", "decision_threshold", "contradiction")))["discrepancies"]
+    assert disc["findings"][0]["evidence"] == "unresolved" and disc["recall_with_evidence"] == 0.0
 
 
 def test_a_quote_found_only_away_from_its_cited_lines_does_not_count():
@@ -194,17 +226,45 @@ def test_an_unverifiable_claim_never_needs_code_evidence():
     assert [f["evidence"] for f in disc["findings"]] == ["unresolved", "not_required"]
     assert disc["counts"]["detected_without_evidence"] == 0 and disc["recall_with_evidence"] == 1.0
 
+def test_an_exact_match_is_preferred_over_an_earlier_same_field_entry():
+    r = report(finding("D-001", "input_features", "unverifiable"))
+    disc = score_discovery(r, key(("K-1", "input_features", "contradiction"), ("K-2", "input_features", "unverifiable")))["discrepancies"]
+    assert [(e["id"], e["outcome"]) for e in disc["key_entries"]] == [("K-1", "missed"), ("K-2", "detected")]
+    assert disc["recall"] == 0.5
+
+
+def test_a_misclassified_finding_is_not_counted_as_missing_evidence():
+    r = report(finding("D-001", "input_features", "contradiction"))  # no evidence, wrong type
+    disc = score_discovery(r, key(("K-1", "input_features", "omission")))["discrepancies"]
+    assert outcomes({"discrepancies": disc})["D-001"] == ("misclassified", "K-1", "missing")
+    assert disc["counts"]["detected_without_evidence"] == 0
+
+
+def test_key_entries_reveal_only_ids_and_outcomes():
+    score = score_discovery(report(finding("D-001", "decision_threshold", "contradiction", THRESHOLD)),
+                            key(("K-1", "decision_threshold", "contradiction"), ("K-2", "train_test_split", "contradiction")))
+    entries = score["discrepancies"]["key_entries"]
+    assert all(set(e) == {"id", "outcome", "discrepancy_id"} for e in entries)
+    assert "train_test_split" not in json.dumps(score)  # the missed entry's field stays in the private key
+
+
 # --------------------------------------------------------------------------- model-specific metadata
 GB = "python-gradient-boosting"
 
 
-def test_top_level_metadata_belongs_to_the_legacy_r_model_only():
+@pytest.mark.parametrize("other_model", [GB, "python-random-forest"])
+def test_top_level_metadata_belongs_to_the_legacy_r_model_only(other_model):
     k = {"expected_link": "logit", "expected_target": "target"}
     r_score = score_discovery(report(), k)
     assert r_score["metadata_scored"] and r_score["matched"] == ["expected_link", "expected_target"]
-    gb_score = score_discovery(report(model_id=GB), k)  # GB is not scored against the R facts
-    assert gb_score["metadata_scored"] is False
-    assert (gb_score["recall"], gb_score["precision"], gb_score["matched"], gb_score["missed"]) == (None, None, [], [])
+    other = score_discovery(report(model_id=other_model), k)  # never scored against the R facts
+    assert other["metadata_scored"] is False
+    assert (other["recall"], other["precision"], other["matched"], other["missed"]) == (None, None, [], [])
+
+
+def test_a_model_listed_with_null_metadata_is_not_fact_scored():
+    score = score_discovery(report(), {"expected_link": "logit", "metadata": {"legacy-r-logistic": None}})
+    assert score["metadata_scored"] is False
 
 
 def test_per_model_metadata_is_used_and_overrides_the_top_level_values():
@@ -228,8 +288,16 @@ def test_the_answer_key_must_live_outside_the_repository(tmp_path):
     outside = tmp_path / "discovery_answer_key.json"
     assert private_key_path(outside) == outside.resolve()
     for inside in (ROOT / "models/discovery_answer_key.json", "models/discovery_answer_key.json", "tests/../key.json"):
-        with pytest.raises(ValueError, match="inside the repository"):
+        with pytest.raises(ValueError, match="inside a git repository"):
             private_key_path(inside)
+    clone = tmp_path / "other-clone"
+    (clone / ".git").mkdir(parents=True)
+    with pytest.raises(ValueError, match="inside a git repository"):
+        private_key_path(clone / "models" / "discovery_answer_key.json")
+    other_case = Path(str(ROOT / "models").swapcase()) / "discovery_answer_key.json"
+    if other_case.parent.exists():  # only on a case-insensitive disk, such as the default macOS one
+        with pytest.raises(ValueError, match="inside a git repository"):
+            private_key_path(other_case)
 
 
 def test_cli_scores_with_a_key_outside_the_repository(tmp_path):
@@ -256,4 +324,4 @@ def test_cli_scores_with_a_key_outside_the_repository(tmp_path):
     written = (work / "reports/discovery/legacy-r-logistic_score.json").read_text()
     assert SECRET not in written and json.loads(written)["discrepancies"]["counts"]["detected"] == 1
     refused = run(ROOT / "models" / "discovery_answer_key.json")
-    assert refused.returncode == 2 and "inside the repository" in refused.stderr
+    assert refused.returncode == 2 and "inside a git repository" in refused.stderr

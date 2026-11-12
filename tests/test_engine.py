@@ -223,7 +223,7 @@ def test_agent_reports_run_with_or_without_the_answer_key(tmp_path, monkeypatch,
 def test_pipeline_refuses_an_answer_key_inside_the_repository(monkeypatch):
     inside = Path(__file__).resolve().parents[1] / "models" / "discovery_answer_key.json"
     monkeypatch.setenv("MODELTRACE_ANSWER_KEY", str(inside))
-    with pytest.raises(ValueError, match="inside the repository"):
+    with pytest.raises(ValueError, match="inside a git repository"):
         generate_agent_reports(Path("unused"), {}, {}, {})
 
 
