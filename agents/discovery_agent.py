@@ -21,7 +21,7 @@ import math
 import re
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from llm.client import StructuredLLM, llm_from_env
 from llm.evidence import Sources, load_sources, render_listing, verify_facts, verify_ref, verify_refs
@@ -47,6 +47,7 @@ from llm.schemas import (
     Fact,
     Finding,
     ModelMetadata,
+    SourceRef,
     utc_now,
 )
 
@@ -269,11 +270,14 @@ ANSWER_KEY_FIELDS = {
 # Scored even when the key lists none, so a correct document (the control case) exposes false alarms.
 # Omissions are scored only when the key lists at least one expected omission; otherwise they are "not_scored".
 ALWAYS_SCORED_TYPES: frozenset[str] = frozenset({"contradiction", "unverifiable"})
-SUPPORTED_EVIDENCE = frozenset({"verified", "not_required"})
+# A contradiction or omission must point at code; an unverifiable claim is one the code cannot settle.
+EVIDENCE_REQUIRED_TYPES: frozenset[str] = frozenset({"contradiction", "omission"})
 
 
 class ExpectedDiscrepancy(BaseModel):
     """One entry of a model's list under the answer key's ``discrepancies``. The description never enters the score."""
+
+    model_config = ConfigDict(coerce_numbers_to_str=True)  # numeric ids such as 1 are read as "1"
 
     id: str
     field: DiscrepancyField
@@ -289,12 +293,30 @@ def _ratio(numerator: int, denominator: int) -> float | None:
     return numerator / denominator if denominator else None
 
 
+def _for_model(answer_key: dict, section: str, model_id: str, kind: type) -> dict | list | None:
+    """The model's entry in a per-model section of the key (``metadata`` or ``discrepancies``), or None."""
+    mapping = answer_key.get(section)
+    if mapping is None:
+        return None
+    if not isinstance(mapping, dict):
+        raise ValueError(f"answer key '{section}' must map each model id to its entry, e.g. "
+                         f"{{\"{model_id}\": {'[...]' if kind is list else '{...}'}}}")
+    entry = mapping.get(model_id)
+    if entry is not None and not isinstance(entry, kind):
+        raise ValueError(f"answer key '{section}' entry for {model_id} must be a {'list' if kind is list else 'mapping'}")
+    return entry
+
+
 def expected_metadata(answer_key: dict, model_id: str) -> dict:
     """The model's ``expected_*`` values: its entry under ``metadata`` if the key has one, else the top-level
     values, which were written for the legacy R model only. Empty (not scored) for any other model."""
-    per_model = (answer_key.get("metadata") or {}).get(model_id)
+    per_model = _for_model(answer_key, "metadata", model_id, dict)
     if per_model is not None:
-        return {k: v for k, v in per_model.items() if k.startswith("expected_")}
+        unprefixed = sorted(k for k in per_model if not k.startswith("expected_"))
+        if unprefixed:
+            raise ValueError(f"answer key 'metadata' entry for {model_id} has keys without the expected_ prefix: "
+                             f"{unprefixed}")
+        return dict(per_model)
     if model_id == PERSON1_MODEL:
         return {k: v for k, v in answer_key.items() if k.startswith("expected_")}
     return {}
@@ -328,13 +350,29 @@ def _score_facts(report: DiscoveryReport, expected: dict) -> dict:
     }
 
 
+def _at_cited_lines(ref: SourceRef, code: Sources) -> bool:
+    """The quote is still at the lines the finding cites. ``verify_ref`` alone would accept it anywhere in the file."""
+    checked = verify_ref(ref, code)
+    return checked is not None and (checked.line_start, checked.line_end) == (ref.line_start, ref.line_end)
+
+
 def evidence_status(discrepancy: Discrepancy, code: Sources) -> str:
-    """verified: every cited reference is found again in the model's source files; unresolved: one is not;
-    missing: nothing cited. An unverifiable claim may have no code evidence by definition (not_required)."""
+    """verified: every cited quote is still at its cited lines in the model's source files; unresolved: one is not
+    (changed, moved, or in a file that is not a source file); missing: nothing cited; not_required: an
+    unverifiable claim with nothing cited."""
     if not discrepancy.code_evidence:
-        return "not_required" if discrepancy.type == "unverifiable" else "missing"
-    resolved = all(verify_ref(ref, code) is not None for ref in discrepancy.code_evidence)
-    return "verified" if resolved else "unresolved"
+        return "missing" if discrepancy.type in EVIDENCE_REQUIRED_TYPES else "not_required"
+    return "verified" if all(_at_cited_lines(ref, code) for ref in discrepancy.code_evidence) else "unresolved"
+
+
+def _supported(discrepancy_type: str, evidence: str) -> bool:
+    return evidence == "verified" or discrepancy_type not in EVIDENCE_REQUIRED_TYPES
+
+
+def _unique(ids: list[str], what: str) -> None:
+    repeated = sorted({i for i in ids if ids.count(i) > 1})
+    if repeated:
+        raise ValueError(f"{what} repeats id(s): {repeated}")
 
 
 def score_discrepancies(report: DiscoveryReport, expected: list[ExpectedDiscrepancy], code: Sources) -> dict:
@@ -343,37 +381,43 @@ def score_discrepancies(report: DiscoveryReport, expected: list[ExpectedDiscrepa
     Pass 1 pairs the same field and type (detected); pass 2 pairs the same field with a different type
     (misclassified, which is not a true positive). Leftover entries are missed; leftover findings are
     unsupported. Findings of a type outside ``scored_types`` are reported as not_scored and left out of
-    precision. Findings whose evidence resolves are tried first.
+    precision. Findings with supporting evidence are tried first.
     """
-    ids = [e.id for e in expected]
-    if len(set(ids)) != len(ids):
-        raise ValueError(f"answer key for {report.model_id} repeats an id: {ids}")
+    _unique([e.id for e in expected], f"answer key for {report.model_id}")
+    _unique([d.discrepancy_id for d in report.discrepancies], f"discovery report for {report.model_id}")
     scored_types = ALWAYS_SCORED_TYPES | {e.type for e in expected}
     evidence = {d.discrepancy_id: evidence_status(d, code) for d in report.discrepancies}
+    supported = {d.discrepancy_id: _supported(d.type, evidence[d.discrepancy_id]) for d in report.discrepancies}
     candidates = sorted((d for d in report.discrepancies if d.type in scored_types),
-                        key=lambda d: (evidence[d.discrepancy_id] not in SUPPORTED_EVIDENCE, d.discrepancy_id))
-    pair_of: dict[str, tuple[str, str]] = {}  # expected id or discrepancy id -> (outcome, the other id)
+                        key=lambda d: (not supported[d.discrepancy_id], d.discrepancy_id))
+    # Two maps, because answer-key ids and report ids may look alike (both "D-001").
+    entry_match: dict[str, tuple[str, str]] = {}    # expected id -> (outcome, discrepancy id)
+    finding_match: dict[str, tuple[str, str]] = {}  # discrepancy id -> (outcome, expected id)
     for outcome, same in (("detected", lambda e, d: (e.field, e.type) == (d.field, d.type)),
                           ("misclassified", lambda e, d: e.field == d.field)):
         for e in expected:
-            if e.id in pair_of:
+            if e.id in entry_match:
                 continue
-            d = next((d for d in candidates if d.discrepancy_id not in pair_of and same(e, d)), None)
+            d = next((d for d in candidates if d.discrepancy_id not in finding_match and same(e, d)), None)
             if d is not None:
-                pair_of[e.id], pair_of[d.discrepancy_id] = (outcome, d.discrepancy_id), (outcome, e.id)
+                entry_match[e.id] = (outcome, d.discrepancy_id)
+                finding_match[d.discrepancy_id] = (outcome, e.id)
 
-    key_entries = [{"id": e.id, "field": e.field, "type": e.type, "outcome": pair_of.get(e.id, ("missed", None))[0],
-                    "discrepancy_id": pair_of.get(e.id, (None, None))[1]} for e in expected]
+    key_entries = []
+    for e in expected:
+        outcome, discrepancy_id = entry_match.get(e.id, ("missed", None))
+        key_entries.append({"id": e.id, "field": e.field, "type": e.type, "outcome": outcome,
+                            "discrepancy_id": discrepancy_id})
     findings = []
     for d in report.discrepancies:
         default = "unsupported" if d.type in scored_types else "not_scored"
-        outcome, expected_id = pair_of.get(d.discrepancy_id, (default, None))
+        outcome, expected_id = finding_match.get(d.discrepancy_id, (default, None))
         findings.append({"discrepancy_id": d.discrepancy_id, "field": d.field, "type": d.type,
                          "evidence": evidence[d.discrepancy_id], "outcome": outcome, "expected_id": expected_id})
     counts = {name: sum(f["outcome"] == name for f in findings)
               for name in ("detected", "misclassified", "unsupported", "not_scored")}
     counts["missed"] = sum(e["outcome"] == "missed" for e in key_entries)
-    counts["detected_without_evidence"] = sum(f["outcome"] == "detected" and f["evidence"] not in SUPPORTED_EVIDENCE
+    counts["detected_without_evidence"] = sum(f["outcome"] == "detected" and not supported[f["discrepancy_id"]]
                                               for f in findings)
     return {
         "scored_types": sorted(scored_types),
@@ -394,6 +438,15 @@ def private_key_path(path: str | Path) -> Path:
     return resolved
 
 
+def _load_code(paths: list[str]) -> Sources:
+    """The report's source files, read from the current directory (the repository root)."""
+    missing = [p for p in paths if not Path(p).is_file()]
+    if missing:
+        raise FileNotFoundError(f"source files of the Discovery report not found: {missing}. Run from the repository "
+                                "root, or re-run Discovery if the files were moved.")
+    return load_sources(paths)
+
+
 def score_discovery(report: DiscoveryReport, answer_key: dict, code: Sources | None = None) -> dict:
     """Score a Discovery report against Person 1's answer key; run by Person 1, who holds the key.
 
@@ -406,12 +459,11 @@ def score_discovery(report: DiscoveryReport, answer_key: dict, code: Sources | N
 
     ``code`` defaults to the report's source files, read from the current directory.
     """
-    entries = (answer_key.get("discrepancies") or {}).get(report.model_id)
+    entries = _for_model(answer_key, "discrepancies", report.model_id, list)
     discrepancies = None
     if entries is not None:
-        if code is None:
-            code = load_sources([p for p in report.source_files if Path(p).is_file()])
-        discrepancies = score_discrepancies(report, [ExpectedDiscrepancy.model_validate(e) for e in entries], code)
+        expected = [ExpectedDiscrepancy.model_validate(e) for e in entries]
+        discrepancies = score_discrepancies(report, expected, code if code is not None else _load_code(report.source_files))
     return {
         "model_id": report.model_id,
         **_score_facts(report, expected_metadata(answer_key, report.model_id)),
@@ -511,12 +563,11 @@ if __name__ == "__main__":
                         help="score the saved report against an answer key instead of running the agent (Person 1)")
     args = parser.parse_args()
     if args.score:
-        try:
-            key_path = private_key_path(args.score)
-        except ValueError as error:
-            parser.error(str(error))
         saved = DiscoveryReport.model_validate_json((REPORTS_DIR / f"{args.model_id}_discovery.json").read_text())
-        score = score_discovery(saved, json.loads(key_path.read_text()))
+        try:
+            score = score_discovery(saved, json.loads(private_key_path(args.score).read_text()))
+        except (ValueError, FileNotFoundError) as error:  # key location or format, or source files not found
+            parser.error(str(error))
         out = REPORTS_DIR / f"{args.model_id}_score.json"
         out.write_text(json.dumps(score, indent=2) + "\n")
         summary = (f"facts recall {score['recall']:.2f}, precision {score['precision']:.2f}" if score["metadata_scored"]

@@ -137,9 +137,62 @@ def test_malformed_key_entries_are_rejected():
         score_discovery(r, key(("K-1", "threshold", "contradiction")))  # not in the field vocabulary
     with pytest.raises(ValidationError):
         score_discovery(r, key(("K-1", "decision_threshold", "wrong")))
-    with pytest.raises(ValueError, match="repeats an id"):
+    with pytest.raises(ValueError, match=r"repeats id\(s\): \['K-1'\]"):
         score_discovery(r, key(("K-1", "decision_threshold", "contradiction"), ("K-1", "monitoring", "omission")))
 
+
+
+def test_key_ids_that_look_like_report_ids_do_not_collide():
+    r = report(finding("D-001", "monitoring", "contradiction"), finding("D-002", "other", "contradiction"))
+    disc = score_discovery(r, key(("D-001", "other", "contradiction"), ("D-002", "limitations", "contradiction")))["discrepancies"]
+    assert [(e["id"], e["outcome"], e["discrepancy_id"]) for e in disc["key_entries"]] == [
+        ("D-001", "detected", "D-002"), ("D-002", "missed", None)]
+    assert outcomes({"discrepancies": disc})["D-001"][:2] == ("unsupported", None)
+    assert (disc["recall"], disc["precision"]) == (0.5, 0.5)
+
+
+def test_numeric_key_ids_are_read_as_text():
+    disc = score_discovery(report(finding("D-001", "decision_threshold", "contradiction", THRESHOLD)),
+                           {"discrepancies": {"legacy-r-logistic": [
+                               {"id": 7, "field": "decision_threshold", "type": "contradiction"}]}})["discrepancies"]
+    assert disc["key_entries"][0]["id"] == "7" and disc["key_entries"][0]["outcome"] == "detected"
+
+
+def test_a_report_with_repeated_ids_is_rejected():
+    with pytest.raises(ValueError, match="discovery report for legacy-r-logistic repeats id"):
+        score_discovery(report(finding("D-001", "monitoring", "contradiction"), finding("D-001", "other", "omission")),
+                        key(("K-1", "other", "contradiction")))
+
+
+@pytest.mark.parametrize("bad, message", [
+    ({"discrepancies": [{"id": "K-1", "field": "other", "type": "omission"}]}, "'discrepancies' must map each model id"),
+    ({"discrepancies": {"legacy-r-logistic": {"id": "K-1"}}}, "entry for legacy-r-logistic must be a list"),
+    ({"metadata": [{"expected_link": "logit"}]}, "'metadata' must map each model id"),
+    ({"metadata": {"legacy-r-logistic": {"model_type": "glm"}}}, r"without the expected_ prefix: \['model_type'\]"),
+])
+def test_wrongly_shaped_keys_give_a_clear_error(bad, message):
+    with pytest.raises(ValueError, match=message):
+        score_discovery(report(), bad)
+
+
+def test_missing_source_files_stop_the_scoring():
+    r = report(finding("D-001", "decision_threshold", "contradiction", THRESHOLD)).model_copy(
+        update={"source_files": [R_FILE, "engine/renamed.py"]})
+    with pytest.raises(FileNotFoundError, match="engine/renamed.py"):
+        score_discovery(r, key(("K-1", "decision_threshold", "contradiction")))
+
+
+def test_a_quote_found_only_away_from_its_cited_lines_does_not_count():
+    moved = report(finding("D-001", "decision_threshold", "contradiction", THRESHOLD, line=22))  # really on line 23
+    assert outcomes(score_discovery(moved, key(("K-1", "decision_threshold", "contradiction"))))["D-001"][2] == "unresolved"
+
+
+def test_an_unverifiable_claim_never_needs_code_evidence():
+    r = report(finding("D-001", "ownership", "unverifiable", "owner <- 'risk team'"),  # citation does not resolve
+               finding("D-002", "monitoring", "unverifiable"))
+    disc = score_discovery(r, key(("K-1", "ownership", "unverifiable"), ("K-2", "monitoring", "unverifiable")))["discrepancies"]
+    assert [f["evidence"] for f in disc["findings"]] == ["unresolved", "not_required"]
+    assert disc["counts"]["detected_without_evidence"] == 0 and disc["recall_with_evidence"] == 1.0
 
 # --------------------------------------------------------------------------- model-specific metadata
 GB = "python-gradient-boosting"
