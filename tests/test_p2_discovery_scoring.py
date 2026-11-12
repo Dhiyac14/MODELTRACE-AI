@@ -139,3 +139,31 @@ def test_malformed_key_entries_are_rejected():
         score_discovery(r, key(("K-1", "decision_threshold", "wrong")))
     with pytest.raises(ValueError, match="repeats an id"):
         score_discovery(r, key(("K-1", "decision_threshold", "contradiction"), ("K-1", "monitoring", "omission")))
+
+
+# --------------------------------------------------------------------------- model-specific metadata
+GB = "python-gradient-boosting"
+
+
+def test_top_level_metadata_belongs_to_the_legacy_r_model_only():
+    k = {"expected_link": "logit", "expected_target": "target"}
+    r_score = score_discovery(report(), k)
+    assert r_score["metadata_scored"] and r_score["matched"] == ["expected_link", "expected_target"]
+    gb_score = score_discovery(report(model_id=GB), k)  # GB is not scored against the R facts
+    assert gb_score["metadata_scored"] is False
+    assert (gb_score["recall"], gb_score["precision"], gb_score["matched"], gb_score["missed"]) == (None, None, [], [])
+
+
+def test_per_model_metadata_is_used_and_overrides_the_top_level_values():
+    k = {"expected_link": "probit", "metadata": {"legacy-r-logistic": {"expected_link": "logit"},
+                                                 GB: {"expected_target": "target"}}}
+    assert score_discovery(report(), k)["matched"] == ["expected_link"]
+    gb_score = score_discovery(report(model_id=GB), k)
+    assert gb_score["metadata_scored"] and gb_score["matched"] == ["expected_target"] and gb_score["recall"] == 1.0
+
+
+def test_an_empty_metadata_entry_disables_fact_scoring_but_not_discrepancy_scoring():
+    k = {"expected_link": "logit", "metadata": {"legacy-r-logistic": {}}, "discrepancies": {"legacy-r-logistic": []}}
+    score = score_discovery(report(finding("D-001", "decision_threshold", "contradiction", THRESHOLD)), k)
+    assert score["metadata_scored"] is False and score["recall"] is None
+    assert score["discrepancies"]["counts"]["unsupported"] == 1

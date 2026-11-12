@@ -278,11 +278,16 @@ def page_discovery(model_id: str) -> None:
             score = ARTIFACTS.load("discovery_score", model_id)
             scored = {}
             if score:
-                cols = st.columns(3)
-                cols[0].metric("Fact recall vs answer key", f"{score['recall']:.2f}")
-                cols[1].metric("Fact precision vs answer key", f"{score['precision']:.2f}")
-                cols[2].metric("Facts missed", len(score.get("missed", [])))
-                st.caption(f"Scored by Person 1 at {score.get('scored_at')}; missed: {', '.join(score.get('missed', [])) or 'none'}.")
+                if score.get("metadata_scored", True):  # score files written before per-model metadata were always scored
+                    cols = st.columns(3)
+                    cols[0].metric("Fact recall vs answer key", rate(score["recall"]))
+                    cols[1].metric("Fact precision vs answer key", rate(score["precision"]))
+                    cols[2].metric("Facts missed", len(score.get("missed", [])))
+                    st.caption(f"Scored by Person 1 at {score.get('scored_at')}; "
+                               f"missed: {', '.join(score.get('missed', [])) or 'none'}.")
+                else:
+                    st.caption(f"Scored by Person 1 at {score.get('scored_at')}. Facts not scored: the answer key "
+                               "has no expected metadata for this model.")
                 if score.get("report_generated_at") != report.generated_at:
                     st.warning("This score is for an earlier Discovery report; ask Person 1 to score the current one.")
                 disc = score.get("discrepancies")

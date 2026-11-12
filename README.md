@@ -91,8 +91,10 @@ Person 1 scores the Discovery report with the local answer key; the dashboard sh
 python -m agents.discovery_agent --model-id legacy-r-logistic --score models/discovery_answer_key.json
 ```
 
-The key holds the `expected_*` metadata values and a `discrepancies` mapping from model id to a list of
-`{id, field, type, description}`. Discrepancies match one-to-one on field and type; the same field with another
+The key holds `expected_*` metadata values and a `discrepancies` mapping from model id to a list of
+`{id, field, type, description}`. Top-level `expected_*` values belong to the legacy R model; other models are
+fact-scored only from their own entry under `metadata` (model id to `expected_*` values), so Gradient Boosting
+is never scored against the R facts. Discrepancies match one-to-one on field and type; the same field with another
 type is `misclassified`, and a finding that matches nothing is `unsupported`. Contradictions and unverifiable
 claims are always scored; omissions only when the key lists one. Code evidence is checked again against the
 source files. The score (`reports/discovery/<model_id>_score.json`) never copies the key's descriptions.

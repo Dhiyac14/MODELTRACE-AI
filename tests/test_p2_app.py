@@ -142,3 +142,18 @@ def test_discovery_page_shows_the_discrepancy_score(data_root):
 
     score_path.write_text(json.dumps({**json.loads(score_path.read_text()), "report_generated_at": "2026-01-01T00:00:00+00:00"}))
     assert any("earlier Discovery report" in w.value for w in app("Discovery").warning)
+
+
+def test_gradient_boosting_score_without_expected_metadata(data_root):
+    from agents.discovery_agent import score_discovery
+    rel = "reports/discovery/python-gradient-boosting_discovery.json"
+    shutil.copy(ROOT / rel, data_root / rel)
+    report = DiscoveryReport.model_validate_json((data_root / rel).read_text())
+    key = {"expected_link": "logit", "discrepancies": {"python-gradient-boosting": []}}  # fabricated control key
+    (data_root / "reports/discovery/python-gradient-boosting_score.json").write_text(json.dumps(score_discovery(report, key)))
+
+    at = app("Discovery", model="python-gradient-boosting")
+    assert not at.exception
+    assert any("Facts not scored" in c.value for c in at.caption)
+    metrics = {m.label: m.value for m in at.metric}
+    assert "Fact recall vs answer key" not in metrics and metrics["Discrepancy precision"] == "n/a"

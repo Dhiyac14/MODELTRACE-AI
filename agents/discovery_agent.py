@@ -50,6 +50,8 @@ from llm.schemas import (
     utc_now,
 )
 
+from workflow.artifacts import PERSON1_MODEL
+
 from ._common import read_source
 
 REPORTS_DIR = Path("reports/discovery")
@@ -286,11 +288,25 @@ def _ratio(numerator: int, denominator: int) -> float | None:
     return numerator / denominator if denominator else None
 
 
-def _score_facts(report: DiscoveryReport, answer_key: dict) -> dict:
+def expected_metadata(answer_key: dict, model_id: str) -> dict:
+    """The model's ``expected_*`` values: its entry under ``metadata`` if the key has one, else the top-level
+    values, which were written for the legacy R model only. Empty (not scored) for any other model."""
+    per_model = (answer_key.get("metadata") or {}).get(model_id)
+    if per_model is not None:
+        return {k: v for k, v in per_model.items() if k.startswith("expected_")}
+    if model_id == PERSON1_MODEL:
+        return {k: v for k, v in answer_key.items() if k.startswith("expected_")}
+    return {}
+
+
+def _score_facts(report: DiscoveryReport, expected: dict) -> dict:
     """An entry counts as found when every word of the expected value appears in the reported fact or its
     verified code evidence. Keys this report has no field for are listed in ``unmapped_keys`` and count as missed.
+    With no expected values the facts are not scored and recall and precision are None.
     """
-    expected = {k: v for k, v in answer_key.items() if k.startswith("expected_")}
+    if not expected:
+        return {"metadata_scored": False, "recall": None, "precision": None, "matched": [], "missed": [],
+                "unmapped_keys": []}
     matched, missed, unmapped, reported = [], [], [], 0
     for key, value in expected.items():
         field = ANSWER_KEY_FIELDS.get(key)
@@ -302,7 +318,8 @@ def _score_facts(report: DiscoveryReport, answer_key: dict) -> dict:
         found = _words(fact.value).union(*(_words(r.quote) for r in fact.evidence))
         (matched if _words(value) <= found else missed).append(key)
     return {
-        "recall": len(matched) / len(expected) if expected else 0.0,
+        "metadata_scored": True,
+        "recall": len(matched) / len(expected),
         "precision": len(matched) / reported if reported else 0.0,
         "matched": matched,
         "missed": missed + unmapped,
@@ -371,9 +388,13 @@ def score_discrepancies(report: DiscoveryReport, expected: list[ExpectedDiscrepa
 def score_discovery(report: DiscoveryReport, answer_key: dict, code: Sources | None = None) -> dict:
     """Score a Discovery report against Person 1's answer key; run by Person 1, who holds the key.
 
-    The key holds ``expected_*`` metadata values (scored as before, top-level ``recall``/``precision``) and,
-    optionally, ``discrepancies``: a mapping from model id to a list of ``{id, field, type, description}``.
-    A model with no list there gets ``"discrepancies": null``; an empty list is the false-alarm control case.
+    The key holds:
+
+    - ``expected_*`` metadata values. Top-level ones belong to the legacy R model; ``metadata`` maps any model id
+      to its own ``expected_*`` values. A model with none (or ``{}``) gets ``metadata_scored: false``.
+    - ``discrepancies``, a mapping from model id to a list of ``{id, field, type, description}``. A model with no
+      list there gets ``"discrepancies": null``; an empty list is the false-alarm control case.
+
     ``code`` defaults to the report's source files, read from the current directory.
     """
     entries = (answer_key.get("discrepancies") or {}).get(report.model_id)
@@ -384,7 +405,7 @@ def score_discovery(report: DiscoveryReport, answer_key: dict, code: Sources | N
         discrepancies = score_discrepancies(report, [ExpectedDiscrepancy.model_validate(e) for e in entries], code)
     return {
         "model_id": report.model_id,
-        **_score_facts(report, answer_key),
+        **_score_facts(report, expected_metadata(answer_key, report.model_id)),
         "discrepancies": discrepancies,
         "report_generated_at": report.generated_at,
         "scored_at": utc_now(),
@@ -485,7 +506,8 @@ if __name__ == "__main__":
         score = score_discovery(saved, json.loads(Path(args.score).read_text()))
         out = REPORTS_DIR / f"{args.model_id}_score.json"
         out.write_text(json.dumps(score, indent=2) + "\n")
-        summary = f"facts recall {score['recall']:.2f}, precision {score['precision']:.2f}"
+        summary = (f"facts recall {score['recall']:.2f}, precision {score['precision']:.2f}" if score["metadata_scored"]
+                   else "facts not scored (no expected metadata for this model)")
         if score["discrepancies"] is not None:
             counts = score["discrepancies"]["counts"]
             summary += "; discrepancies " + ", ".join(f"{k} {v}" for k, v in counts.items())
