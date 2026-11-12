@@ -58,7 +58,7 @@ streamlit run app.py
 ```
 
 Without an API key the dashboard and the Documentation and Monitoring Agents still run with template text;
-only the Discovery Agent needs the LLM. With `LLM_PROVIDER=anthropic` the agents use Claude Opus 5.5 at
+only the Discovery and LLM Migration Agents need the LLM. With `LLM_PROVIDER=anthropic` the agents use Claude Opus 5.5 at
 medium effort; `LLM_PROVIDER=openai` works with any OpenAI-compatible endpoint. Never commit `.env`.
 
 ### What runs where
@@ -67,6 +67,7 @@ medium effort; `LLM_PROVIDER=openai` works with any OpenAI-compatible endpoint. 
 |---|---|---|
 | Discovery Agent: facts from code with checked line references; code vs existing document | `agents/discovery_agent.py` | `reports/discovery/<model_id>_discovery.json` |
 | Documentation Agent: model card, figures copied from Person 1's reports | `agents/documentation_agent.py` | `reports/documentation/`, `docs/model_cards/` |
+| LLM Migration Agent: the LLM writes a Python version of the R model; it is checked, run in isolation and compared with R's predictions, up to 3 rounds | `agents/llm_migration_agent.py`, `agents/migration_harness.py` | `reports/llm_migration/<model_id>_llm_migration.json`, `<model_id>_candidate.py` |
 | Monitoring Agent: rule-based alerts on Person 1's monitoring report, explained by the LLM | `agents/monitoring_agent.py` | `reports/alerts/<model_id>_alerts.json` |
 | Approval workflow, separation of duties, hash-chained audit log | `workflow/` | `governance/*.json` (git-ignored) |
 | Inventory and SS1/23 risk tier | `inventory/`, `governance/ss1_23_mapping.json` | `inventory/model_inventory.json` |
@@ -76,8 +77,12 @@ Command-line runs (the dashboard has the same buttons):
 ```bash
 python -m agents.discovery_agent --model-id legacy-r-logistic --source models/legacy_model.R --source engine/data.py --doc models/outdated_model_document.md
 python -m agents.documentation_agent --model-id legacy-r-logistic
+python -m agents.llm_migration_agent --model-id legacy-r-logistic --source models/legacy_model.R
 python -m agents.monitoring_agent --model-id legacy-r-logistic
 ```
+
+The LLM Migration Agent needs Person 1's shared split and R predictions (`python -m engine.pipeline`). Its
+report is evidence for the reviewer; the Redevelop gate still reads Person 1's parity report.
 
 Person 1 scores the Discovery report with the local answer key; the dashboard shows the result:
 

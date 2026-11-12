@@ -39,9 +39,16 @@ prose. To limit hallucination:
 Prompts contain source code, model documents and aggregate metrics, never customer-level records. Every call
 is logged (hashes, model, tokens, outcome) in `governance/llm_call_log.jsonl`.
 
-**Generated code** *(Person 1 to review)*. No LLM-generated code is executed. The Python candidate is written by
-Person 1 and parity-tested against the R `glm` on the same split: maximum probability difference 3.6e-7
-against a tolerance of 1e-5. The Redevelop stage can be approved only when this test passes.
+**Generated code** *(Person 1 to review)*. The Python candidate used by the engine is written by Person 1 and
+parity-tested against the R `glm` on the same split: maximum probability difference 3.6e-7 against a tolerance
+of 1e-5. The Redevelop stage can be approved only when this test passes. The LLM Migration Agent also has the
+LLM write a candidate from the R code, and that code is executed, so it is contained: a static check rejects
+imports outside numpy, pandas, statsmodels, patsy, math and typing, and any file or process access; a fixed
+harness runs it in a separate process with no credentials in its environment and a timeout; on macOS a
+sandbox also blocks the network, reads of `.env` files and writes outside its temporary folder. On other
+systems only the static check, the process and the timeout apply. Its predictions are compared with R's
+under the same tolerance, and a failed round goes back to the LLM with the error line or aggregate figures,
+never data rows. Its report is evidence for the reviewer; it does not open the gate.
 
 **Auditability.** Each approval stores a hash of the file it approved, so a later change to that evidence is
 shown as a stale approval. Every action goes into an audit log where each entry carries the hash of the previous

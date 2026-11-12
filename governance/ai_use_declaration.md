@@ -9,10 +9,12 @@
 | Draft model-card prose (overview, methodology, limitations) | Claude Opus 5.5 | numbers must appear in the evidence; approval wording flagged; all figures in tables are copied by code | Document gate |
 | Draft the risk-tier rationale (optional) | Claude Opus 5.5 | discarded unless it names the tier the fixed rule computed | Discover gate |
 | Explain monitoring alerts | Claude Opus 5.5 | severity set by fixed PSI rules; numbers must appear in the batch data; high alerts cannot be downgraded | alert review, Monitor gate |
+| Write a Python version of the legacy R model | Claude Opus 5.5 | static check of imports and file or process access; run in an isolated process (sandboxed on macOS); predictions compared with R's within 1e-5; R terms in the mapping must appear in the R code | Redevelop gate (evidence for the reviewer) |
 
-Without an API key the product runs with template text, and only the Discovery Agent is unavailable. Every
-LLM call is logged in `governance/llm_call_log.jsonl`. Prompts contain code, model documents and aggregate
-metrics, never customer-level records.
+Without an API key the product runs with template text, and only the Discovery and LLM Migration Agents are
+unavailable. Every LLM call is logged in `governance/llm_call_log.jsonl`. Prompts contain code, model
+documents, aggregate metrics and, for a failed migration round, the error line of the run, never
+customer-level records.
 
 ## AI tools and existing code used to build the project
 
@@ -28,13 +30,15 @@ Data: UCI Default of Credit Card Clients (dataset 350), public.
 
 ## What was tested independently of the AI
 
-- 136 automated tests for Person 2's code and 16 for Person 1's (152 in all), run together on the merged branch. They cover
+- 160 automated tests for Person 2's code and 16 for Person 1's (176 in all), run together on the merged branch. They cover
   the evidence checks, the approval rules, tamper detection, the alert rules (checked against Person 1's own
-  severities) and the dashboard pages. The LLM is replaced by fakes in these tests.
+  severities), the static check, sandbox and revision loop for generated code, and the dashboard pages. The
+  LLM is replaced by fakes in these tests.
 - Live Claude runs with their cost measured before and after:
   - development fixture: $0.26;
   - Person 1's R model and documents: $0.26;
-  - Gradient Boosting and Random Forest cards plus alert explanations: $0.36.
+  - Gradient Boosting and Random Forest cards plus alert explanations: $0.36;
+  - Python version of the R model: $0.10, passed parity with R in the first round.
   Their outputs were read and spot-checked against the source files and reports.
 - A manual walkthrough of the dashboard in a browser: submissions, approvals, an agent run, an alert review
   and an audit-chain check.

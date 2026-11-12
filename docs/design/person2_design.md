@@ -12,6 +12,7 @@ Scope, from the work split (P2.1–P2.5) and the plan (steps 5, 6, 13–16):
 | Five-stage approval workflow, separation of duties | 14 | `workflow/state_machine.py`, `workflow/approvals.py`, `governance/users.json` |
 | Audit log | 15 | `workflow/audit.py` |
 | Monitoring Agent and alert reviews | 13 | `agents/monitoring_agent.py`, `workflow/alerts.py` |
+| LLM Migration Agent: LLM-generated Python candidate, checked and run in isolation | P1.2 (LLM part) | `agents/llm_migration_agent.py`, `agents/migration_harness.py` |
 | Streamlit dashboard, Migration/Validation Agent integration | 16 | `app.py`, `workflow/artifacts.py` |
 
 ## 1. Design rules
@@ -35,6 +36,7 @@ Scope, from the work split (P2.1–P2.5) and the plan (steps 5, 6, 13–16):
  source files + old document ─► Discovery Agent ─► reports/discovery/<id>_discovery.json ─┐
  inventory + Person 1 reports ─► Documentation Agent ─► reports/documentation/, docs/model_cards/ ─┤
  Person 1: migration + parity ─► reports/migration/migration_results.json ──────────────┤
+   split + R predictions ─► LLM Migration Agent ─► reports/llm_migration/<id>_llm_migration.json (evidence only)
  Person 1: validation        ─► reports/validation/validation_results.json ─────────────┼─► approval gates
  Person 1: monitoring batches ─► reports/monitoring/monitoring_results.json             │   (workflow/)
                                    └─► Monitoring Agent ─► reports/alerts/<id>_alerts.json ┘
@@ -78,6 +80,18 @@ above 0.25 high; any schema change high; any missing value warning. Alert ids ar
 changed, impact, checks, recommendation: monitor / investigate / consider re-validation); it cannot retrain,
 replace or deploy anything.
 
+**LLM Migration** (`run_llm_migration`) — the work split asks for an LLM-generated Python candidate; Person 1's
+engine uses a hand-written one, so this agent adds the LLM part without changing Person 1's files. Each round:
+the LLM returns a module with `fit`, `predict_proba` and `classify`; `check_candidate` rejects imports outside
+numpy, pandas, statsmodels, patsy, math and typing, file and process access and escape hatches (`open`,
+`getattr`, dunder attributes); `migration_harness.py` runs it with `python -I -B` in its own temporary folder,
+with an environment holding no credentials, a timeout and, on macOS, `sandbox-exec` (no network, no `.env`
+reads, writes only in that folder); the predictions are compared with `reports/migration/r_predictions.csv`
+using Person 1's measures and tolerance. A failed round goes back with the static problems, the last line of
+the error or the aggregate figures, never data rows; at most three rounds. Inputs and tolerance are read from
+Person 1's parity report, and missing inputs stop the agent before any LLM call. The Redevelop gate is
+unchanged: it still reads Person 1's parity report.
+
 ## 5. Governance workflow (`workflow/`)
 
 **Stages:** Discover → Document → Redevelop → Validate → Monitor. Redevelop applies only to R or SAS models.
@@ -119,7 +133,8 @@ Governance. Each stage page ends with its approval gate, which lists the reasons
 for the current user. The sidebar picks the model, the acting user (prototype: no login) and a toggle that
 shows copies of Person 1's reports (from `ml-engineering` @ fdad799) with a banner while they are not on this
 branch. After the merge, the Migration and Validation buttons call Person 1's `MigrationAgent` and
-`ValidationAgent` classes.
+`ValidationAgent` classes. The Migration page also runs the LLM Migration Agent and shows each round, the
+generated module, the term mapping and the isolation used.
 
 ```bash
 .venv/bin/streamlit run app.py
@@ -178,14 +193,17 @@ same way. Install both dependency lists: `pip install -e ".[dev,validation,stats
   gates never read them.
 
 ## 10. Verification
-- 136 Person 2 tests, including compatibility tests for Person 1's interfaces and reports; with Person 1's 16 tests,
-  152 pass on the merged branch (Person 1's `ml-engineering` merged into `agent-governance` on 12 November).
+- 160 Person 2 tests, including compatibility tests for Person 1's interfaces and reports and the sandbox tests for
+  generated code; with Person 1's 16 tests, 176 pass on the merged branch (Person 1's `ml-engineering` merged into
+  `agent-governance` on 12 November).
 - Live Claude Opus 5.5 runs, each estimated with `count_tokens` first:
   - development fixture: $0.26 (seven calls);
   - Person 1's R model, `engine/data.py` and outdated document: $0.26 (four calls). No false alarm on the 0.5
     threshold; the missing feature list, split and preprocessing reported; every evidence section of the card
     filled from Person 1's reports with no grounding warnings;
   - Gradient Boosting and Random Forest discovery and cards, and alert explanations on Person 1's monitoring
-    report: $0.36 (six calls).
+    report: $0.36 (six calls);
+  - LLM Migration Agent on the UCI split: $0.10 (one call, estimate $0.05-$0.17), parity passed in the first
+    round with MAE 9.4e-9 and maximum difference 3.6e-7 against R, all 6000 labels equal.
 - Browser walkthrough: submit and approve Discover with two users, run the Monitoring Agent, acknowledge an
   alert, confirm the audit chain.
