@@ -39,8 +39,9 @@ uses the downloaded UCI workbook and requires `Rscript` and the Python
 dependencies to be installed.
 
 The Discovery answer key is private: keep it outside the repository and point
-`MODELTRACE_ANSWER_KEY` at it. The pipeline and the scorer refuse a key path
-inside the repository. Do not share it with the Discovery Agent operator or Person 2.
+`MODELTRACE_ANSWER_KEY` at it. The scorer refuses a key path inside any git
+repository; the pipeline then warns and runs Discovery unscored. Do not share it
+with the Discovery Agent operator or Person 2.
 
 ## Person 2 agents, governance and dashboard
 
@@ -99,8 +100,10 @@ The key holds `expected_*` metadata values and a `discrepancies` mapping from mo
 fact-scored only from their own entry under `metadata` (model id to `expected_*` values), so Gradient Boosting
 is never scored against the R facts. Discrepancies match one-to-one on field and type; the same field with another
 type is `misclassified`, and a finding that matches nothing is `unsupported`. Contradictions and unverifiable
-claims are always scored; omissions only when the key lists one. Code evidence is checked again against the
-source files. The score (`reports/discovery/<model_id>_score.json`) never copies the key's descriptions.
+claims are always scored; omissions only when the key lists one. Code evidence counts only when each quote is
+still at its cited lines in the model's source files (as registered in the inventory) and covers most of those
+lines. The score (`reports/discovery/<model_id>_score.json`) lists key entries by id and outcome only, never their
+field, type or description, so it can be committed without revealing what was missed.
 
 ### Optional: MLflow tracking
 
