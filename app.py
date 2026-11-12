@@ -307,14 +307,15 @@ def page_discovery(model_id: str) -> None:
             else:
                 st.caption("Not scored yet. Person 1 holds the answer key and runs: python -m agents.discovery_agent "
                            f"--model-id {model_id} --score \"$MODELTRACE_ANSWER_KEY\" (a path outside the repository)")
-            rows = [{"ID": d.discrepancy_id, "Field": d.field, "Type": d.type, "Documented claim": d.documented_claim,
-                     "Suggested correction": d.suggested_correction, "Detected by": d.detected_by,
-                     "Code evidence": "; ".join(f"{r.file}:L{r.line_start}" for r in d.code_evidence)}
-                    for d in report.discrepancies]
-            if scored:
-                for row in rows:
-                    row["Score"] = scored.get(row["ID"], {}).get("outcome", "not in score")
-                    row["Evidence check"] = scored.get(row["ID"], {}).get("evidence", "")
+            rows = []
+            for d in report.discrepancies:
+                row = {"ID": d.discrepancy_id, "Field": d.field, "Type": d.type}
+                if scored:  # next to the type, so the outcome is visible without scrolling
+                    result = scored.get(d.discrepancy_id, {})
+                    row |= {"Score": result.get("outcome", "not in score"), "Evidence check": result.get("evidence", "")}
+                rows.append(row | {"Documented claim": d.documented_claim, "Suggested correction": d.suggested_correction,
+                                   "Detected by": d.detected_by,
+                                   "Code evidence": "; ".join(f"{r.file}:L{r.line_start}" for r in d.code_evidence)})
             table(rows)
         with tabs[2]:
             for file in report.source_files:
