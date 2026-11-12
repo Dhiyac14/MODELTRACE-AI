@@ -22,3 +22,6 @@ models/artifacts/
 models/discovery_answer_key.json
 reports/migration/shared_data/
 reports/migration/r_predictions.csv
+# Optional MLflow export (governance/mlflow_export.py)
+mlflow.db
+mlruns/

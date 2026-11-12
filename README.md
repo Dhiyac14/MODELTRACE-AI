@@ -71,6 +71,7 @@ medium effort; `LLM_PROVIDER=openai` works with any OpenAI-compatible endpoint. 
 | Monitoring Agent: rule-based alerts on Person 1's monitoring report, explained by the LLM | `agents/monitoring_agent.py` | `reports/alerts/<model_id>_alerts.json` |
 | Approval workflow, separation of duties, hash-chained audit log | `workflow/` | `governance/*.json` (git-ignored) |
 | Inventory and SS1/23 risk tier | `inventory/`, `governance/ss1_23_mapping.json` | `inventory/model_inventory.json` |
+| Optional MLflow export of the reports, linked to the audit chain and approvals | `governance/mlflow_export.py` | `mlflow.db`, `mlruns/` (git-ignored) |
 
 Command-line runs (the dashboard has the same buttons):
 
@@ -89,6 +90,21 @@ Person 1 scores the Discovery report with the local answer key; the dashboard sh
 ```bash
 python -m agents.discovery_agent --model-id legacy-r-logistic --score models/discovery_answer_key.json
 ```
+
+### Optional: MLflow tracking
+
+MLflow is not a core dependency. After `python -m engine.pipeline`, this logs one run with the
+validation, parity, fairness and per-batch monitoring metrics, the report files as artifacts, and tags for
+the audit chain head, the stage approvals and each report's SHA-256:
+
+```bash
+python -m pip install mlflow
+python -m governance.mlflow_export
+mlflow ui --backend-store-uri sqlite:///mlflow.db
+```
+
+The reports and the hash-chained audit log stay the record; MLflow is for comparing runs. Set
+`MLFLOW_TRACKING_URI` to an Azure ML workspace (with `azureml-mlflow`) to send the run there instead.
 
 ### Demo users and rules
 

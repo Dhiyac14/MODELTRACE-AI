@@ -193,9 +193,9 @@ same way. Install both dependency lists: `pip install -e ".[dev,validation,stats
   gates never read them.
 
 ## 10. Verification
-- 160 Person 2 tests, including compatibility tests for Person 1's interfaces and reports and the sandbox tests for
-  generated code; with Person 1's 16 tests, 176 pass on the merged branch (Person 1's `ml-engineering` merged into
-  `agent-governance` on 12 November).
+- 165 Person 2 tests, including compatibility tests for Person 1's interfaces and reports and the sandbox tests for
+  generated code; with Person 1's 18 tests, 183 pass on the merged branch (Person 1's `ml-engineering` merged into
+  `agent-governance` on 12 November). The MLflow round-trip test is skipped where MLflow is not installed.
 - Live Claude Opus 5.5 runs, each estimated with `count_tokens` first:
   - development fixture: $0.26 (seven calls);
   - Person 1's R model, `engine/data.py` and outdated document: $0.26 (four calls). No false alarm on the 0.5

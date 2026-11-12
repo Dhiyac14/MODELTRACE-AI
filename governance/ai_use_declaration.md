@@ -23,14 +23,15 @@ part in the same form.
 
 | Part | Owner | AI tools used to build it | Existing code used |
 |---|---|---|---|
-| Agents, LLM layer, approval workflow, audit log, inventory, dashboard, their tests, the design document and the governance documents | Person 2 | Claude Code (Anthropic, Claude Opus 5.5) as a coding assistant, directed by Person 2 | Open-source libraries as published (Pydantic, python-dotenv, Streamlit, Plotly, pandas, pytest, the Anthropic and OpenAI Python SDKs); Person 1's agent classes, kept unchanged for compatibility |
+| Agents, LLM layer, approval workflow, audit log, inventory, dashboard, optional MLflow export, their tests, the design document and the governance documents | Person 2 | Claude Code (Anthropic, Claude Opus 5.5) as a coding assistant, directed by Person 2 | Open-source libraries as published (Pydantic, python-dotenv, Streamlit, Plotly, pandas, pytest, MLflow, the Anthropic and OpenAI Python SDKs); Person 1's agent classes, kept unchanged for compatibility |
 | ML engine, R model, migration, validation, monitoring and risk findings (`engine/`, `models/`, `reports/`) | Person 1 | *[Person 1 to complete]* | *[Person 1 to complete]* |
 
 Data: UCI Default of Credit Card Clients (dataset 350), public.
 
 ## What was tested independently of the AI
 
-- 160 automated tests for Person 2's code and 16 for Person 1's (176 in all), run together on the merged branch. They cover
+- 165 automated tests for Person 2's code and 18 for Person 1's (183 in all), run together on the merged branch; the
+  MLflow round-trip test runs only where MLflow is installed. They cover
   the evidence checks, the approval rules, tamper detection, the alert rules (checked against Person 1's own
   severities), the static check, sandbox and revision loop for generated code, and the dashboard pages. The
   LLM is replaced by fakes in these tests.
