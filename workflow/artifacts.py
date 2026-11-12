@@ -18,6 +18,7 @@ PERSON2_REPORTS = {
     "discovery": "reports/discovery/{model_id}_discovery.json",
     "model_card": "reports/documentation/{model_id}_model_card.json",
     "alerts": "reports/alerts/{model_id}_alerts.json",
+    "llm_migration": "reports/llm_migration/{model_id}_llm_migration.json",
     "discovery_score": "reports/discovery/{model_id}_score.json",  # written by Person 1, who holds the answer key
 }
 PERSON1_MODEL = "legacy-r-logistic"

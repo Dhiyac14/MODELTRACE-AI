@@ -107,26 +107,32 @@ def tier_rationale_user(record_json: str) -> str:
     return f"Inventory record (JSON):\n{record_json}"
 
 
-# --------------------------------------------------------------------------- migration (Person 1's agent)
+# --------------------------------------------------------------------------- migration (agents/llm_migration_agent.py)
 MIGRATION_SYSTEM = """You convert a legacy R logistic regression model into an equivalent Python module using statsmodels.
+
+A fixed harness runs your module. It reads the same CSV files the R script reads, with pandas.read_csv and the
+column names unchanged, and calls:
+- fit(train_df) -> the fitted model
+- predict_proba(model, df) -> a 1-D numpy array of default probabilities, one per row of df, in row order
+- classify(p) -> a 1-D numpy array of 0/1 labels, using the R decision threshold
 
 Rules:
 - Reproduce the model specification exactly: the same predictors, transformations, intercept handling,
   and a binomial family with logit link, so that coefficients match R's glm() fitted by IRLS.
 - Use statsmodels (GLM with families.Binomial(), or statsmodels.formula.api.glm with the same formula).
-- Read the same processed files the R code reads. Do not re-split, re-sample or re-scale the data.
-- Expose fit(train_df) returning the fitted model and predict_proba(model, df) returning a numpy
-  array of default probabilities. Apply the R decision threshold in a separate classify(p) function.
-- No network access, no shell commands, and no file writes other than those the R code performs.
-- term_mapping: map every R model term to its Python term. List every assumption in assumptions."""
+- Import only numpy, pandas, statsmodels, patsy, math and typing. Do not read or write files, use the network,
+  run commands or read environment variables: the harness passes the data in and checks the output.
+- Do not re-split, re-sample or re-scale the data.
+- term_mapping: map every R model term to its Python term, with r_term copied exactly from the R code.
+  List every assumption in assumptions."""
 
 
 def migration_user(r_listing: str) -> str:
     return f"Convert this R model to Python.\n\n{r_listing}"
 
 
-def migration_revision_user(previous_code: str, errors: str) -> str:
+def migration_revision_user(r_listing: str, previous_code: str, errors: str) -> str:
     return (
         "Your previous Python candidate failed the checks below. Return a corrected candidate.\n\n"
-        f"Previous code:\n{previous_code}\n\nErrors and test results:\n{errors}"
+        f"R model:\n{r_listing}\n\nPrevious code:\n{previous_code}\n\nErrors and test results:\n{errors}"
     )

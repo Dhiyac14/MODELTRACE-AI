@@ -240,7 +240,7 @@ class TierRationaleDraft(BaseModel):
     rationale: str = Field(description="2-3 sentences explaining the given tier. Do not change the tier.")
 
 
-# --------------------------------------------------------------------------- migration (used by Person 1)
+# --------------------------------------------------------------------------- migration (LLM)
 class TermMapping(BaseModel):
     r_term: str
     python_term: str
@@ -252,6 +252,51 @@ class MigrationCandidate(BaseModel):
     explanation: str
     assumptions: list[str] = Field(default_factory=list)
     term_mapping: list[TermMapping] = Field(default_factory=list)
+
+
+# --------------------------------------------------------------------------- migration (report)
+class CandidateParity(BaseModel):
+    """Same measures and pass rule as Person 1's ``r_vs_statsmodels`` block (engine/pipeline.py, run_migration)."""
+    row_alignment_verified: bool
+    n_rows: int
+    mae: float | None = None
+    max_probability_difference: float | None = None
+    label_agreement: float | None = None
+    label_disagreements: int | None = None
+    tolerance: float
+    mae_pass: bool = False
+    max_difference_pass: bool = False
+    overall_pass: bool = False
+
+
+class MigrationAttempt(BaseModel):
+    round: int
+    python_code: str
+    code_sha256: str
+    static_problems: list[str] = Field(default_factory=list)
+    run_error: str | None = None
+    parity: CandidateParity | None = None
+    passed: bool = False
+
+
+class MigrationReport(BaseModel):
+    model_id: str
+    r_source: str
+    train_csv: str
+    test_csv: str
+    r_predictions_csv: str
+    tolerance: float
+    isolation: str = Field(description="How the generated code was run.")
+    attempts: list[MigrationAttempt]
+    passed: bool
+    candidate_path: str | None = None
+    explanation: str = ""
+    assumptions: list[str] = Field(default_factory=list)
+    term_mapping: list[TermMapping] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    llm_model: str
+    generated_at: str = Field(default_factory=utc_now)
+    review_status: ReviewStatus = "pending_human_review"
 
 
 # ------------------------------------------------------------------ compatibility with Person 1's code
