@@ -8,11 +8,13 @@ from streamlit.testing.v1 import AppTest
 
 from agents.llm_migration_agent import save_migration_report
 from inventory.registry import save_inventory, seed_records
-from llm.schemas import CandidateParity, DiscoveryReport, MigrationAttempt, MigrationReport
+from llm.schemas import (CandidateParity, DiscoveryReport, Discrepancy, MigrationAttempt, MigrationReport,
+                         SourceRef)
 from workflow.approvals import load_users
 from workflow.state_machine import Workflow
 
 ROOT = Path(__file__).resolve().parents[1]
+R_FILE = "models/legacy_model.R"
 SECTIONS = ["Executive Overview", "Discovery", "Documentation", "Migration", "Validation",
             "Risk & Evidence", "Monitoring", "Governance"]
 USER_INDEX = {"dev.alex": 0, "val.sam": 1, "mrm.jordan": 2, "mon.riley": 3, "lead.taylor": 4}
@@ -42,6 +44,26 @@ def app(section, model="legacy-r-logistic", user="dev.alex", samples=False) -> A
     at.session_state["user"] = USER_INDEX[user]
     at.session_state["samples"] = samples
     return at.run()
+
+
+def r_line(text: str) -> SourceRef:
+    """The line of the R model that contains ``text``, looked up now so that edits to the R file break no test."""
+    lines = (ROOT / R_FILE).read_text(encoding="utf-8").splitlines()
+    number = next(i for i, line in enumerate(lines, start=1) if text in line)
+    return SourceRef(file=R_FILE, line_start=number, line_end=number, quote=lines[number - 1].strip(), verified=True)
+
+
+def finding(did: str, field: str, type_: str, *evidence: SourceRef) -> Discrepancy:
+    return Discrepancy(discrepancy_id=did, field=field, type=type_, documented_claim="claim", code_evidence=list(evidence),
+                       explanation="why", suggested_correction="fix", detected_by="rule")
+
+
+def write_discovery(root: Path, model_id: str, *findings: Discrepancy) -> DiscoveryReport:
+    """The committed report's metadata with known discrepancies, so tests do not depend on what a live run found."""
+    rel = f"reports/discovery/{model_id}_discovery.json"
+    report = DiscoveryReport.model_validate_json((ROOT / rel).read_text()).model_copy(update={"discrepancies": list(findings)})
+    (root / rel).write_text(report.model_dump_json())
+    return report
 
 
 @pytest.mark.parametrize("samples", [False, True])
@@ -125,7 +147,11 @@ def test_documentation_agent_runs_from_the_ui(data_root):
 
 def test_discovery_page_shows_the_discrepancy_score(data_root):
     from agents.discovery_agent import score_discovery
-    report = DiscoveryReport.model_validate_json((data_root / "reports/discovery/legacy-r-logistic_discovery.json").read_text())
+    report = write_discovery(data_root, "legacy-r-logistic",
+                             finding("D-001", "input_features", "omission", r_line("setdiff(")),  # matches K-1
+                             finding("D-002", "model_name", "unverifiable"),
+                             finding("D-003", "preprocessing", "contradiction", r_line("glm(")),
+                             finding("D-004", "target_variable", "contradiction"))         # no evidence
     key = {"expected_link": "logit", "expected_target": "not_target", "expected_owner": "x",  # fabricated
            "discrepancies": {"legacy-r-logistic": [
                {"id": "K-1", "field": "input_features", "type": "omission", "description": ""},
@@ -137,8 +163,8 @@ def test_discovery_page_shows_the_discrepancy_score(data_root):
     assert not at.exception
     metrics = {m.label: m.value for m in at.metric}
     assert (metrics["Fact recall vs answer key"], metrics["Fact precision vs answer key"]) == ("0.33", "0.50")
-    assert (metrics["Discrepancy recall"], metrics["Discrepancy precision"]) == ("0.50", "0.11")  # 1 of 2, 1 of 9
-    assert (metrics["Unsupported"], metrics["Detected without evidence"]) == ("8", "0")
+    assert (metrics["Discrepancy recall"], metrics["Discrepancy precision"]) == ("0.50", "0.25")  # 1 of 2, 1 of 4
+    assert (metrics["Unsupported"], metrics["Detected without evidence"]) == ("3", "0")
     assert any("Missed key entries: K-2 (" in c.value for c in at.caption)
     rows = next(d.value for d in at.dataframe if "Score" in d.value.columns).set_index("ID")
     assert rows.loc["D-001", "Score"] == "detected" and rows.loc["D-001", "Evidence check"] == "verified"
@@ -152,9 +178,7 @@ def test_discovery_page_shows_the_discrepancy_score(data_root):
 
 def test_gradient_boosting_score_without_expected_metadata(data_root):
     from agents.discovery_agent import score_discovery
-    rel = "reports/discovery/python-gradient-boosting_discovery.json"
-    shutil.copy(ROOT / rel, data_root / rel)
-    report = DiscoveryReport.model_validate_json((data_root / rel).read_text())
+    report = write_discovery(data_root, "python-gradient-boosting")  # no findings: precision has nothing to divide
     key = {"expected_link": "logit", "discrepancies": {"python-gradient-boosting": []}}  # fabricated control key
     (data_root / "reports/discovery/python-gradient-boosting_score.json").write_text(json.dumps(score_discovery(report, key)))
 

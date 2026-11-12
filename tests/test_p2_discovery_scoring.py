@@ -306,9 +306,12 @@ def test_cli_scores_with_a_key_outside_the_repository(tmp_path):
     import subprocess
     import sys
     work = tmp_path / "work"  # a copy of what the scorer reads, so the repository's reports stay untouched
-    for rel in ("reports/discovery/legacy-r-logistic_discovery.json", R_FILE, "engine/data.py"):
+    for rel in (R_FILE, "engine/data.py"):
         (work / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(ROOT / rel, work / rel)
+    saved = work / "reports/discovery/legacy-r-logistic_discovery.json"  # known findings, not the last live run's
+    saved.parent.mkdir(parents=True)
+    saved.write_text(report(finding("D-001", "input_features", "omission", EXCLUDED, line=19)).model_dump_json())
     private = tmp_path / "private" / "discovery_answer_key.json"
     private.parent.mkdir()
     private.write_text(json.dumps(key(("K-1", "input_features", "omission"))))
