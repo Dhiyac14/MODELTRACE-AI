@@ -21,9 +21,6 @@ import math
 import re
 from pathlib import Path
 
-from llm.schemas import AgentResult, Evidence, Finding
-
-from ._common import read_source
 from llm.client import StructuredLLM, llm_from_env
 from llm.evidence import Sources, load_sources, render_listing, verify_facts, verify_ref, verify_refs
 from llm.prompts import (
@@ -36,14 +33,20 @@ from llm.prompts import (
 )
 from llm.schemas import (
     MECHANICAL_FIELDS,
+    AgentResult,
     ClaimCheck,
-    Discrepancy,
     DiscoveryReport,
+    Discrepancy,
     DocumentClaims,
     Documented,
+    Evidence,
     Fact,
+    Finding,
     ModelMetadata,
+    utc_now,
 )
+
+from ._common import read_source
 
 REPORTS_DIR = Path("reports/discovery")
 LANGUAGES = {".r": "R", ".py": "Python", ".sas": "SAS", ".sql": "SQL"}
@@ -246,6 +249,48 @@ def run_discovery(
     )
 
 
+# Person 1's answer-key entries (see their DiscoveryAgent) and the report field that holds each fact.
+ANSWER_KEY_FIELDS = {
+    "expected_model_type": "algorithm",
+    "expected_training_function": "algorithm",
+    "expected_link": "algorithm",
+    "expected_target": "target_variable",
+}
+
+
+def _words(text: object) -> set[str]:
+    return set(re.findall(r"[a-z0-9]+", str(text).lower()))
+
+
+def score_discovery(report: DiscoveryReport, answer_key: dict) -> dict:
+    """Score the extracted facts against Person 1's answer key; run by Person 1, who holds the key.
+
+    An entry counts as found when every word of the expected value appears in the reported fact or its
+    verified code evidence. Keys this report has no field for are listed in ``unmapped_keys`` and count as missed.
+    """
+    expected = {k: v for k, v in answer_key.items() if k.startswith("expected_")}
+    matched, missed, unmapped, reported = [], [], [], 0
+    for key, value in expected.items():
+        field = ANSWER_KEY_FIELDS.get(key)
+        fact = getattr(report.metadata, field) if field else None
+        if fact is None or fact.status == "missing" or fact.value is None:
+            (unmapped if field is None else missed).append(key)
+            continue
+        reported += 1
+        found = _words(fact.value).union(*(_words(r.quote) for r in fact.evidence))
+        (matched if _words(value) <= found else missed).append(key)
+    return {
+        "model_id": report.model_id,
+        "recall": len(matched) / len(expected) if expected else 0.0,
+        "precision": len(matched) / reported if reported else 0.0,
+        "matched": matched,
+        "missed": missed + unmapped,
+        "unmapped_keys": unmapped,
+        "report_generated_at": report.generated_at,
+        "scored_at": utc_now(),
+    }
+
+
 def save_report(report: DiscoveryReport, reports_dir: Path = REPORTS_DIR) -> Path:
     reports_dir.mkdir(parents=True, exist_ok=True)
     path = reports_dir / f"{report.model_id}_discovery.json"
@@ -328,10 +373,20 @@ class DiscoveryAgent:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the Discovery Agent on model source files.")
     parser.add_argument("--model-id", required=True)
-    parser.add_argument("--source", action="append", required=True, help="repository-relative path; repeat for each file")
+    parser.add_argument("--source", action="append", help="repository-relative path; repeat for each file")
     parser.add_argument("--doc", help="existing model document to compare with the code")
     parser.add_argument("--replay", help="directory of canned LLM replies (offline demo)")
+    parser.add_argument("--score", metavar="ANSWER_KEY",
+                        help="score the saved report against an answer key instead of running the agent (Person 1)")
     args = parser.parse_args()
+    if args.score:
+        saved = DiscoveryReport.model_validate_json((REPORTS_DIR / f"{args.model_id}_discovery.json").read_text())
+        score = score_discovery(saved, json.loads(Path(args.score).read_text()))
+        out = REPORTS_DIR / f"{args.model_id}_score.json"
+        out.write_text(json.dumps(score, indent=2) + "\n")
+        raise SystemExit(f"wrote {out}: recall {score['recall']:.2f}, precision {score['precision']:.2f}")
+    if not args.source:
+        parser.error("--source is required (or pass --score)")
     if args.replay:
         from llm.client import ReplayLLM
 

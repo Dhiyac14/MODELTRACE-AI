@@ -18,6 +18,7 @@ PERSON2_REPORTS = {
     "discovery": "reports/discovery/{model_id}_discovery.json",
     "model_card": "reports/documentation/{model_id}_model_card.json",
     "alerts": "reports/alerts/{model_id}_alerts.json",
+    "discovery_score": "reports/discovery/{model_id}_score.json",  # written by Person 1, who holds the answer key
 }
 PERSON1_MODEL = "legacy-r-logistic"
 PERSON1_REPORTS = {
@@ -26,6 +27,9 @@ PERSON1_REPORTS = {
     "monitoring": "reports/monitoring/monitoring_results.json",
     "risk_findings": "reports/risk_findings/risk_findings_results.json",
 }
+# SHAP results that Person 1's validation run computes for the supporting models, stored inside the legacy
+# model's report. Only these blocks belong to those models; the report's metrics belong to the migrated model.
+PERSON1_SHAP_KEYS = {"python-random-forest": "random_forest_shap", "python-gradient-boosting": "gradient_boosting_shap"}
 PYTHON_CANDIDATE_SOURCE = "engine/models.py"  # Person 1's Statsmodels candidate (train_statsmodels_logistic)
 STAGE_EVIDENCE = {
     "discover": "discovery",
@@ -36,6 +40,11 @@ STAGE_EVIDENCE = {
 }
 # Copies of Person 1's reports from ml-engineering @ fdad799, used only when the sample toggle is on.
 SAMPLE_ROOT = Path("tests/fixtures/p2/person1_reports")
+
+
+def person1_shap(validation_report: dict[str, Any] | None, model_id: str) -> dict[str, Any] | None:
+    key = PERSON1_SHAP_KEYS.get(model_id)
+    return ((validation_report or {}).get("explainability") or {}).get(key) if key else None
 
 
 def parity_passed(report: dict[str, Any] | None) -> bool:

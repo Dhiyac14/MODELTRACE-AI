@@ -71,3 +71,29 @@ def test_failed_parity_is_detected():
     report = json.loads((PERSON1 / PERSON1_REPORTS["parity"]).read_text())
     report["r_vs_statsmodels"]["overall_pass"] = False
     assert not parity_passed(report) and not parity_passed(None) and not parity_passed({})
+
+
+# --------------------------------------------------------------------------- supporting models and scoring
+def test_supporting_model_card_shows_only_its_own_shap(person1_root):
+    from llm.schemas import DiscoveryReport
+    discovery = DiscoveryReport.model_validate_json(
+        (ROOT / "reports/discovery/legacy-r-logistic_discovery.json").read_text()).model_copy(update={"model_id": "python-random-forest"})
+    evidence = load_evidence("python-random-forest", person1_root)
+    assert list(evidence["validation"][1]) == ["explainability"]  # no metrics that belong to the migrated model
+    card = build_model_card(discovery, get_record(seed_records(), "python-random-forest"), evidence)
+    sections = {s.key: s for s in card.sections}
+    assert sections["metrics"].status == "pending" and sections["explainability"].status == "available"
+    assert all(r.label.startswith("random_forest_shap.") for r in sections["explainability"].rows)
+    assert load_evidence("python-random-forest", person1_root / "absent") == {}
+
+
+def test_score_discovery_with_a_made_up_key():
+    from agents.discovery_agent import score_discovery
+    from llm.schemas import DiscoveryReport
+    report = DiscoveryReport.model_validate_json((ROOT / "reports/discovery/legacy-r-logistic_discovery.json").read_text())
+    key = {"expected_model_type": "binomial_logistic_regression", "expected_link": "logit",  # invented for this test
+           "expected_target": "something_else", "expected_owner": "x"}
+    score = score_discovery(report, key)
+    assert score["matched"] == ["expected_model_type", "expected_link"]
+    assert set(score["missed"]) == {"expected_target", "expected_owner"} and score["unmapped_keys"] == ["expected_owner"]
+    assert score["recall"] == 0.5 and score["precision"] == 2 / 3

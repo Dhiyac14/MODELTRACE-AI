@@ -25,7 +25,8 @@ from llm.schemas import AlertReport, DiscoveryReport, ModelCard
 from workflow.alerts import RULES as ALERT_RULES
 from workflow.alerts import alert_status, check_alert_action
 from workflow.approvals import check_duties, load_users
-from workflow.artifacts import PYTHON_CANDIDATE_SOURCE, SAMPLE_ROOT, STAGE_EVIDENCE, Artifacts, parity_passed
+from workflow.artifacts import (PERSON1_MODEL, PERSON1_SHAP_KEYS, PYTHON_CANDIDATE_SOURCE, SAMPLE_ROOT, STAGE_EVIDENCE,
+                                Artifacts, parity_passed, person1_shap)
 from workflow.state_machine import REOPENABLE, STAGES, SUBMITTABLE, Workflow, WorkflowError
 
 ROOT = Path(os.environ.get("MODELTRACE_ROOT", "."))
@@ -267,8 +268,16 @@ def page_discovery(model_id: str) -> None:
             if report.metadata.missing_information:
                 st.markdown("**Missing from the code:** " + "; ".join(report.metadata.missing_information))
         with tabs[1]:
-            st.caption("Scoring against the hidden answer key is done by Person 1 (models/discovery_answer_key.json is "
-                       "local to them).")
+            score = ARTIFACTS.load("discovery_score", model_id)
+            if score:
+                cols = st.columns(3)
+                cols[0].metric("Recall vs answer key", f"{score['recall']:.2f}")
+                cols[1].metric("Precision vs answer key", f"{score['precision']:.2f}")
+                cols[2].metric("Missed", len(score.get("missed", [])))
+                st.caption(f"Scored by Person 1 at {score.get('scored_at')}; missed: {', '.join(score.get('missed', [])) or 'none'}.")
+            else:
+                st.caption("Not scored yet. Person 1 holds the answer key and runs: python -m agents.discovery_agent "
+                           f"--model-id {model_id} --score models/discovery_answer_key.json")
             table([{"ID": d.discrepancy_id, "Field": d.field, "Type": d.type, "Documented claim": d.documented_claim,
                     "Suggested correction": d.suggested_correction, "Detected by": d.detected_by,
                     "Code evidence": "; ".join(f"{r.file}:L{r.line_start}" for r in d.code_evidence)}
@@ -398,7 +407,12 @@ def page_validation(model_id: str) -> None:
         with st.expander("Validation Agent result", expanded=False):
             st.json(st.session_state[f"validation-summary-{model_id}"])
     if data is None:
-        st.info(f"No validation report yet ({ARTIFACTS.relpath('validation', model_id)}).")
+        st.info(f"No validation report for this model yet ({ARTIFACTS.relpath('validation', model_id)}).")
+        legacy, _, _ = load_display("validation", PERSON1_MODEL) if model_id in PERSON1_SHAP_KEYS else (None, None, False)
+        shap = person1_shap(legacy, model_id)
+        if shap:
+            st.markdown("**Explainability computed in Person 1's validation run**")
+            bar(shap["mean_abs_shap"], "mean |SHAP|", f"Mean absolute SHAP ({shap.get('n_rows')} test rows)", key="shap-own")
         gate_panel(model_id, "validate")
         return
     st.caption(f"Validated model: {data.get('model')} · hash `{str(data.get('model_hash'))[:12]}`")

@@ -19,14 +19,14 @@ from typing import Any
 from agents.discovery_agent import format_split
 from inventory.registry import InventoryRecord, get_record, load_inventory
 from inventory.risk_tier import TIER_RULE
-from llm.schemas import AgentResult, Evidence, Finding
-
-from ._common import read_source
 from llm.client import StructuredLLM, llm_from_env
 from llm.evidence import ungrounded_numbers
 from llm.prompts import MODEL_CARD_SYSTEM, model_card_user
-from llm.schemas import CardRow, CardSection, DiscoveryReport, Fact, ModelCard, ModelCardNarrative, SourceRef
-from workflow.artifacts import Artifacts
+from llm.schemas import (AgentResult, CardRow, CardSection, DiscoveryReport, Evidence, Fact, Finding, ModelCard,
+                         ModelCardNarrative, SourceRef)
+from workflow.artifacts import PERSON1_MODEL, PERSON1_SHAP_KEYS, Artifacts, person1_shap
+
+from ._common import read_source
 
 EvidenceFiles = dict[str, tuple[str, dict[str, Any]]]  # kind -> (file path, parsed JSON)
 
@@ -58,8 +58,14 @@ APPROVAL_WORDS = re.compile(r"\b(approved|signed[ -]off|certified|independently 
 def load_evidence(model_id: str, root: Path = Path(".")) -> EvidenceFiles:
     """Person 1's live validation and parity reports for this model (never the sample copies)."""
     artifacts = Artifacts(root)
-    return {kind: (artifacts.relpath(kind, model_id), data) for kind in ("validation", "parity")
-            if (data := artifacts.load(kind, model_id)) is not None}
+    evidence = {kind: (artifacts.relpath(kind, model_id), data) for kind in ("validation", "parity")
+                if (data := artifacts.load(kind, model_id)) is not None}
+    if "validation" not in evidence:
+        shap = person1_shap(artifacts.load("validation", PERSON1_MODEL), model_id)
+        if shap is not None:  # only this model's SHAP block, nothing that belongs to the migrated model
+            evidence["validation"] = (artifacts.relpath("validation", PERSON1_MODEL),
+                                      {"explainability": {PERSON1_SHAP_KEYS[model_id]: shap}})
+    return evidence
 
 
 def _fmt(value: Any) -> str:
