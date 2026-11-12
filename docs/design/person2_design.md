@@ -178,11 +178,14 @@ same way. Install both dependency lists: `pip install -e ".[dev,validation,stats
   gates never read them.
 
 ## 10. Verification
-- 132 tests on this branch, including the compatibility tests for Person 1's interfaces and reports;
-  148 tests on the trial merge.
-- Live Claude Opus 5.5 runs: development fixture $0.26 (seven calls); Person 1's real R model, `engine/data.py`
-  and outdated document $0.26 (four calls). The committed discovery report and model card come from the second
-  run: no false alarm on the 0.5 threshold, the missing feature list, split and preprocessing reported, and
-  every evidence section of the card filled from Person 1's reports with no grounding warnings.
+- 136 Person 2 tests, including compatibility tests for Person 1's interfaces and reports; with Person 1's 16 tests,
+  152 pass on the merged branch (Person 1's `ml-engineering` merged into `agent-governance` on 12 November).
+- Live Claude Opus 5.5 runs, each estimated with `count_tokens` first:
+  - development fixture: $0.26 (seven calls);
+  - Person 1's R model, `engine/data.py` and outdated document: $0.26 (four calls). No false alarm on the 0.5
+    threshold; the missing feature list, split and preprocessing reported; every evidence section of the card
+    filled from Person 1's reports with no grounding warnings;
+  - Gradient Boosting and Random Forest discovery and cards, and alert explanations on Person 1's monitoring
+    report: $0.36 (six calls).
 - Browser walkthrough: submit and approve Discover with two users, run the Monitoring Agent, acknowledge an
   alert, confirm the audit chain.

@@ -40,3 +40,64 @@ dependencies to be installed.
 
 `models/discovery_answer_key.json` is intentionally local-only and ignored by
 Git. Do not share it with the Discovery Agent operator or Person 2.
+
+## Person 2 agents, governance and dashboard
+
+The agent layer discovers, documents and monitors the models, and every stage passes a human approval gate.
+The Streamlit dashboard brings the five lifecycle stages together: Discover, Document, Redevelop, Validate
+and Monitor. Design and interfaces: `docs/design/person2_design.md`. Architecture: `docs/architecture.png`.
+
+### Quick start
+
+```bash
+python -m pip install -e ".[dev,validation,statsmodels]"
+python -m pip install -r requirements.txt
+cp .env.example .env          # optional: add LLM_API_KEY to use Claude
+python -m inventory.registry --seed --force   # only to reset the inventory
+streamlit run app.py
+```
+
+Without an API key the dashboard and the Documentation and Monitoring Agents still run with template text;
+only the Discovery Agent needs the LLM. With `LLM_PROVIDER=anthropic` the agents use Claude Opus 5.5 at
+medium effort; `LLM_PROVIDER=openai` works with any OpenAI-compatible endpoint. Never commit `.env`.
+
+### What runs where
+
+| Component | Code | Output |
+|---|---|---|
+| Discovery Agent: facts from code with checked line references; code vs existing document | `agents/discovery_agent.py` | `reports/discovery/<model_id>_discovery.json` |
+| Documentation Agent: model card, figures copied from Person 1's reports | `agents/documentation_agent.py` | `reports/documentation/`, `docs/model_cards/` |
+| Monitoring Agent: rule-based alerts on Person 1's monitoring report, explained by the LLM | `agents/monitoring_agent.py` | `reports/alerts/<model_id>_alerts.json` |
+| Approval workflow, separation of duties, hash-chained audit log | `workflow/` | `governance/*.json` (git-ignored) |
+| Inventory and SS1/23 risk tier | `inventory/`, `governance/ss1_23_mapping.json` | `inventory/model_inventory.json` |
+
+Command-line runs (the dashboard has the same buttons):
+
+```bash
+python -m agents.discovery_agent --model-id legacy-r-logistic --source models/legacy_model.R --source engine/data.py --doc models/outdated_model_document.md
+python -m agents.documentation_agent --model-id legacy-r-logistic
+python -m agents.monitoring_agent --model-id legacy-r-logistic
+```
+
+Person 1 scores the Discovery report with the local answer key; the dashboard shows the result:
+
+```bash
+python -m agents.discovery_agent --model-id legacy-r-logistic --score models/discovery_answer_key.json
+```
+
+### Demo users and rules
+
+The dashboard has no login; pick the acting user in the sidebar (`governance/users.json`). Developers
+submit Discover, Document and Redevelop; the validator submits Validate; the monitoring analyst submits
+Monitor and reviews alerts; the risk manager decides every gate. Nobody can decide on their own submission,
+whoever built the redevelopment cannot validate it, and agents cannot approve anything. Redevelop can only
+be approved when Person 1's parity report says `r_vs_statsmodels.overall_pass` is true.
+
+### Tests
+
+```bash
+python -m pytest
+```
+
+Person 2's tests are `tests/test_p2_*.py`; they run offline with fake or replayed LLM replies.
+Responsible AI note: `governance/responsible_ai.md`. AI-use declaration: `governance/ai_use_declaration.md`.
