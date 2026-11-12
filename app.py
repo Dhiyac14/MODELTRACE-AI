@@ -18,10 +18,11 @@ import streamlit as st
 
 from agents.discovery_agent import run_discovery, save_report
 from agents.documentation_agent import build_model_card, load_evidence, render_markdown, save_model_card
+from agents.llm_migration_agent import default_inputs, run_llm_migration, save_migration_report
 from agents.monitoring_agent import PSI_HIGH, PSI_WARNING, build_alert_report, save_alert_report
 from inventory.risk_tier import TIER_RULE, draft_rationale
 from llm.client import llm_from_env
-from llm.schemas import AlertReport, DiscoveryReport, ModelCard
+from llm.schemas import AlertReport, DiscoveryReport, MigrationReport, ModelCard
 from workflow.alerts import RULES as ALERT_RULES
 from workflow.alerts import alert_status, check_alert_action
 from workflow.approvals import check_duties, load_users
@@ -368,7 +369,70 @@ def page_migration(model_id: str) -> None:
             st.markdown(f"**Python candidate** `{PYTHON_CANDIDATE_SOURCE}`")
             st.code(ARTIFACTS.read_text(PYTHON_CANDIDATE_SOURCE) or "(not found on this branch)", language="python",
                     line_numbers=True)
+    llm_migration_panel(model_id)
     gate_panel(model_id, "redevelop")
+
+
+def llm_migration_panel(model_id: str) -> None:
+    record = WF.record(model_id)
+    st.divider()
+    st.subheader("LLM migration candidate")
+    st.caption("The LLM writes a Python module from the R code. Code checks it, runs it in a separate process on "
+               "Person 1's shared split and compares its predictions with R's; a failed round goes back to the LLM "
+               "with what failed, up to 3 rounds. Evidence for the reviewer: the gate reads Person 1's parity report.")
+    inputs = default_inputs(model_id, ROOT)
+    missing = inputs.missing(ROOT)
+    needs = [msg for ok, msg in [
+        (LLM is not None, "configure the LLM in .env"),
+        (bool(record.source_files), "save the source files"),
+        (not missing, f"run Person 1's pipeline, python -m engine.pipeline (missing: {', '.join(missing)})"),
+        (WF.statuses(model_id)["redevelop"] in SUBMITTABLE, "the Redevelop stage must be open (not submitted or approved)"),
+    ] if not ok]
+    if st.button("Run LLM Migration Agent", type="primary", disabled=bool(needs), key="run-llm-migration"):
+        try:
+            with st.spinner("Generating the Python candidate, running it and comparing it with R..."):
+                report = run_llm_migration(model_id, record.source_files[0], LLM, ROOT, inputs)
+        except Exception as exc:  # LLM or API error: show it and keep the page usable
+            st.error(f"LLM Migration Agent failed: {type(exc).__name__}: {exc}")
+        else:
+            save_migration_report(report, ROOT)
+            WF.log_agent_run(model_id, "redevelop", "llm_migration", USER,
+                             {"output": ARTIFACTS.relpath("llm_migration", model_id), "llm_model": report.llm_model,
+                              "rounds": len(report.attempts), "passed": report.passed})
+            flash(f"LLM migration report written: parity {'passed' if report.passed else 'FAILED'} "
+                  f"after {len(report.attempts)} round(s).")
+            st.rerun()
+    if needs:
+        st.caption("To run the LLM Migration Agent: " + "; ".join(needs) + ".")
+
+    data = ARTIFACTS.load("llm_migration", model_id)
+    if data is None:
+        st.info(f"No LLM migration report yet ({ARTIFACTS.relpath('llm_migration', model_id)}).")
+        return
+    report = MigrationReport.model_validate(data)
+    rounds = f"{len(report.attempts)} round(s), {report.llm_model}"
+    if report.passed:
+        st.success(f"LLM candidate matches R within tolerance {report.tolerance:g} after {rounds}.")
+    else:
+        st.error(f"LLM candidate did NOT match R after {rounds}.")
+    table([{"Round": a.round,
+            "Static check": "; ".join(a.static_problems) or "passed",
+            "Run": a.run_error or ("ran" if a.parity else "not run"),
+            "Mean abs. difference": show_value(a.parity.mae if a.parity else None),
+            "Max difference": show_value(a.parity.max_probability_difference if a.parity else None),
+            "Parity": "pass" if a.passed else "fail"} for a in report.attempts])
+    st.caption(f"Isolation: {report.isolation} · {report.generated_at} · {report.review_status.replace('_', ' ')}")
+    left, right = st.columns(2)
+    with left:
+        st.markdown(f"**Generated Python** `{report.candidate_path}`")
+        st.code(report.attempts[-1].python_code, language="python", line_numbers=True)
+    with right:
+        st.markdown("**R to Python terms**")
+        table([m.model_dump() for m in report.term_mapping])
+        if report.assumptions:
+            st.markdown("**Assumptions**\n" + "\n".join(f"- {a}" for a in report.assumptions))
+        for warning in report.warnings:
+            st.warning(warning)
 
 
 def group_chart(grouping: str, report: dict[str, Any], key: str) -> None:

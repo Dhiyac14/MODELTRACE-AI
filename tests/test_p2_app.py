@@ -6,7 +6,9 @@ from pathlib import Path
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from agents.llm_migration_agent import save_migration_report
 from inventory.registry import save_inventory, seed_records
+from llm.schemas import CandidateParity, MigrationAttempt, MigrationReport
 from workflow.approvals import load_users
 from workflow.state_machine import Workflow
 
@@ -90,6 +92,25 @@ def test_sample_data_cannot_satisfy_a_gate(data_root):
     assert any("Parity tests passed" in s.value for s in at.success)  # the sample says passed...
     assert at.button(key="submit-legacy-r-logistic-redevelop").disabled          # ...but it is not live evidence
     assert any("No evidence yet: reports/migration/migration_results.json" in m.value for m in at.markdown)
+
+
+def test_migration_page_shows_the_llm_candidate(data_root):
+    at = app("Migration")
+    assert at.button(key="run-llm-migration").disabled  # no LLM and no Person 1 split in tests
+    assert any("No LLM migration report yet" in i.value for i in at.info)
+
+    parity = CandidateParity(row_alignment_verified=True, n_rows=6000, mae=1e-8, max_probability_difference=4e-7,
+                             label_agreement=1.0, label_disagreements=0, tolerance=1e-5, mae_pass=True,
+                             max_difference_pass=True, overall_pass=True)
+    attempts = [MigrationAttempt(round=1, python_code="def fit(df): ...", code_sha256="a", run_error="KeyError: 'x'"),
+                MigrationAttempt(round=2, python_code="def fit(df): ...", code_sha256="b", parity=parity, passed=True)]
+    save_migration_report(MigrationReport(
+        model_id="legacy-r-logistic", r_source="models/legacy_model.R", train_csv="data/processed/train.csv",
+        test_csv="data/processed/test.csv", r_predictions_csv="reports/migration/r_predictions.csv", tolerance=1e-5,
+        isolation="separate process", attempts=attempts, passed=True, llm_model="fake"), data_root)
+    at = app("Migration")
+    assert not at.exception
+    assert any("LLM candidate matches R within tolerance 1e-05 after 2 round(s)" in s.value for s in at.success)
 
 
 def test_documentation_agent_runs_from_the_ui(data_root):
