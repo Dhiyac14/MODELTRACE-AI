@@ -159,7 +159,9 @@ Model IDs follow Person 1's `inventory/models.json`: `legacy-r-logistic`, `pytho
 - Alert severity is recomputed with the same PSI bands as `engine/monitoring.py`; a test checks that both agree
   for every batch.
 - Scoring the Discovery report against `models/discovery_answer_key.json` stays with Person 1 (the key is local
-  to them).
+  to them). `score_discovery` keeps the metadata score and adds per-discrepancy outcomes (detected,
+  misclassified, missed, unsupported, not_scored), precision, recall and an evidence check; Person 2 tests it
+  with fabricated keys only.
 - `engine/pipeline.py::generate_agent_reports` keeps calling the deterministic agent classes, so running the
   pipeline never spends LLM tokens; the LLM agents run from the dashboard behind the approval gates.
 
