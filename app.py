@@ -422,17 +422,15 @@ def llm_migration_panel(model_id: str) -> None:
             "Max difference": show_value(a.parity.max_probability_difference if a.parity else None),
             "Parity": "pass" if a.passed else "fail"} for a in report.attempts])
     st.caption(f"Isolation: {report.isolation} · {report.generated_at} · {report.review_status.replace('_', ' ')}")
-    left, right = st.columns(2)
-    with left:
-        st.markdown(f"**Generated Python** `{report.candidate_path}`")
-        st.code(report.attempts[-1].python_code, language="python", line_numbers=True)
-    with right:
-        st.markdown("**R to Python terms**")
-        table([m.model_dump() for m in report.term_mapping])
-        if report.assumptions:
-            st.markdown("**Assumptions**\n" + "\n".join(f"- {a}" for a in report.assumptions))
-        for warning in report.warnings:
-            st.warning(warning)
+    st.markdown("**R to Python terms**")
+    table([m.model_dump() for m in report.term_mapping])
+    for warning in report.warnings:
+        st.warning(warning)
+    if report.assumptions:
+        with st.expander(f"Assumptions stated by the LLM ({len(report.assumptions)})"):
+            st.markdown("\n".join(f"- {a}" for a in report.assumptions))
+    st.markdown(f"**Generated Python** `{report.candidate_path}`")
+    st.code(report.attempts[-1].python_code, language="python", line_numbers=True)
 
 
 def group_chart(grouping: str, report: dict[str, Any], key: str) -> None:
