@@ -31,9 +31,10 @@ model artifacts, and R prediction CSV are ignored so large/intermediate files
 are not committed.
 
 The original R `glm()` model is implemented in
-`models/legacy_model.R`. The pipeline persists one shared train/test CSV split,
-executes R `glm(..., family = binomial(link = "logit"))`, executes Python
-Statsmodels `Logit`, and compares predictions in
+`models/legacy_model.R` and classifies probabilities at its explicit 0.35
+threshold. The pipeline persists one shared train/test CSV split, executes R
+`glm(..., family = binomial(link = "logit"))`, executes Python Statsmodels
+`Logit`, and compares predictions in
 `reports/migration/migration_results.json`. Running `python -m engine.pipeline`
 uses the downloaded UCI workbook and requires `Rscript` and the Python
 dependencies to be installed.

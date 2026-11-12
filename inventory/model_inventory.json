@@ -38,7 +38,7 @@
       "engine/models.py",
       "engine/data.py"
     ],
-    "legacy_document": null,
+    "legacy_document": "models/gradient_boosting_model_document.md",
     "lifecycle_stage": "discover",
     "documentation_status": "not_started",
     "migration_status": "not_applicable",

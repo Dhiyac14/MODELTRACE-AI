@@ -20,7 +20,8 @@ feature_names <- setdiff(names(train), c("row_id", "target", "SEX", "AGE", "ID")
 formula <- reformulate(feature_names, response = "target")
 legacy_model <- glm(formula, data = train, family = binomial(link = "logit"))
 probability <- as.numeric(predict(legacy_model, newdata = test, type = "response"))
-prediction <- as.integer(probability >= 0.5)
+CLASSIFICATION_THRESHOLD <- 0.35
+prediction <- as.integer(probability >= CLASSIFICATION_THRESHOLD)
 
 write.csv(
   data.frame(row_id = test$row_id, probability = probability, prediction = prediction),

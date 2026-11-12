@@ -114,6 +114,7 @@ def seed_records() -> list[InventoryRecord]:
             algorithm="Gradient Boosting classifier (scikit-learn)",
             language="Python",
             source_files=["engine/models.py", "engine/data.py"],
+            legacy_document="models/gradient_boosting_model_document.md",
             migration_status="not_applicable",
             materiality="medium",
             materiality_basis="informs model review but does not drive decisions",

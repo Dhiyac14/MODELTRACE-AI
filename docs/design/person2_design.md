@@ -147,7 +147,7 @@ Model IDs follow Person 1's `inventory/models.json`: `legacy-r-logistic`, `pytho
 
 | Use | Person 1 file | Fields used |
 |---|---|---|
-| Discover input | `models/legacy_model.R`, `engine/data.py` | R `glm` (logit, threshold 0.5); split `test_size=0.2`, stratified, `random_state=42`; ID, SEX, AGE excluded from predictors |
+| Discover input | `models/legacy_model.R`, `engine/data.py` | R `glm` (logit, threshold 0.35); split `test_size=0.2`, stratified, `random_state=42`; ID, SEX, AGE excluded from predictors |
 | Existing document | `models/outdated_model_document.md` | compared with the code by the Discovery Agent |
 | Redevelop gate | `reports/migration/migration_results.json` | `r_vs_statsmodels.overall_pass` (must be true to approve), parity metrics, `r_script` |
 | Validate | `reports/validation/validation_results.json` | `metrics`, `stability`, `fairness.{sex,age_groups}` (`by_group`, `demographic_parity_difference`, `disparate_impact`), `explainability` (`coefficients`, `*_shap.mean_abs_shap`) |
