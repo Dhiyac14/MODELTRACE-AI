@@ -197,6 +197,49 @@ def page_overview() -> None:
     st.caption("Counts use live report files only; sample data is never counted here.")
 
 
+def discovery_score_panel(model_id: str, score: dict[str, Any], report: DiscoveryReport) -> dict[str, dict]:
+    """Show Person 1's score of the Discovery report. Returns the per-discrepancy results that label the table rows,
+    or {} when no rows should be labelled."""
+    scored_at = score.get("scored_at")
+    if "metadata_scored" in score:
+        metadata_scored = score["metadata_scored"]
+    elif model_id == PERSON1_MODEL:
+        metadata_scored = True  # files from before per-model metadata were scored against this model's facts
+    else:
+        metadata_scored = False
+        st.warning("This score file predates per-model metadata and compared this model with the R model's facts, "
+                   "so its fact scores are hidden. Ask Person 1 to re-score it.")
+    if metadata_scored:
+        cols = st.columns(3)
+        cols[0].metric("Fact recall vs answer key", rate(score["recall"]))
+        cols[1].metric("Fact precision vs answer key", rate(score["precision"]))
+        cols[2].metric("Facts missed", len(score.get("missed", [])))
+        st.caption(f"Scored by Person 1 at {scored_at}; missed: {', '.join(score.get('missed', [])) or 'none'}.")
+    else:
+        st.caption(f"Scored by Person 1 at {scored_at}. Facts not scored for this model.")
+    stale = score.get("report_generated_at") != report.generated_at
+    if stale:  # discrepancy ids are renumbered on every run, so per-row results would land on the wrong rows
+        st.warning("This score is for an earlier Discovery report, so per-row results are hidden; "
+                   "ask Person 1 to score the current one.")
+    disc = score.get("discrepancies")
+    if disc is None:
+        st.caption("Discrepancies not scored: the answer key has no list for this model.")
+        return {}
+    counts = disc["counts"]
+    cols = st.columns(4)
+    cols[0].metric("Discrepancy recall", rate(disc["recall"]))
+    cols[1].metric("Discrepancy precision", rate(disc["precision"]))
+    cols[2].metric("Unsupported", counts["unsupported"], help="Reported discrepancies that match no expected one")
+    cols[3].metric("Detected without evidence", counts["detected_without_evidence"],
+                   help="Matched an expected discrepancy, but the code evidence did not resolve")
+    missed = [e["id"] for e in disc["key_entries"] if e["outcome"] == "missed"]
+    st.caption(f"Scored types: {', '.join(disc['scored_types'])}. Recall with evidence: "
+               f"{rate(disc['recall_with_evidence'])}. Misclassified: {counts['misclassified']}. "
+               f"Missed key entries: {', '.join(missed) or 'none'} (the private key says what they are). "
+               f"Other types, reported separately: {counts['not_scored']}.")
+    return {} if stale else {f["discrepancy_id"]: f for f in disc["findings"]}
+
+
 def page_discovery(model_id: str) -> None:
     record = WF.record(model_id)
     st.header(f"Discovery · {record.name}")
@@ -278,34 +321,10 @@ def page_discovery(model_id: str) -> None:
             score = ARTIFACTS.load("discovery_score", model_id)
             scored = {}
             if score:
-                if score.get("metadata_scored", True):  # score files written before per-model metadata were always scored
-                    cols = st.columns(3)
-                    cols[0].metric("Fact recall vs answer key", rate(score["recall"]))
-                    cols[1].metric("Fact precision vs answer key", rate(score["precision"]))
-                    cols[2].metric("Facts missed", len(score.get("missed", [])))
-                    st.caption(f"Scored by Person 1 at {score.get('scored_at')}; "
-                               f"missed: {', '.join(score.get('missed', [])) or 'none'}.")
-                else:
-                    st.caption(f"Scored by Person 1 at {score.get('scored_at')}. Facts not scored: the answer key "
-                               "has no expected metadata for this model.")
-                stale = score.get("report_generated_at") != report.generated_at
-                if stale:  # discrepancy ids are renumbered on every run, so per-row results would land on the wrong rows
-                    st.warning("This score is for an earlier Discovery report, so per-row results are hidden; "
-                               "ask Person 1 to score the current one.")
-                disc = score.get("discrepancies")
-                if disc:
-                    counts = disc["counts"]
-                    cols = st.columns(4)
-                    cols[0].metric("Discrepancy recall", rate(disc["recall"]))
-                    cols[1].metric("Discrepancy precision", rate(disc["precision"]))
-                    cols[2].metric("Unsupported", counts["unsupported"], help="Reported discrepancies that match no expected one")
-                    cols[3].metric("Detected without evidence", counts["detected_without_evidence"],
-                                   help="Matched an expected discrepancy, but the code evidence did not resolve")
-                    missed = [f"{e['id']} ({e['field']}, {e['type']})" for e in disc["key_entries"] if e["outcome"] == "missed"]
-                    st.caption(f"Scored types: {', '.join(disc['scored_types'])}. Recall with evidence: "
-                               f"{rate(disc['recall_with_evidence'])}. Misclassified: {counts['misclassified']}. "
-                               f"Missed: {', '.join(missed) or 'none'}. Other types, reported separately: {counts['not_scored']}.")
-                    scored = {} if stale else {f["discrepancy_id"]: f for f in disc["findings"]}
+                try:
+                    scored = discovery_score_panel(model_id, score, report)
+                except (KeyError, TypeError, AttributeError):  # a truncated or hand-edited file must not break the page
+                    st.warning("The score file is incomplete; ask Person 1 to re-score this model.")
             else:
                 st.caption("Not scored yet. Person 1 holds the answer key and runs: python -m agents.discovery_agent "
                            f"--model-id {model_id} --score \"$MODELTRACE_ANSWER_KEY\" (a path outside the repository)")
