@@ -141,7 +141,9 @@ def test_discovery_page_shows_the_discrepancy_score(data_root):
     assert not any("earlier Discovery report" in w.value for w in at.warning)
 
     score_path.write_text(json.dumps({**json.loads(score_path.read_text()), "report_generated_at": "2026-01-01T00:00:00+00:00"}))
-    assert any("earlier Discovery report" in w.value for w in app("Discovery").warning)
+    stale = app("Discovery")
+    assert any("per-row results are hidden" in w.value for w in stale.warning)
+    assert not any("Score" in d.value.columns for d in stale.dataframe)  # ids may now name other discrepancies
 
 
 def test_gradient_boosting_score_without_expected_metadata(data_root):

@@ -288,8 +288,10 @@ def page_discovery(model_id: str) -> None:
                 else:
                     st.caption(f"Scored by Person 1 at {score.get('scored_at')}. Facts not scored: the answer key "
                                "has no expected metadata for this model.")
-                if score.get("report_generated_at") != report.generated_at:
-                    st.warning("This score is for an earlier Discovery report; ask Person 1 to score the current one.")
+                stale = score.get("report_generated_at") != report.generated_at
+                if stale:  # discrepancy ids are renumbered on every run, so per-row results would land on the wrong rows
+                    st.warning("This score is for an earlier Discovery report, so per-row results are hidden; "
+                               "ask Person 1 to score the current one.")
                 disc = score.get("discrepancies")
                 if disc:
                     counts = disc["counts"]
@@ -303,7 +305,7 @@ def page_discovery(model_id: str) -> None:
                     st.caption(f"Scored types: {', '.join(disc['scored_types'])}. Recall with evidence: "
                                f"{rate(disc['recall_with_evidence'])}. Misclassified: {counts['misclassified']}. "
                                f"Missed: {', '.join(missed) or 'none'}. Other types, reported separately: {counts['not_scored']}.")
-                    scored = {f["discrepancy_id"]: f for f in disc["findings"]}
+                    scored = {} if stale else {f["discrepancy_id"]: f for f in disc["findings"]}
             else:
                 st.caption("Not scored yet. Person 1 holds the answer key and runs: python -m agents.discovery_agent "
                            f"--model-id {model_id} --score \"$MODELTRACE_ANSWER_KEY\" (a path outside the repository)")
