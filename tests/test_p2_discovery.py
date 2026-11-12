@@ -165,3 +165,14 @@ def test_unassessed_claim_is_flagged_and_unsupported_omission_dropped():
     assert assess_free_text(check, CLAIMS, CODE, warnings) == []
     assert any("C2 was not assessed" in w for w in warnings)
     assert any("omission 1" in w for w in warnings)
+
+
+def test_model_hint_scopes_the_prompt():
+    class Capture(ReplayLLM):
+        def structured(self, system, user, schema):
+            self.last_user = user
+            return super().structured(system, user, schema)
+
+    llm = Capture(f"{FIX}/replay_lr")
+    run_discovery("python-random-forest", SOURCES, llm, model_hint="Python Random Forest (RandomForestClassifier)")
+    assert llm.last_user.startswith("Describe this model only: Python Random Forest")

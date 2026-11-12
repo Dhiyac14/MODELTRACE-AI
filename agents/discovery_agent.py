@@ -216,10 +216,12 @@ def run_discovery(
     source_paths: list[str | Path],
     llm: StructuredLLM,
     legacy_doc_path: str | Path | None = None,
+    model_hint: str | None = None,
 ) -> DiscoveryReport:
+    """``model_hint`` names the model to describe when the source files define several (e.g. engine/models.py)."""
     sources = load_sources(source_paths)
     listing = render_listing(sources)
-    raw = llm.structured(DISCOVERY_SYSTEM, discovery_user(listing), ModelMetadata)
+    raw = llm.structured(DISCOVERY_SYSTEM, discovery_user(listing, model_hint), ModelMetadata)
     metadata, warnings = verify_facts(raw, sources)
 
     discrepancies: list[Discrepancy] = []
@@ -376,6 +378,7 @@ if __name__ == "__main__":
     parser.add_argument("--source", action="append", help="repository-relative path; repeat for each file")
     parser.add_argument("--doc", help="existing model document to compare with the code")
     parser.add_argument("--replay", help="directory of canned LLM replies (offline demo)")
+    parser.add_argument("--model-hint", help="which model to describe when the files define several")
     parser.add_argument("--score", metavar="ANSWER_KEY",
                         help="score the saved report against an answer key instead of running the agent (Person 1)")
     args = parser.parse_args()
@@ -395,5 +398,5 @@ if __name__ == "__main__":
         client, status = llm_from_env()
         if client is None:
             parser.error(status)
-    result = run_discovery(args.model_id, args.source, client, args.doc)
+    result = run_discovery(args.model_id, args.source, client, args.doc, args.model_hint)
     print(f"wrote {save_report(result)}: {len(result.discrepancies)} discrepancies, {len(result.evidence_warnings)} warnings")

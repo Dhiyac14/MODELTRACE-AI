@@ -1,0 +1,353 @@
+{
+  "model_id": "python-random-forest",
+  "language": "Python",
+  "source_files": [
+    "engine/models.py",
+    "engine/data.py"
+  ],
+  "legacy_document": null,
+  "metadata": {
+    "model_name": {
+      "value": "random_forest",
+      "status": "verified",
+      "evidence": [
+        {
+          "file": "engine/models.py",
+          "line_start": 64,
+          "line_end": 64,
+          "quote": "\"random_forest\": RandomForestClassifier(",
+          "verified": true
+        }
+      ],
+      "note": "Dictionary key used as the ModelBundle name."
+    },
+    "algorithm": {
+      "value": "scikit-learn RandomForestClassifier (n_estimators=150, random_state=seed (default 42), n_jobs=-1, class_weight=\"balanced\")",
+      "status": "verified",
+      "evidence": [
+        {
+          "file": "engine/models.py",
+          "line_start": 64,
+          "line_end": 66,
+          "quote": "\"random_forest\": RandomForestClassifier(\n            n_estimators=150, random_state=seed, n_jobs=-1, class_weight=\"balanced\"\n        ),",
+          "verified": true
+        },
+        {
+          "file": "engine/models.py",
+          "line_start": 56,
+          "line_end": 56,
+          "quote": "x_train: pd.DataFrame, y_train: pd.Series, seed: int = 42",
+          "verified": true
+        }
+      ],
+      "note": ""
+    },
+    "business_purpose": {
+      "value": "Supporting comparison model for predicting credit card client default next month, alongside a logistic regression migration target.",
+      "status": "inferred",
+      "evidence": [
+        {
+          "file": "engine/models.py",
+          "line_start": 58,
+          "line_end": 58,
+          "quote": "\"\"\"Train the migration target and supporting comparison models.\"\"\"",
+          "verified": true
+        },
+        {
+          "file": "engine/data.py",
+          "line_start": 78,
+          "line_end": 78,
+          "quote": "\"dataset\": \"UCI Default of Credit Card Clients\",",
+          "verified": true
+        }
+      ],
+      "note": "Inferred from docstring and dataset name; the random forest is not the migration target, so it appears to be a comparison/benchmark model. No explicit business use stated."
+    },
+    "target_variable": {
+      "value": "default.payment.next.month",
+      "status": "verified",
+      "evidence": [
+        {
+          "file": "engine/data.py",
+          "line_start": 19,
+          "line_end": 19,
+          "quote": "TARGET = \"default.payment.next.month\"",
+          "verified": true
+        },
+        {
+          "file": "engine/data.py",
+          "line_start": 142,
+          "line_end": 142,
+          "quote": "target = frame[TARGET].astype(int)",
+          "verified": true
+        }
+      ],
+      "note": "Binary target cast to int."
+    },
+    "input_features": {
+      "value": [
+        "LIMIT_BAL",
+        "EDUCATION",
+        "MARRIAGE",
+        "PAY_0",
+        "PAY_2",
+        "PAY_3",
+        "PAY_4",
+        "PAY_5",
+        "PAY_6",
+        "BILL_AMT1",
+        "BILL_AMT2",
+        "BILL_AMT3",
+        "BILL_AMT4",
+        "BILL_AMT5",
+        "BILL_AMT6",
+        "PAY_AMT1",
+        "PAY_AMT2",
+        "PAY_AMT3",
+        "PAY_AMT4",
+        "PAY_AMT5",
+        "PAY_AMT6"
+      ],
+      "status": "inferred",
+      "evidence": [
+        {
+          "file": "engine/data.py",
+          "line_start": 58,
+          "line_end": 63,
+          "quote": "expected_features = [\n        \"LIMIT_BAL\", \"SEX\", \"EDUCATION\", \"MARRIAGE\", \"AGE\",\n        \"PAY_0\", \"PAY_2\", \"PAY_3\", \"PAY_4\", \"PAY_5\", \"PAY_6\",\n        \"BILL_AMT1\", \"BILL_AMT2\", \"BILL_AMT3\", \"BILL_AMT4\", \"BILL_AMT5\", \"BILL_AMT6\",\n        \"PAY_AMT1\", \"PAY_AMT2\", \"PAY_AMT3\", \"PAY_AMT4\", \"PAY_AMT5\", \"PAY_AMT6\",\n    ]",
+          "verified": true
+        },
+        {
+          "file": "engine/data.py",
+          "line_start": 150,
+          "line_end": 151,
+          "quote": "excluded = [column for column in (\"ID\", *SENSITIVE_FEATURES) if column in features.columns]\n    return features.drop(columns=excluded)",
+          "verified": true
+        },
+        {
+          "file": "engine/models.py",
+          "line_start": 59,
+          "line_end": 59,
+          "quote": "model_features = predictive_features(x_train)",
+          "verified": true
+        }
+      ],
+      "note": "Features are all columns of x_train minus ID, SEX, AGE. Assuming the official UCI loader is used, this yields the listed 21 columns. With the demo fixture the features would be LIMIT_BAL, BILL_AMT1, PAY_0 only."
+    },
+    "excluded_columns": {
+      "value": [
+        "ID",
+        "SEX",
+        "AGE",
+        "default.payment.next.month"
+      ],
+      "status": "verified",
+      "evidence": [
+        {
+          "file": "engine/data.py",
+          "line_start": 20,
+          "line_end": 22,
+          "quote": "GROUP = \"SEX\"\nAGE = \"AGE\"\nSENSITIVE_FEATURES = (GROUP, AGE)",
+          "verified": true
+        },
+        {
+          "file": "engine/data.py",
+          "line_start": 150,
+          "line_end": 150,
+          "quote": "excluded = [column for column in (\"ID\", *SENSITIVE_FEATURES) if column in features.columns]",
+          "verified": true
+        },
+        {
+          "file": "engine/data.py",
+          "line_start": 141,
+          "line_end": 141,
+          "quote": "features = frame.drop(columns=[TARGET])",
+          "verified": true
+        }
+      ],
+      "note": "ID is an identifier; SEX and AGE are fairness-only attributes; target removed from features."
+    },
+    "preprocessing_steps": {
+      "value": [
+        "Load UCI dataset (official ucimlrepo client with validation of shape, missing values and default rate, or Excel workbook with header=1)",
+        "Rename 'default payment next month' to 'default.payment.next.month' and drop ID (workbook path)",
+        "Drop rows with missing values (workbook path)",
+        "Cast target to int",
+        "Stratified train/test split with test_size=0.2 and random_state=42",
+        "Remove ID, SEX and AGE from predictors",
+        "No scaling applied to random forest inputs"
+      ],
+      "status": "verified",
+      "evidence": [
+        {
+          "file": "engine/data.py",
+          "line_start": 37,
+          "line_end": 43,
+          "quote": "frame = pd.read_excel(path, header=1)\n    frame = frame.rename(columns={\"default payment next month\": TARGET})\n    if \"ID\" in frame.columns:\n        frame = frame.drop(columns=[\"ID\"])\n    if TARGET not in frame.columns:\n        raise ValueError(f\"Dataset must contain target column {TARGET!r}\")\n    return frame.dropna().reset_index(drop=True)",
+          "verified": true
+        },
+        {
+          "file": "engine/data.py",
+          "line_start": 74,
+          "line_end": 74,
+          "quote": "validation = validate_uci_dataset(frame)",
+          "verified": true
+        },
+        {
+          "file": "engine/data.py",
+          "line_start": 143,
+          "line_end": 145,
+          "quote": "return train_test_split(\n        features, target, test_size=test_size, random_state=seed, stratify=target\n    )",
+          "verified": true
+        },
+        {
+          "file": "engine/models.py",
+          "line_start": 71,
+          "line_end": 71,
+          "quote": "model.fit(model_features, y_train)",
+          "verified": true
+        }
+      ],
+      "note": "Which loader path is used in production is not shown."
+    },
+    "train_fraction": {
+      "value": 0.8,
+      "status": "inferred",
+      "evidence": [
+        {
+          "file": "engine/data.py",
+          "line_start": 136,
+          "line_end": 136,
+          "quote": "frame: pd.DataFrame, test_size: float = 0.2, seed: int = 42",
+          "verified": true
+        }
+      ],
+      "note": "Default test_size=0.2 implies 0.8 train; the caller may override it."
+    },
+    "decision_threshold": {
+      "value": 0.5,
+      "status": "inferred",
+      "evidence": [
+        {
+          "file": "engine/models.py",
+          "line_start": 27,
+          "line_end": 27,
+          "quote": "return np.asarray(self.model.predict(features[self.feature_names]), dtype=int)",
+          "verified": true
+        },
+        {
+          "file": "engine/models.py",
+          "line_start": 140,
+          "line_end": 140,
+          "quote": "\"threshold\": 0.5,",
+          "verified": true
+        }
+      ],
+      "note": "Labels come from sklearn predict (majority class probability, equivalent to 0.5 for binary); parity report records threshold 0.5."
+    },
+    "assumptions": [
+      {
+        "value": "SEX and AGE are used only for fairness analysis and not as predictors.",
+        "status": "verified",
+        "evidence": [
+          {
+            "file": "engine/data.py",
+            "line_start": 149,
+            "line_end": 149,
+            "quote": "\"\"\"Remove identifiers and fairness-only attributes from model predictors.\"\"\"",
+            "verified": true
+          }
+        ],
+        "note": ""
+      },
+      {
+        "value": "Official dataset is expected to have 30,000 rows, 25 columns, no missing values and default rate between 20% and 24%.",
+        "status": "verified",
+        "evidence": [
+          {
+            "file": "engine/data.py",
+            "line_start": 103,
+            "line_end": 106,
+            "quote": "\"has_expected_shape\": len(frame) == 30_000 and len(frame.columns) == 25,\n        \"has_expected_target\": TARGET in frame.columns,\n        \"default_rate_approximately_22_percent\": (\n            default_rate is not None and 0.20 <= default_rate <= 0.24",
+            "verified": true
+          }
+        ],
+        "note": ""
+      },
+      {
+        "value": "Class imbalance is handled via balanced class weights.",
+        "status": "verified",
+        "evidence": [
+          {
+            "file": "engine/models.py",
+            "line_start": 65,
+            "line_end": 65,
+            "quote": "n_estimators=150, random_state=seed, n_jobs=-1, class_weight=\"balanced\"",
+            "verified": true
+          }
+        ],
+        "note": ""
+      }
+    ],
+    "limitations": [
+      {
+        "value": "Hyperparameters other than n_estimators and class_weight use library defaults; no tuning is shown.",
+        "status": "inferred",
+        "evidence": [
+          {
+            "file": "engine/models.py",
+            "line_start": 64,
+            "line_end": 66,
+            "quote": "\"random_forest\": RandomForestClassifier(\n            n_estimators=150, random_state=seed, n_jobs=-1, class_weight=\"balanced\"\n        ),",
+            "verified": true
+          }
+        ],
+        "note": "No hyperparameter search in code."
+      },
+      {
+        "value": "Feature set depends on the loaded dataset; the demo fixture yields only three predictors.",
+        "status": "verified",
+        "evidence": [
+          {
+            "file": "engine/data.py",
+            "line_start": 130,
+            "line_end": 131,
+            "quote": "{\"LIMIT_BAL\": limit, \"AGE\": age, \"BILL_AMT1\": bill, \"PAY_0\": pay,\n         GROUP: sex, TARGET: target}",
+            "verified": true
+          }
+        ],
+        "note": ""
+      },
+      {
+        "value": "Model is a supporting comparison model, not the migration target.",
+        "status": "inferred",
+        "evidence": [
+          {
+            "file": "engine/models.py",
+            "line_start": 58,
+            "line_end": 58,
+            "quote": "\"\"\"Train the migration target and supporting comparison models.\"\"\"",
+            "verified": true
+          }
+        ],
+        "note": "Inferred from docstring."
+      }
+    ],
+    "missing_information": [
+      "Business owner and intended business use of the random forest",
+      "Performance metrics and validation results",
+      "Approved decision threshold and its justification",
+      "Monitoring plan and performance triggers",
+      "Data time period and representativeness of the UCI dataset for the bank portfolio",
+      "Which data loader (official UCI vs workbook vs demo) is used in production",
+      "Hyperparameter selection rationale",
+      "Fairness assessment results for SEX and AGE groups",
+      "Model version, approval status and implementation details"
+    ]
+  },
+  "discrepancies": [],
+  "evidence_warnings": [],
+  "llm_model": "claude-opus-5-5",
+  "generated_at": "2026-11-12T00:28:50+00:00",
+  "review_status": "pending_human_review"
+}

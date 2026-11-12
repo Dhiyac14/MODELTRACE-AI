@@ -25,8 +25,10 @@ Rules:
 - missing_information: what a model document must contain that the code cannot tell us."""
 
 
-def discovery_user(code_listing: str) -> str:
-    return f"Extract the model metadata from these source files.\n\n{code_listing}"
+def discovery_user(code_listing: str, model_hint: str | None = None) -> str:
+    scope = (f"Describe this model only: {model_hint}. Other models defined in the same files are out of scope.\n\n"
+             if model_hint else "")
+    return f"{scope}Extract the model metadata from these source files.\n\n{code_listing}"
 
 
 DOC_CLAIMS_SYSTEM = f"""You read an existing model document and list what it claims about the model.

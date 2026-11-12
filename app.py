@@ -236,7 +236,8 @@ def page_discovery(model_id: str) -> None:
     if st.button("Run Discovery Agent", type="primary", disabled=bool(needs), key="run-discovery"):
         with st.spinner("Extracting metadata and checking the existing document..."):
             report = run_discovery(model_id, [str(ROOT / p) for p in record.source_files], LLM,
-                                   str(ROOT / record.legacy_document) if record.legacy_document else None)
+                                   str(ROOT / record.legacy_document) if record.legacy_document else None,
+                                   model_hint=f"{record.name} ({record.algorithm})")
         path = save_report(report, ROOT / "reports/discovery")
         WF.log_agent_run(model_id, "discover", "discovery", USER, {"output": path.as_posix(), "llm_model": report.llm_model,
                                                                   "discrepancies": len(report.discrepancies)})

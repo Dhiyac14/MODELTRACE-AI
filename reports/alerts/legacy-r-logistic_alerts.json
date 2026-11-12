@@ -1,0 +1,136 @@
+{
+  "model_id": "legacy-r-logistic",
+  "source": "reports/monitoring/monitoring_results.json",
+  "alerts": [
+    {
+      "alert_id": "legacy-r-logistic:002:feature_psi:LIMIT_BAL",
+      "model_id": "legacy-r-logistic",
+      "batch_id": "002",
+      "scenario": "simulated_diagnostic",
+      "metric": "feature_psi",
+      "feature": "LIMIT_BAL",
+      "value": 0.586449302647903,
+      "severity": "high",
+      "rule": "PSI below 0.10: low; 0.10 to 0.25: warning; above 0.25: high (illustrative monitoring heuristics, not regulatory thresholds)",
+      "evidence_ref": "reports/monitoring/monitoring_results.json#batches[1].feature_psi.LIMIT_BAL",
+      "explanation": {
+        "alert_id": "legacy-r-logistic:002:feature_psi:LIMIT_BAL",
+        "summary": "The input feature LIMIT_BAL (credit limit balance) shifted in batch 002 with a PSI of 0.586. That is more than twice the high threshold of 0.25 and well above the warning threshold of 0.1. LIMIT_BAL is the driving feature for this batch. The only other non-zero feature PSI is BILL_AMT1 at 0.072, which is below the warning threshold. Every other feature has a PSI of 0.0, and the schema is unchanged with no missing or extra columns. This batch is a simulated diagnostic with no observed outcomes.",
+        "potential_impact": "A large shift in credit limits means the applicant population, or how limits are recorded, differs substantially from the reference data. Predictions for these applicants may be less reliable. So far the model's output has barely moved: prediction PSI is 0.014, mean predicted probability is 0.213, and 0.068 of the batch is above the decision threshold. This suggests the shift has not yet changed the overall score distribution much. It could still be distorting individual scores or rankings, which would affect who is approved or declined. The batch reports performance figures (ROC AUC 0.705, recall 0.217, precision 0.702, Brier 0.147), but observed_outcomes is false. These figures come from a simulated diagnostic and should not be treated as evidence of real-world performance.",
+        "investigate": [
+          "Compare the LIMIT_BAL distribution in batch 002 against the reference data by bin to see where the shift sits, such as more high-limit or more low-limit accounts. Also check whether it reflects a genuine population change or a data issue such as a unit, currency or scaling change.",
+          "Check upstream data sources and pipeline changes for LIMIT_BAL, for example credit limit policy changes, new product or channel mixes, or ETL transformations. Check BILL_AMT1 (PSI 0.072) at the same time, since it may be linked.",
+          "Review how the logistic model uses LIMIT_BAL (coefficient size and sign). Score sensitivity across the shifted range to judge how much individual predictions and threshold decisions could move.",
+          "Confirm how the batch's performance metrics were generated given observed_outcomes is false. Plan to compare against actual outcomes once they become available before drawing conclusions about model performance."
+        ],
+        "recommendation": "investigate",
+        "reason": "LIMIT_BAL's PSI of 0.586 is far above the 0.25 high threshold and needs a root-cause review. However, prediction PSI is only 0.014 and there are no observed outcomes yet, so a human reviewer should first establish the cause and impact before deciding whether revalidation is warranted."
+      },
+      "explanation_source": "llm_draft"
+    },
+    {
+      "alert_id": "legacy-r-logistic:003:feature_psi:LIMIT_BAL",
+      "model_id": "legacy-r-logistic",
+      "batch_id": "003",
+      "scenario": "simulated_diagnostic",
+      "metric": "feature_psi",
+      "feature": "LIMIT_BAL",
+      "value": 2.410715535681309,
+      "severity": "high",
+      "rule": "PSI below 0.10: low; 0.10 to 0.25: warning; above 0.25: high (illustrative monitoring heuristics, not regulatory thresholds)",
+      "evidence_ref": "reports/monitoring/monitoring_results.json#batches[2].feature_psi.LIMIT_BAL",
+      "explanation": {
+        "alert_id": "legacy-r-logistic:003:feature_psi:LIMIT_BAL",
+        "summary": "The distribution of LIMIT_BAL (credit limit) in batch 003 shifted with a PSI of 2.41, almost ten times the 0.25 high threshold. The batch is labelled 'simulated_diagnostic', so this shift may have been deliberately injected rather than seen in production.",
+        "potential_impact": "Credit limit is a core affordability and risk input to the logistic model, so a shift this large means applicants in this batch look very different from the reference population. Coefficient-based scores may be pushed systematically up or down, which could contribute to the prediction shift (PSI 1.54) and change which applicants fall above the decision threshold.",
+        "investigate": [
+          "Compare LIMIT_BAL bin-level distributions (reference vs batch 003) to see whether limits moved up, moved down or were truncated.",
+          "Confirm whether the shift was intentionally injected as part of the simulated diagnostic, or whether it reflects a real portfolio change or a units/scaling error in the data pipeline.",
+          "Check how much LIMIT_BAL alone contributes to the change in predicted probabilities by scoring the batch with LIMIT_BAL replaced by reference values."
+        ],
+        "recommendation": "investigate",
+        "reason": "The PSI of 2.41 is far above the 0.25 high threshold, but the batch is simulated, so a human should confirm the cause before deciding on any further action."
+      },
+      "explanation_source": "llm_draft"
+    },
+    {
+      "alert_id": "legacy-r-logistic:003:feature_psi:PAY_0",
+      "model_id": "legacy-r-logistic",
+      "batch_id": "003",
+      "scenario": "simulated_diagnostic",
+      "metric": "feature_psi",
+      "feature": "PAY_0",
+      "value": 5.282053461559873,
+      "severity": "high",
+      "rule": "PSI below 0.10: low; 0.10 to 0.25: warning; above 0.25: high (illustrative monitoring heuristics, not regulatory thresholds)",
+      "evidence_ref": "reports/monitoring/monitoring_results.json#batches[2].feature_psi.PAY_0",
+      "explanation": {
+        "alert_id": "legacy-r-logistic:003:feature_psi:PAY_0",
+        "summary": "PAY_0 (most recent repayment status) is the driving feature for batch 003, with a PSI of 5.28, more than twenty times the 0.25 high threshold. The related lagged features PAY_2 to PAY_6 all show a PSI of 0.0.",
+        "potential_impact": "Recent repayment status is typically among the strongest default predictors in this model. A shift of this size is likely the main driver of the prediction PSI of 1.54 and the mean predicted probability of 0.411. It could materially change credit decisions for this population. The stability of PAY_2 to PAY_6 is an unusual pattern: real delinquency trends would normally carry into the lagged months. This suggests either an injected shift or a coding or pipeline issue isolated to PAY_0.",
+        "investigate": [
+          "Review the PAY_0 value distribution by category (e.g. -2, -1, 0, 1, 2+) in reference vs batch 003 to see which statuses gained or lost share.",
+          "Check whether PAY_0 encoding or source mapping changed upstream, given that PAY_2 to PAY_6 show no shift at all.",
+          "Confirm with the diagnostic owner whether PAY_0 was the intentionally perturbed feature in this simulated batch.",
+          "Quantify how much of the prediction shift is attributable to PAY_0 by re-scoring with reference PAY_0 values."
+        ],
+        "recommendation": "investigate",
+        "reason": "PAY_0 is the dominant source of drift at PSI 5.28, and its isolation from the lagged repayment features needs a human to confirm the root cause before any revalidation decision."
+      },
+      "explanation_source": "llm_draft"
+    },
+    {
+      "alert_id": "legacy-r-logistic:003:feature_psi:BILL_AMT1",
+      "model_id": "legacy-r-logistic",
+      "batch_id": "003",
+      "scenario": "simulated_diagnostic",
+      "metric": "feature_psi",
+      "feature": "BILL_AMT1",
+      "value": 0.17009508251855657,
+      "severity": "warning",
+      "rule": "PSI below 0.10: low; 0.10 to 0.25: warning; above 0.25: high (illustrative monitoring heuristics, not regulatory thresholds)",
+      "evidence_ref": "reports/monitoring/monitoring_results.json#batches[2].feature_psi.BILL_AMT1",
+      "explanation": {
+        "alert_id": "legacy-r-logistic:003:feature_psi:BILL_AMT1",
+        "summary": "BILL_AMT1 (most recent bill amount) shows a PSI of 0.170. This is above the 0.1 warning threshold but below the 0.25 high threshold. BILL_AMT2 to BILL_AMT6 all show a PSI of 0.0.",
+        "potential_impact": "This is a moderate shift in the latest bill amount. On its own it is likely to have a smaller effect on predictions than the PAY_0 and LIMIT_BAL shifts. It could still interact with them, for example if balances relative to credit limits have changed.",
+        "investigate": [
+          "Compare BILL_AMT1 summary statistics and bins against the reference to see the direction of the shift.",
+          "Check whether the BILL_AMT1 change is consistent with the LIMIT_BAL shift (e.g. a utilisation change) or is independent of it."
+        ],
+        "recommendation": "monitor",
+        "reason": "The PSI of 0.170 is at warning level only, so tracking it in subsequent batches is proportionate while the high-severity alerts are investigated."
+      },
+      "explanation_source": "llm_draft"
+    },
+    {
+      "alert_id": "legacy-r-logistic:003:prediction_psi:-",
+      "model_id": "legacy-r-logistic",
+      "batch_id": "003",
+      "scenario": "simulated_diagnostic",
+      "metric": "prediction_psi",
+      "feature": null,
+      "value": 1.5366301797595217,
+      "severity": "high",
+      "rule": "PSI below 0.10: low; 0.10 to 0.25: warning; above 0.25: high (illustrative monitoring heuristics, not regulatory thresholds)",
+      "evidence_ref": "reports/monitoring/monitoring_results.json#batches[2].prediction_psi",
+      "explanation": {
+        "alert_id": "legacy-r-logistic:003:prediction_psi:-",
+        "summary": "The model's output score distribution shifted with a prediction PSI of 1.54, about six times the 0.25 high threshold. In batch 003 the mean predicted probability is 0.411, and 27.2% of records score above the decision threshold.",
+        "potential_impact": "The shift in model outputs means credit decisions for this batch could differ materially from those the model was validated on. With 27.2% of records above threshold, approval or decline volumes may change. Outcomes are not observed (observed_outcomes is false) and the batch is simulated. The reported performance figures (e.g. ROC AUC 0.702, recall 0.543, precision 0.441) should therefore not be read as confirmed real-world performance.",
+        "investigate": [
+          "Compare the batch 003 score distribution and the share above threshold against the reference period to quantify the change in decision volumes.",
+          "Attribute the prediction shift to the drifted inputs (PAY_0, LIMIT_BAL, BILL_AMT1) to confirm which inputs drive it.",
+          "Clarify how the performance metrics were produced given observed_outcomes is false, and whether they are based on simulated labels.",
+          "Assess whether the model's calibration (Brier 0.192 here) still holds under this input distribution once real outcomes become available."
+        ],
+        "recommendation": "consider_revalidation",
+        "reason": "An output shift of PSI 1.54 indicates the model is operating well outside its reference conditions, so a human reviewer should weigh whether revalidation is warranted once the input drift is confirmed as genuine."
+      },
+      "explanation_source": "llm_draft"
+    }
+  ],
+  "warnings": [],
+  "generated_by": "Monitoring Agent (LLM: claude-opus-5-5)",
+  "generated_at": "2026-11-12T00:29:34+00:00"
+}
