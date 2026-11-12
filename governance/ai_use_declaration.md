@@ -14,14 +14,17 @@ Without an API key the product runs with template text, and only the Discovery A
 LLM call is logged in `governance/llm_call_log.jsonl`. Prompts contain code, model documents and aggregate
 metrics, never customer-level records.
 
-## Generative AI used to build the project
+## AI tools and existing code used to build the project
 
-**Person 2 (agents, governance, dashboard).** The code, tests, design document, the Person 2 section of the
-README and drafts of this declaration and the Responsible AI note were written with Claude Code (Anthropic,
-Claude Opus 5.5), working on Person 2's instructions. Person 2 set the requirements, made the design
-decisions and chose what to keep. *[Person 2: confirm this wording before submission.]*
+The hackathon rules ask teams to declare AI tools and any existing code used. Each person declares their own
+part in the same form.
 
-**Person 1 (ML engine, migration, validation, monitoring).** *[Person 1 to complete.]*
+| Part | Owner | AI tools used to build it | Existing code used |
+|---|---|---|---|
+| Agents, LLM layer, approval workflow, audit log, inventory, dashboard, their tests, the design document and the governance documents | Person 2 | Claude Code (Anthropic, Claude Opus 5.5) as a coding assistant, directed by Person 2 | Open-source libraries as published (Pydantic, python-dotenv, Streamlit, Plotly, pandas, pytest, the Anthropic and OpenAI Python SDKs); Person 1's agent classes, kept unchanged for compatibility |
+| ML engine, R model, migration, validation, monitoring and risk findings (`engine/`, `models/`, `reports/`) | Person 1 | *[Person 1 to complete]* | *[Person 1 to complete]* |
+
+Data: UCI Default of Credit Card Clients (dataset 350), public.
 
 ## What was tested independently of the AI
 
