@@ -1,13 +1,13 @@
 # Model card: Python Gradient Boosting (python-gradient-boosting)
 
 Version 1.0.0 · Risk tier 2 · Review status: **pending_human_review**  
-Generated 2026-11-12T00:28:18+00:00 by Documentation Agent (LLM: claude-opus-5-5)
+Generated 2026-11-12T22:48:56+00:00 by Documentation Agent (LLM: claude-opus-5-5)
 
 > Draft for human review. Figures are copied from the cited files; no approval is implied.
 
 ## Model overview and intended purpose
 
-Python Gradient Boosting (model_id python-gradient-boosting) is a Python challenger model that predicts the target default.payment.next.month and is compared against the production default model; per the recorded business purpose (an inferred field), it informs but does not drive decisions. It is assigned risk tier 2. It uses the public UCI Default of Credit Card Clients dataset (30,000 records of credit-card clients in Taiwan, payment history April to September 2005), which is intended here as demonstration data only and is not representative of a UK bank's current portfolio. The business owner and intended business use are not documented.
+Python Gradient Boosting (python-gradient-boosting) is a challenger model that predicts the target default.payment.next.month and is compared against the production default model; per the facts provided, it informs but does not drive decisions, though this business purpose is recorded as inferred. It is assigned risk tier 2. It uses the UCI Default of Credit Card Clients dataset (30,000 records of credit-card clients in Taiwan, payment history April to September 2005), which is described as public demonstration data only and not representative of a UK bank's current portfolio. The business owner, intended use and decision context are not documented.
 
 ## Dataset and data provenance
 
@@ -21,7 +21,7 @@ Python Gradient Boosting (model_id python-gradient-boosting) is a Python challen
 
 ## Algorithm and methodology
 
-The model is a scikit-learn GradientBoostingClassifier with default hyperparameters except random_state set to a seed (default 42), trained on an inferred stratified 80/20 train/test split using the same seed. Preprocessing renames the target column, drops ID and rows with missing values, validates the dataset shape and default rate, casts the target to integer, and applies no feature scaling. Predictors are 21 inferred input features (LIMIT_BAL, EDUCATION, MARRIAGE, PAY_0 and PAY_2 to PAY_6, BILL_AMT1 to BILL_AMT6, PAY_AMT1 to PAY_AMT6), with ID, SEX and AGE excluded. An inferred decision threshold of 0.5 is applied.
+The model is a scikit-learn GradientBoostingClassifier using library default hyperparameters except random_state set to a seed (default 42), with 21 predictors covering credit limit, education, marital status, repayment status (PAY_0, PAY_2 to PAY_6), bill amounts and payment amounts; ID, SEX and AGE are excluded from the predictors. Preprocessing renames the target column, drops ID, drops rows with missing values on the workbook load path, validates the official UCI data (30,000 rows, 25 columns, no missing values, default rate between 20% and 24%), and casts the target to int; no scaling or encoding is applied. Data is split with a stratified train/test split (test_size=0.2, random_state=42), and a decision threshold of 0.5 is recorded, although the input feature list, train fraction and threshold are marked as inferred. The approved threshold and its rationale, and the hyperparameter selection rationale, are not documented.
 
 ## Input features and target
 
@@ -30,9 +30,9 @@ The model is a scikit-learn GradientBoostingClassifier with default hyperparamet
 | Target variable | default.payment.next.month | engine/data.py:L19; engine/data.py:L142 (verified) |
 | Input features (21) | LIMIT_BAL, EDUCATION, MARRIAGE, PAY_0, PAY_2, PAY_3, PAY_4, PAY_5, PAY_6, BILL_AMT1, BILL_AMT2, BILL_AMT3, BILL_AMT4, BILL_AMT5, BILL_AMT6, PAY_AMT1, PAY_AMT2, PAY_AMT3, PAY_AMT4, PAY_AMT5, PAY_AMT6 | engine/data.py:L58-63; engine/data.py:L148-151; engine/models.py:L59 (inferred) |
 | Excluded columns | ID, SEX, AGE, default.payment.next.month | engine/data.py:L20-22; engine/data.py:L150; engine/data.py:L141 (verified) |
-| Preprocessing | Rename 'default payment next month' to target name and drop ID when loading the workbook, Drop rows with missing values (workbook loader), Validate official UCI dataset (30,000 rows, 25 columns, no missing values, default rate 20-24%), Separate target and cast to int, Stratified train/test split with test_size=0.2, random_state=seed, Remove ID, SEX and AGE from predictors, No scaling applied for gradient boosting | engine/data.py:L38-43; engine/data.py:L103; engine/data.py:L141-145; engine/data.py:L151 (verified) |
-| Train/test split | 80% train / 20% test | engine/data.py:L136 (inferred) |
-| Decision threshold | 0.5 | engine/models.py:L27; engine/models.py:L140 (inferred) |
+| Preprocessing | Rename target column 'default payment next month' to 'default.payment.next.month' and drop ID, then drop rows with missing values (workbook load path), Validate the official UCI dataset: 30,000 rows, 25 columns, no missing values, default rate between 20% and 24%, Cast target to int and run a stratified train/test split (test_size=0.2, random_state=42), Drop ID, SEX and AGE from predictors via predictive_features, No scaling or encoding is applied for the gradient boosting model | engine/data.py:L38-43; engine/data.py:L103; engine/data.py:L142-145; engine/models.py:L67 (verified) |
+| Train/test split | 80% train / 20% test | engine/data.py:L135-137 (inferred) |
+| Decision threshold | 0.5 | engine/models.py:L26-27; engine/models.py:L140 (inferred) |
 
 ## Performance metrics
 
@@ -75,7 +75,7 @@ _Pending: produced at the Validate stage. No figures are shown until the report 
 
 ## Limitations and assumptions
 
-Default hyperparameters are used with no tuning or cross-validation shown, and no justification is documented; there is no class imbalance handling, and categorical fields such as EDUCATION, MARRIAGE and PAY_* are used as raw numeric values without encoding. The model assumes SEX and AGE are fairness-only attributes and an expected training default rate of about 22% (20-24%), but fairness evaluation results, validation metrics and prediction PSI are not available in the provided results. Performance metrics, acceptance criteria, the production data loader, decision threshold calibration, monitoring, retraining frequency and approval status are not documented. Several fields (business purpose, input features, train fraction and decision threshold) are inferred and should be confirmed.
+No hyperparameter tuning or class imbalance handling is applied, unlike the random forest, which uses class_weight='balanced'. SEX and AGE are excluded on the assumption that this addresses fairness, but proxy variables such as EDUCATION and MARRIAGE remain among the predictors, and fairness test results and tolerances are not documented. A synthetic demo dataset may be used when UCI data is unavailable, which would change the feature set, and the data path used in production is not documented. Validation metrics, acceptance criteria, PSI results, monitoring and retraining plans, model version and deployment details are not documented.
 
 ## Risk tier, approval and governance
 
@@ -94,4 +94,17 @@ Default hyperparameters are used with no tuning or cross-validation shown, and n
 
 ## Corrections to the existing model document
 
-No existing model document was compared.
+Compared with models/gradient_boosting_model_document.md.
+
+| Item | Value | Evidence |
+|---|---|---|
+| D-001 decision_threshold (omission) | Document: The document does not state the decision threshold. Correction: State the decision threshold: 0.5. | engine/models.py:L26-27; engine/models.py:L140 |
+| D-002 model_name (contradiction) | Document: The model is a challenger model identified as python-gradient-boosting. Correction: The model is a supporting comparison model identified in code as 'gradient_boosting'. | engine/models.py:L67; engine/models.py:L72 |
+| D-003 performance (unverifiable) | Document: The validation report from engine/pipeline.py evaluates the migrated Statsmodels logistic model and does not report Gradient Boosting performance metrics. Correction:  | no code evidence |
+| D-004 other (unverifiable) | Document: The real-data pipeline may produce SHAP explainability values for the Gradient Boosting model when the optional SHAP dependency is available. Correction:  | no code evidence |
+| D-005 limitations (omission) | Document: Not mentioned in the document. Correction: Document that a synthetic demo dataset (make_demo_dataset, 1200 rows) exists as a fallback when the UCI file is unavailable, and that results from it are not representative. | engine/data.py:L118-119 |
+| D-006 preprocessing (omission) | Document: Not mentioned in the document. Correction: Document that the workbook loader drops rows with missing values. Also document that the official UCI loader stops with an error unless the data has 30,000 rows and 25 columns, contains no missing values and has a default rate between 20% and 24%. | engine/data.py:L43; engine/data.py:L109-114 |
+
+## Grounding warnings
+
+- methodology: the draft mentions approval or validation but none is recorded; check the wording.

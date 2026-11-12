@@ -8,7 +8,7 @@
   "legacy_document": "models/outdated_model_document.md",
   "metadata": {
     "model_name": {
-      "value": "legacy_model",
+      "value": "Legacy R Logistic Regression (legacy_model)",
       "status": "inferred",
       "evidence": [
         {
@@ -26,10 +26,10 @@
           "verified": true
         }
       ],
-      "note": "No formal model name is declared. The name is taken from the file name, the R object name and the comment describing it as the legacy production model."
+      "note": "The code has no formal model name. The name comes from the comment, the object name legacy_model and the request scope."
     },
     "algorithm": {
-      "value": "Logistic regression (GLM, binomial family, logit link)",
+      "value": "Logistic regression via glm with binomial family and logit link",
       "status": "verified",
       "evidence": [
         {
@@ -43,7 +43,7 @@
       "note": ""
     },
     "business_purpose": {
-      "value": "Predict whether a credit card client defaults on payment next month (credit card default probability scoring).",
+      "value": "Predict the probability that a credit card client defaults on payment next month (binary default classification)",
       "status": "inferred",
       "evidence": [
         {
@@ -61,11 +61,11 @@
           "verified": true
         }
       ],
-      "note": "Inferred from the target name and the dataset name. The code does not state a business use case or a decision context."
+      "note": "Inferred from the target name and the dataset label. The R script only refers to a generic 'target' column, and no business use is stated."
     },
     "target_variable": {
-      "value": "target (renamed from default.payment.next.month)",
-      "status": "verified",
+      "value": "target (holds default.payment.next.month)",
+      "status": "inferred",
       "evidence": [
         {
           "file": "models/legacy_model.R",
@@ -76,20 +76,20 @@
         },
         {
           "file": "engine/data.py",
-          "line_start": 19,
-          "line_end": 19,
-          "quote": "TARGET = \"default.payment.next.month\"",
-          "verified": true
-        },
-        {
-          "file": "engine/data.py",
           "line_start": 165,
           "line_end": 165,
           "quote": "    train[\"target\"] = y_train",
           "verified": true
+        },
+        {
+          "file": "engine/data.py",
+          "line_start": 142,
+          "line_end": 142,
+          "quote": "    target = frame[TARGET].astype(int)",
+          "verified": true
         }
       ],
-      "note": "The R model uses the column 'target'. The shared split writes y_train, derived from default.payment.next.month, into that column."
+      "note": "The R response is the column 'target'. The link to default.payment.next.month assumes the CSVs are produced by write_shared_split."
     },
     "input_features": {
       "value": [
@@ -126,13 +126,13 @@
         },
         {
           "file": "engine/data.py",
-          "line_start": 59,
-          "line_end": 62,
-          "quote": "        \"LIMIT_BAL\", \"SEX\", \"EDUCATION\", \"MARRIAGE\", \"AGE\",\n        \"PAY_0\", \"PAY_2\", \"PAY_3\", \"PAY_4\", \"PAY_5\", \"PAY_6\",\n        \"BILL_AMT1\", \"BILL_AMT2\", \"BILL_AMT3\", \"BILL_AMT4\", \"BILL_AMT5\", \"BILL_AMT6\",\n        \"PAY_AMT1\", \"PAY_AMT2\", \"PAY_AMT3\", \"PAY_AMT4\", \"PAY_AMT5\", \"PAY_AMT6\",",
+          "line_start": 58,
+          "line_end": 63,
+          "quote": "    expected_features = [\n        \"LIMIT_BAL\", \"SEX\", \"EDUCATION\", \"MARRIAGE\", \"AGE\",\n        \"PAY_0\", \"PAY_2\", \"PAY_3\", \"PAY_4\", \"PAY_5\", \"PAY_6\",\n        \"BILL_AMT1\", \"BILL_AMT2\", \"BILL_AMT3\", \"BILL_AMT4\", \"BILL_AMT5\", \"BILL_AMT6\",\n        \"PAY_AMT1\", \"PAY_AMT2\", \"PAY_AMT3\", \"PAY_AMT4\", \"PAY_AMT5\", \"PAY_AMT6\",\n    ]",
           "verified": true
         }
       ],
-      "note": "The R script uses every column of train.csv except those it excludes. This list assumes train.csv was produced from the official UCI dataset path. If the demo fixture were used instead, the features would be LIMIT_BAL, BILL_AMT1 and PAY_0 only."
+      "note": "Features are chosen at run time as every train.csv column except the excluded ones. This list assumes the official UCI data with the expected columns. The demo dataset would give only LIMIT_BAL, BILL_AMT1 and PAY_0."
     },
     "excluded_columns": {
       "value": [
@@ -152,56 +152,41 @@
           "verified": true
         }
       ],
-      "note": "SEX and AGE are sensitive attributes, kept only for fairness analysis (see engine/data.py lines 22 and 149). ID and row_id are identifiers."
+      "note": ""
     },
     "preprocessing_steps": {
       "value": [
-        "Fetch UCI dataset 350 via ucimlrepo and rename columns X1..X23 to named features",
-        "Validate the dataset: 30,000 rows, 25 columns, no missing values, default rate between 0.20 and 0.24",
-        "Separate the target default.payment.next.month and cast it to int",
-        "Stratified train/test split with test_size=0.2 and random_state=42 (defaults)",
-        "Write train.csv/test.csv with an inserted row_id column and the target column 'target'",
-        "In R, exclude row_id, target, SEX, AGE and ID from the predictors; no scaling or encoding is applied"
+        "Read train/test CSVs with read.csv(check.names = FALSE)",
+        "Validate that train contains target and test contains row_id",
+        "Exclude row_id, target, SEX, AGE, ID from predictors",
+        "Build formula target ~ all remaining columns (no transformations, scaling or encoding)",
+        "Upstream: stratified train/test split with seed 42 and row_id insertion via write_shared_split"
       ],
-      "status": "verified",
+      "status": "inferred",
       "evidence": [
         {
-          "file": "engine/data.py",
-          "line_start": 64,
-          "line_end": 65,
-          "quote": "    if list(features.columns) == [f\"X{i}\" for i in range(1, 24)]:\n        features.columns = expected_features",
-          "verified": true
-        },
-        {
-          "file": "engine/data.py",
-          "line_start": 103,
-          "line_end": 103,
-          "quote": "        \"has_expected_shape\": len(frame) == 30_000 and len(frame.columns) == 25,",
-          "verified": true
-        },
-        {
-          "file": "engine/data.py",
-          "line_start": 142,
-          "line_end": 145,
-          "quote": "    target = frame[TARGET].astype(int)\n    return train_test_split(\n        features, target, test_size=test_size, random_state=seed, stratify=target\n    )",
-          "verified": true
-        },
-        {
-          "file": "engine/data.py",
-          "line_start": 164,
-          "line_end": 165,
-          "quote": "    train.insert(0, \"row_id\", train.index.astype(int))\n    train[\"target\"] = y_train",
+          "file": "models/legacy_model.R",
+          "line_start": 13,
+          "line_end": 17,
+          "quote": "train <- read.csv(train_path, check.names = FALSE)\ntest <- read.csv(test_path, check.names = FALSE)\nif (!\"target\" %in% names(train) || !\"row_id\" %in% names(test)) {\n  stop(\"Train data must contain target and test data must contain row_id\")\n}",
           "verified": true
         },
         {
           "file": "models/legacy_model.R",
           "line_start": 19,
-          "line_end": 19,
-          "quote": "feature_names <- setdiff(names(train), c(\"row_id\", \"target\", \"SEX\", \"AGE\", \"ID\"))",
+          "line_end": 20,
+          "quote": "feature_names <- setdiff(names(train), c(\"row_id\", \"target\", \"SEX\", \"AGE\", \"ID\"))\nformula <- reformulate(feature_names, response = \"target\")",
+          "verified": true
+        },
+        {
+          "file": "engine/data.py",
+          "line_start": 143,
+          "line_end": 145,
+          "quote": "    return train_test_split(\n        features, target, test_size=test_size, random_state=seed, stratify=target\n    )",
           "verified": true
         }
       ],
-      "note": "The orchestration code that calls these functions is not shown, so the exact pipeline order is assumed."
+      "note": "The R steps are verified. The upstream Python steps assume the shared split ('consumed by both Python and R') feeds this script."
     },
     "train_fraction": {
       "value": 0.8,
@@ -209,23 +194,23 @@
       "evidence": [
         {
           "file": "engine/data.py",
-          "line_start": 136,
-          "line_end": 136,
-          "quote": "    frame: pd.DataFrame, test_size: float = 0.2, seed: int = 42",
+          "line_start": 135,
+          "line_end": 137,
+          "quote": "def prepare_data(\n    frame: pd.DataFrame, test_size: float = 0.2, seed: int = 42\n) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:",
           "verified": true
         }
       ],
-      "note": "This is the default test_size of 0.2. The actual call site is not shown, so a different value may have been passed."
+      "note": "This is based on the default test_size of 0.2 in prepare_data. The actual call site is not shown, and the R script just takes whatever train.csv it is given."
     },
     "decision_threshold": {
-      "value": 0.5,
+      "value": 0.35,
       "status": "verified",
       "evidence": [
         {
           "file": "models/legacy_model.R",
           "line_start": 23,
-          "line_end": 23,
-          "quote": "prediction <- as.integer(probability >= 0.5)",
+          "line_end": 24,
+          "quote": "CLASSIFICATION_THRESHOLD <- 0.35\nprediction <- as.integer(probability >= CLASSIFICATION_THRESHOLD)",
           "verified": true
         }
       ],
@@ -233,51 +218,21 @@
     },
     "assumptions": [
       {
-        "value": "Train data contains a 'target' column and test data contains a 'row_id' column.",
-        "status": "verified",
-        "evidence": [
-          {
-            "file": "models/legacy_model.R",
-            "line_start": 15,
-            "line_end": 17,
-            "quote": "if (!\"target\" %in% names(train) || !\"row_id\" %in% names(test)) {\n  stop(\"Train data must contain target and test data must contain row_id\")\n}",
-            "verified": true
-          }
-        ],
-        "note": ""
-      },
-      {
-        "value": "The official dataset is expected to have about a 22% default rate (between 0.20 and 0.24) and no missing values.",
-        "status": "verified",
+        "value": "The train and test CSVs come from the shared stratified split written by write_shared_split, with row_id and target columns added.",
+        "status": "inferred",
         "evidence": [
           {
             "file": "engine/data.py",
-            "line_start": 105,
-            "line_end": 107,
-            "quote": "        \"default_rate_approximately_22_percent\": (\n            default_rate is not None and 0.20 <= default_rate <= 0.24\n        ),",
+            "line_start": 161,
+            "line_end": 161,
+            "quote": "    \"\"\"Write the exact train/test rows consumed by both Python and R.\"\"\"",
             "verified": true
           }
         ],
-        "note": ""
+        "note": "Based on the docstring. The R script only checks that the columns exist."
       },
       {
-        "value": "Sensitive attributes SEX and AGE are excluded from the predictors and used only for fairness analysis.",
-        "status": "verified",
-        "evidence": [
-          {
-            "file": "engine/data.py",
-            "line_start": 149,
-            "line_end": 150,
-            "quote": "    \"\"\"Remove identifiers and fairness-only attributes from model predictors.\"\"\"\n    excluded = [column for column in (\"ID\", *SENSITIVE_FEATURES) if column in features.columns]",
-            "verified": true
-          }
-        ],
-        "note": ""
-      }
-    ],
-    "limitations": [
-      {
-        "value": "Categorical codes such as EDUCATION, MARRIAGE and the PAY_* status variables enter the GLM as numeric values without encoding, which imposes a linear effect on them.",
+        "value": "The log-odds of default are linear in the raw predictor values. Categorical-coded columns such as EDUCATION, MARRIAGE and PAY_* are treated as numeric unless read as factors.",
         "status": "inferred",
         "evidence": [
           {
@@ -288,70 +243,78 @@
             "verified": true
           }
         ],
-        "note": "No factor conversion appears in the code. read.csv reads integer codes as numeric."
+        "note": "No encoding or transformation step is present."
+      }
+    ],
+    "limitations": [
+      {
+        "value": "The feature set is not fixed. It depends on whatever columns are in train.csv, so any schema change silently changes the model.",
+        "status": "inferred",
+        "evidence": [
+          {
+            "file": "models/legacy_model.R",
+            "line_start": 19,
+            "line_end": 19,
+            "quote": "feature_names <- setdiff(names(train), c(\"row_id\", \"target\", \"SEX\", \"AGE\", \"ID\"))",
+            "verified": true
+          }
+        ],
+        "note": "The predictors are derived dynamically from the column names."
       },
       {
-        "value": "The fixed 0.5 threshold is not calibrated to the roughly 22% base rate or to business costs.",
+        "value": "There is no missing-value handling, regularisation, scaling or interaction terms. The fitted model is not saved; only the predictions are written.",
+        "status": "inferred",
+        "evidence": [
+          {
+            "file": "models/legacy_model.R",
+            "line_start": 26,
+            "line_end": 30,
+            "quote": "write.csv(\n  data.frame(row_id = test$row_id, probability = probability, prediction = prediction),\n  output_path,\n  row.names = FALSE\n)",
+            "verified": true
+          }
+        ],
+        "note": "Inferred because these steps are absent from the script."
+      },
+      {
+        "value": "The 0.35 threshold is hard-coded and the code gives no justification for it.",
         "status": "inferred",
         "evidence": [
           {
             "file": "models/legacy_model.R",
             "line_start": 23,
             "line_end": 23,
-            "quote": "prediction <- as.integer(probability >= 0.5)",
+            "quote": "CLASSIFICATION_THRESHOLD <- 0.35",
             "verified": true
           }
         ],
-        "note": "The code gives no rationale for choosing this threshold."
-      },
-      {
-        "value": "A synthetic demo dataset can be substituted when the UCI data is unavailable, and it would produce a materially different model.",
-        "status": "verified",
-        "evidence": [
-          {
-            "file": "engine/data.py",
-            "line_start": 119,
-            "line_end": 119,
-            "quote": "    \"\"\"Create a deterministic local fixture when the external UCI file is unavailable.\"\"\"",
-            "verified": true
-          }
-        ],
-        "note": ""
-      },
-      {
-        "value": "Excluding SEX and AGE does not prevent proxy discrimination through the remaining features.",
-        "status": "inferred",
-        "evidence": [
-          {
-            "file": "engine/data.py",
-            "line_start": 177,
-            "line_end": 177,
-            "quote": "    \"\"\"Create the four documented fairness age bands.\"\"\"",
-            "verified": true
-          }
-        ],
-        "note": "This is general reasoning. The code does not show any proxy analysis."
+        "note": "No calibration or cost rationale is shown."
       }
     ],
     "missing_information": [
-      "Formal model name, ID, version and owner",
-      "Business use case and decision context for the predictions",
-      "Rationale for the 0.5 decision threshold",
+      "Business owner, intended use and decision context of the legacy production model",
+      "Rationale for the 0.35 classification threshold",
       "Model performance metrics and validation results",
-      "Fairness test results across SEX and age bands",
-      "Orchestration code showing the actual test_size, seed and data source used",
-      "Monitoring plan, retraining frequency and performance triggers",
-      "Model approval status and intended users",
-      "Treatment of categorical variables and justification for the variable choices"
+      "Fairness evaluation results for SEX and AGE (they are excluded as predictors but used for fairness)",
+      "Model version, approval date and production deployment details",
+      "Data time period and representativeness of the UCI data for the bank's portfolio",
+      "Treatment of categorical-coded variables (EDUCATION, MARRIAGE, PAY_*)",
+      "Monitoring plan and retraining frequency",
+      "Actual train/test split used at the call site"
     ]
   },
   "discrepancies": [
     {
       "discrepancy_id": "D-001",
       "field": "input_features",
-      "type": "omission",
-      "documented_claim": "The document does not list the input features.",
-      "document_ref": null,
+      "type": "contradiction",
+      "documented_claim": "SEX is a model input.",
+      "document_ref": {
+        "file": "models/outdated_model_document.md",
+        "line_start": 10,
+        "line_end": 13,
+        "quote": "- Input features: `LIMIT_BAL`, `SEX`, `EDUCATION`, `MARRIAGE`, `PAY_0`, `PAY_2`,\n  `PAY_3`, `PAY_4`, `PAY_5`, `PAY_6`, `BILL_AMT1`, `BILL_AMT2`,\n  `BILL_AMT3`, `BILL_AMT4`, `BILL_AMT5`, `BILL_AMT6`, `PAY_AMT1`, `PAY_AMT2`,\n  `PAY_AMT3`, `PAY_AMT4`, `PAY_AMT5`, and `PAY_AMT6`.",
+        "verified": true
+      },
       "code_evidence": [
         {
           "file": "models/legacy_model.R",
@@ -359,93 +322,172 @@
           "line_end": 19,
           "quote": "feature_names <- setdiff(names(train), c(\"row_id\", \"target\", \"SEX\", \"AGE\", \"ID\"))",
           "verified": true
-        },
-        {
-          "file": "engine/data.py",
-          "line_start": 59,
-          "line_end": 62,
-          "quote": "        \"LIMIT_BAL\", \"SEX\", \"EDUCATION\", \"MARRIAGE\", \"AGE\",\n        \"PAY_0\", \"PAY_2\", \"PAY_3\", \"PAY_4\", \"PAY_5\", \"PAY_6\",\n        \"BILL_AMT1\", \"BILL_AMT2\", \"BILL_AMT3\", \"BILL_AMT4\", \"BILL_AMT5\", \"BILL_AMT6\",\n        \"PAY_AMT1\", \"PAY_AMT2\", \"PAY_AMT3\", \"PAY_AMT4\", \"PAY_AMT5\", \"PAY_AMT6\",",
-          "verified": true
         }
       ],
-      "explanation": "The code uses 21 input features.",
-      "suggested_correction": "List the input features: LIMIT_BAL, EDUCATION, MARRIAGE, PAY_0, PAY_2, PAY_3, PAY_4, PAY_5, PAY_6, BILL_AMT1, BILL_AMT2, BILL_AMT3, BILL_AMT4, BILL_AMT5, BILL_AMT6, PAY_AMT1, PAY_AMT2, PAY_AMT3, PAY_AMT4, PAY_AMT5, PAY_AMT6.",
+      "explanation": "The code explicitly excludes SEX as a predictor.",
+      "suggested_correction": "Remove SEX from the documented input features.",
       "detected_by": "rule"
     },
     {
       "discrepancy_id": "D-002",
-      "field": "train_test_split",
-      "type": "omission",
-      "documented_claim": "The document does not state the train/test split.",
-      "document_ref": null,
+      "field": "decision_threshold",
+      "type": "contradiction",
+      "documented_claim": "The decision threshold is 0.4.",
+      "document_ref": {
+        "file": "models/outdated_model_document.md",
+        "line_start": 17,
+        "line_end": 18,
+        "quote": "- Classification threshold: 0.40; probabilities at or above this value are\n  classified as defaults.",
+        "verified": true
+      },
       "code_evidence": [
         {
-          "file": "engine/data.py",
-          "line_start": 136,
-          "line_end": 136,
-          "quote": "    frame: pd.DataFrame, test_size: float = 0.2, seed: int = 42",
+          "file": "models/legacy_model.R",
+          "line_start": 23,
+          "line_end": 24,
+          "quote": "CLASSIFICATION_THRESHOLD <- 0.35\nprediction <- as.integer(probability >= CLASSIFICATION_THRESHOLD)",
           "verified": true
         }
       ],
-      "explanation": "The code uses 80% train / 20% test.",
-      "suggested_correction": "State the train/test split: 80% train / 20% test.",
+      "explanation": "The code uses 0.35.",
+      "suggested_correction": "Change the documented decision threshold to 0.35.",
       "detected_by": "rule"
     },
     {
       "discrepancy_id": "D-003",
-      "field": "other",
-      "type": "unverifiable",
-      "documented_claim": "The document is intentionally incomplete and is used by the Discovery test.",
+      "field": "train_test_split",
+      "type": "contradiction",
+      "documented_claim": "The train/test split is 75% train / 25% test.",
       "document_ref": {
         "file": "models/outdated_model_document.md",
-        "line_start": 3,
-        "line_end": 3,
-        "quote": "This is the intentionally incomplete document used by the Discovery test.",
+        "line_start": 14,
+        "line_end": 14,
+        "quote": "- Training split: 75% train and 25% test.",
         "verified": true
       },
-      "code_evidence": [],
-      "explanation": "This statement is about the purpose of the document and a Discovery test. The code does not record either.",
-      "suggested_correction": "",
-      "detected_by": "llm"
+      "code_evidence": [
+        {
+          "file": "engine/data.py",
+          "line_start": 135,
+          "line_end": 137,
+          "quote": "def prepare_data(\n    frame: pd.DataFrame, test_size: float = 0.2, seed: int = 42\n) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:",
+          "verified": true
+        }
+      ],
+      "explanation": "The code uses 80% train / 20% test.",
+      "suggested_correction": "Change the documented train/test split to 80% train / 20% test.",
+      "detected_by": "rule"
     },
     {
       "discrepancy_id": "D-004",
-      "field": "limitations",
+      "field": "model_name",
       "type": "unverifiable",
-      "documented_claim": "The document is missing preprocessing, data split, random seed, dataset version, and fairness assumptions.",
+      "documented_claim": "The model is called the Legacy credit default model.",
       "document_ref": {
         "file": "models/outdated_model_document.md",
-        "line_start": 11,
-        "line_end": 11,
-        "quote": "- Missing: preprocessing, data split, random seed, dataset version, and fairness assumptions",
+        "line_start": 1,
+        "line_end": 1,
+        "quote": "# Legacy credit default model",
         "verified": true
       },
-      "code_evidence": [],
-      "explanation": "This statement describes what the document lacks, not how the code behaves. The code itself does define preprocessing, a seed (42) and fairness attributes.",
+      "code_evidence": [
+        {
+          "file": "models/legacy_model.R",
+          "line_start": 3,
+          "line_end": 3,
+          "quote": "# Reference implementation for the legacy production model.",
+          "verified": true
+        }
+      ],
+      "explanation": "The code calls this the 'legacy production model' and names the fitted object legacy_model. It never uses the exact name 'Legacy credit default model'.",
       "suggested_correction": "",
       "detected_by": "llm"
     },
     {
       "discrepancy_id": "D-005",
+      "field": "target_variable",
+      "type": "contradiction",
+      "documented_claim": "The target variable is default.",
+      "document_ref": {
+        "file": "models/outdated_model_document.md",
+        "line_start": 9,
+        "line_end": 9,
+        "quote": "- Target: `default`.",
+        "verified": true
+      },
+      "code_evidence": [
+        {
+          "file": "models/legacy_model.R",
+          "line_start": 20,
+          "line_end": 20,
+          "quote": "formula <- reformulate(feature_names, response = \"target\")",
+          "verified": true
+        },
+        {
+          "file": "engine/data.py",
+          "line_start": 19,
+          "line_end": 19,
+          "quote": "TARGET = \"default.payment.next.month\"",
+          "verified": true
+        },
+        {
+          "file": "engine/data.py",
+          "line_start": 165,
+          "line_end": 165,
+          "quote": "    train[\"target\"] = y_train",
+          "verified": true
+        }
+      ],
+      "explanation": "No variable called 'default' exists. The model's response column is 'target'. It holds the integer values of the dataset column 'default.payment.next.month'.",
+      "suggested_correction": "The target variable is 'target', a binary 0/1 indicator taken from the UCI column 'default.payment.next.month' (default payment next month).",
+      "detected_by": "llm"
+    },
+    {
+      "discrepancy_id": "D-006",
+      "field": "preprocessing",
+      "type": "contradiction",
+      "documented_claim": "All numeric predictors are standardized to zero mean and unit variance before fitting.",
+      "document_ref": {
+        "file": "models/outdated_model_document.md",
+        "line_start": 15,
+        "line_end": 16,
+        "quote": "- Preprocessing: all numeric predictors are standardized to zero mean and unit\n  variance before fitting.",
+        "verified": true
+      },
+      "code_evidence": [
+        {
+          "file": "models/legacy_model.R",
+          "line_start": 19,
+          "line_end": 21,
+          "quote": "feature_names <- setdiff(names(train), c(\"row_id\", \"target\", \"SEX\", \"AGE\", \"ID\"))\nformula <- reformulate(feature_names, response = \"target\")\nlegacy_model <- glm(formula, data = train, family = binomial(link = \"logit\"))",
+          "verified": true
+        }
+      ],
+      "explanation": "Neither the R script nor the shared-split code performs any scaling or standardization. glm is fitted directly on the raw CSV columns.",
+      "suggested_correction": "Predictors are used in their raw form; no standardization or scaling is applied before fitting.",
+      "detected_by": "llm"
+    },
+    {
+      "discrepancy_id": "D-007",
       "field": "preprocessing",
       "type": "omission",
       "documented_claim": "Not mentioned in the document.",
       "document_ref": null,
       "code_evidence": [
         {
-          "file": "engine/data.py",
-          "line_start": 37,
-          "line_end": 43,
-          "quote": "    frame = pd.read_excel(path, header=1)\n    frame = frame.rename(columns={\"default payment next month\": TARGET})\n    if \"ID\" in frame.columns:\n        frame = frame.drop(columns=[\"ID\"])\n    if TARGET not in frame.columns:\n        raise ValueError(f\"Dataset must contain target column {TARGET!r}\")\n    return frame.dropna().reset_index(drop=True)",
+          "file": "models/legacy_model.R",
+          "line_start": 19,
+          "line_end": 21,
+          "quote": "feature_names <- setdiff(names(train), c(\"row_id\", \"target\", \"SEX\", \"AGE\", \"ID\"))\nformula <- reformulate(feature_names, response = \"target\")\nlegacy_model <- glm(formula, data = train, family = binomial(link = \"logit\"))",
           "verified": true
         }
       ],
-      "explanation": "When loading the workbook, the code skips the header artifact, renames the target, drops the ID column and removes rows with missing values. The document does not describe these steps.",
-      "suggested_correction": "Document the preprocessing: the workbook is read with header=1, the target is renamed to default.payment.next.month, ID is dropped and rows with missing values are removed.",
+      "explanation": "Integer-coded categorical columns such as EDUCATION, MARRIAGE and PAY_* are read by read.csv as numeric. They therefore enter the glm as linear numeric terms rather than as factors. The document does not mention this.",
+      "suggested_correction": "State that all predictor columns, including integer-coded categorical fields, enter the GLM as numeric terms without factor encoding or scaling.",
       "detected_by": "llm"
     },
     {
-      "discrepancy_id": "D-006",
+      "discrepancy_id": "D-008",
       "field": "other",
       "type": "omission",
       "documented_claim": "Not mentioned in the document.",
@@ -453,18 +495,18 @@
       "code_evidence": [
         {
           "file": "engine/data.py",
-          "line_start": 103,
+          "line_start": 109,
           "line_end": 114,
-          "quote": "        \"has_expected_shape\": len(frame) == 30_000 and len(frame.columns) == 25,\n        \"has_expected_target\": TARGET in frame.columns,\n        \"default_rate_approximately_22_percent\": (\n            default_rate is not None and 0.20 <= default_rate <= 0.24\n        ),\n    }\n    if missing_columns or not result[\"has_expected_shape\"] or not result[\"has_expected_target\"]:\n        raise ValueError(f\"Official UCI dataset failed validation: {result}\")\n    if result[\"missing_value_count\"] != 0:\n        raise ValueError(f\"Official UCI dataset contains missing values: {result}\")\n    if not result[\"default_rate_approximately_22_percent\"]:\n        raise ValueError(f\"Unexpected UCI default rate: {result}\")",
+          "quote": "    if missing_columns or not result[\"has_expected_shape\"] or not result[\"has_expected_target\"]:\n        raise ValueError(f\"Official UCI dataset failed validation: {result}\")\n    if result[\"missing_value_count\"] != 0:\n        raise ValueError(f\"Official UCI dataset contains missing values: {result}\")\n    if not result[\"default_rate_approximately_22_percent\"]:\n        raise ValueError(f\"Unexpected UCI default rate: {result}\")",
           "verified": true
         }
       ],
-      "explanation": "The code validates the official UCI dataset 350 and records its provenance. The document does not mention the data source or these validation checks.",
-      "suggested_correction": "State that data comes from UCI dataset 350, fetched via ucimlrepo. Also state that the dataset is validated for 30,000 rows, 25 columns, no missing values and a default rate between 20% and 24%, and that provenance is recorded.",
+      "explanation": "Before any split or training, the official UCI data is checked for 30,000 rows and 25 columns, no missing values, and a default rate between 20% and 24%. The document does not describe these checks.",
+      "suggested_correction": "Document that the UCI dataset 350 is validated for 30,000 rows and 25 columns, no missing values, and a default rate of 20–24% before splitting, and that provenance is recorded.",
       "detected_by": "llm"
     },
     {
-      "discrepancy_id": "D-007",
+      "discrepancy_id": "D-009",
       "field": "limitations",
       "type": "omission",
       "documented_claim": "Not mentioned in the document.",
@@ -478,51 +520,13 @@
           "verified": true
         }
       ],
-      "explanation": "A synthetic demo dataset exists as a fallback for when the UCI file is unavailable. The document does not mention it.",
-      "suggested_correction": "Note that a deterministic synthetic fixture (1,200 samples, seed 42) can replace the real data when the UCI source is unavailable.",
-      "detected_by": "llm"
-    },
-    {
-      "discrepancy_id": "D-008",
-      "field": "other",
-      "type": "omission",
-      "documented_claim": "Not mentioned in the document.",
-      "document_ref": null,
-      "code_evidence": [
-        {
-          "file": "engine/data.py",
-          "line_start": 176,
-          "line_end": 182,
-          "quote": "def age_groups(values: pd.Series) -> pd.Series:\n    \"\"\"Create the four documented fairness age bands.\"\"\"\n    return pd.cut(\n        values,\n        bins=[-np.inf, 24, 34, 44, np.inf],\n        labels=[\"under_25\", \"25_34\", \"35_44\", \"45_plus\"],\n    ).astype(str)",
-          "verified": true
-        }
-      ],
-      "explanation": "The code defines SEX and AGE as fairness attributes and creates four age bands for fairness analysis. The document does not mention this.",
-      "suggested_correction": "Document that SEX and AGE are treated as sensitive attributes for fairness analysis, using the age bands under_25, 25_34, 35_44 and 45_plus.",
-      "detected_by": "llm"
-    },
-    {
-      "discrepancy_id": "D-009",
-      "field": "other",
-      "type": "omission",
-      "documented_claim": "Not mentioned in the document.",
-      "document_ref": null,
-      "code_evidence": [
-        {
-          "file": "models/legacy_model.R",
-          "line_start": 25,
-          "line_end": 29,
-          "quote": "write.csv(\n  data.frame(row_id = test$row_id, probability = probability, prediction = prediction),\n  output_path,\n  row.names = FALSE\n)",
-          "verified": true
-        }
-      ],
-      "explanation": "The model writes a CSV containing row_id, probability and a binary prediction. The document does not describe this output format.",
-      "suggested_correction": "Describe the model output: a CSV with row_id, the predicted default probability and a binary prediction.",
+      "explanation": "A synthetic demo dataset can replace the UCI data when the UCI file is unavailable. The document does not mention this fallback.",
+      "suggested_correction": "Note that a synthetic 1,200-row demo dataset may be used when the UCI data is unavailable, and that results from it are not representative.",
       "detected_by": "llm"
     }
   ],
   "evidence_warnings": [],
   "llm_model": "claude-opus-5-5",
-  "generated_at": "2026-11-11T23:40:26+00:00",
+  "generated_at": "2026-11-12T22:47:34+00:00",
   "review_status": "pending_human_review"
 }

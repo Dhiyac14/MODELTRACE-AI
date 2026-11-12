@@ -5,7 +5,7 @@
     "engine/models.py",
     "engine/data.py"
   ],
-  "legacy_document": null,
+  "legacy_document": "models/gradient_boosting_model_document.md",
   "metadata": {
     "model_name": {
       "value": "gradient_boosting",
@@ -15,11 +15,11 @@
           "file": "engine/models.py",
           "line_start": 67,
           "line_end": 67,
-          "quote": "        \"gradient_boosting\": GradientBoostingClassifier(random_state=seed),",
+          "quote": "\"gradient_boosting\": GradientBoostingClassifier(random_state=seed),",
           "verified": true
         }
       ],
-      "note": "Dictionary key used as the ModelBundle name."
+      "note": "The key in the models dict, also used as the ModelBundle name (line 72)."
     },
     "algorithm": {
       "value": "scikit-learn GradientBoostingClassifier with default hyperparameters except random_state=seed (default seed 42)",
@@ -43,32 +43,32 @@
           "file": "engine/models.py",
           "line_start": 67,
           "line_end": 67,
-          "quote": "        \"gradient_boosting\": GradientBoostingClassifier(random_state=seed),",
+          "quote": "\"gradient_boosting\": GradientBoostingClassifier(random_state=seed),",
           "verified": true
         }
       ],
-      "note": ""
+      "note": "No other hyperparameters are set, so library defaults apply."
     },
     "business_purpose": {
-      "value": "Supporting comparison model for a Python/R/Statsmodels migration exercise, predicting credit card client default on next month's payment.",
+      "value": "Supporting comparison model for predicting credit card client default next month, trained alongside a logistic-regression migration target and used for comparison.",
       "status": "inferred",
       "evidence": [
         {
           "file": "engine/models.py",
           "line_start": 58,
           "line_end": 58,
-          "quote": "    \"\"\"Train the migration target and supporting comparison models.\"\"\"",
+          "quote": "\"\"\"Train the migration target and supporting comparison models.\"\"\"",
           "verified": true
         },
         {
           "file": "engine/data.py",
           "line_start": 78,
           "line_end": 78,
-          "quote": "            \"dataset\": \"UCI Default of Credit Card Clients\",",
+          "quote": "\"dataset\": \"UCI Default of Credit Card Clients\",",
           "verified": true
         }
       ],
-      "note": "Inferred from docstring and dataset/target names; no explicit business use is stated for the gradient boosting model."
+      "note": "Inferred from the docstring and the dataset name. The business use is not stated in the code."
     },
     "target_variable": {
       "value": "default.payment.next.month",
@@ -85,11 +85,11 @@
           "file": "engine/data.py",
           "line_start": 142,
           "line_end": 142,
-          "quote": "    target = frame[TARGET].astype(int)",
+          "quote": "target = frame[TARGET].astype(int)",
           "verified": true
         }
       ],
-      "note": ""
+      "note": "Binary integer target."
     },
     "input_features": {
       "value": [
@@ -121,7 +121,7 @@
           "file": "engine/data.py",
           "line_start": 58,
           "line_end": 63,
-          "quote": "    expected_features = [\n        \"LIMIT_BAL\", \"SEX\", \"EDUCATION\", \"MARRIAGE\", \"AGE\",\n        \"PAY_0\", \"PAY_2\", \"PAY_3\", \"PAY_4\", \"PAY_5\", \"PAY_6\",\n        \"BILL_AMT1\", \"BILL_AMT2\", \"BILL_AMT3\", \"BILL_AMT4\", \"BILL_AMT5\", \"BILL_AMT6\",\n        \"PAY_AMT1\", \"PAY_AMT2\", \"PAY_AMT3\", \"PAY_AMT4\", \"PAY_AMT5\", \"PAY_AMT6\",\n    ]",
+          "quote": "expected_features = [\n        \"LIMIT_BAL\", \"SEX\", \"EDUCATION\", \"MARRIAGE\", \"AGE\",\n        \"PAY_0\", \"PAY_2\", \"PAY_3\", \"PAY_4\", \"PAY_5\", \"PAY_6\",\n        \"BILL_AMT1\", \"BILL_AMT2\", \"BILL_AMT3\", \"BILL_AMT4\", \"BILL_AMT5\", \"BILL_AMT6\",\n        \"PAY_AMT1\", \"PAY_AMT2\", \"PAY_AMT3\", \"PAY_AMT4\", \"PAY_AMT5\", \"PAY_AMT6\",\n    ]",
           "verified": true
         },
         {
@@ -135,11 +135,11 @@
           "file": "engine/models.py",
           "line_start": 59,
           "line_end": 59,
-          "quote": "    model_features = predictive_features(x_train)",
+          "quote": "model_features = predictive_features(x_train)",
           "verified": true
         }
       ],
-      "note": "Features are all non-target columns minus ID, SEX, AGE; list derived from the official UCI expected column list. If the demo fixture is used, features would be LIMIT_BAL, BILL_AMT1, PAY_0 only. Which loader is used in production is not shown."
+      "note": "Features are all non-target columns minus ID, SEX and AGE. This list assumes the official UCI dataset path is used. With the demo fixture, the features would be only LIMIT_BAL, BILL_AMT1 and PAY_0."
     },
     "excluded_columns": {
       "value": [
@@ -161,28 +161,26 @@
           "file": "engine/data.py",
           "line_start": 150,
           "line_end": 150,
-          "quote": "    excluded = [column for column in (\"ID\", *SENSITIVE_FEATURES) if column in features.columns]",
+          "quote": "excluded = [column for column in (\"ID\", *SENSITIVE_FEATURES) if column in features.columns]",
           "verified": true
         },
         {
           "file": "engine/data.py",
           "line_start": 141,
           "line_end": 141,
-          "quote": "    features = frame.drop(columns=[TARGET])",
+          "quote": "features = frame.drop(columns=[TARGET])",
           "verified": true
         }
       ],
-      "note": "SEX and AGE are retained only for fairness analysis; target removed from features."
+      "note": "SEX and AGE are excluded as fairness-only attributes. ID is excluded as an identifier. The target is separated from the features."
     },
     "preprocessing_steps": {
       "value": [
-        "Rename 'default payment next month' to target name and drop ID when loading the workbook",
-        "Drop rows with missing values (workbook loader)",
-        "Validate official UCI dataset (30,000 rows, 25 columns, no missing values, default rate 20-24%)",
-        "Separate target and cast to int",
-        "Stratified train/test split with test_size=0.2, random_state=seed",
-        "Remove ID, SEX and AGE from predictors",
-        "No scaling applied for gradient boosting"
+        "Rename target column 'default payment next month' to 'default.payment.next.month' and drop ID, then drop rows with missing values (workbook load path)",
+        "Validate the official UCI dataset: 30,000 rows, 25 columns, no missing values, default rate between 20% and 24%",
+        "Cast target to int and run a stratified train/test split (test_size=0.2, random_state=42)",
+        "Drop ID, SEX and AGE from predictors via predictive_features",
+        "No scaling or encoding is applied for the gradient boosting model"
       ],
       "status": "verified",
       "evidence": [
@@ -190,32 +188,32 @@
           "file": "engine/data.py",
           "line_start": 38,
           "line_end": 43,
-          "quote": "    frame = frame.rename(columns={\"default payment next month\": TARGET})\n    if \"ID\" in frame.columns:\n        frame = frame.drop(columns=[\"ID\"])\n    if TARGET not in frame.columns:\n        raise ValueError(f\"Dataset must contain target column {TARGET!r}\")\n    return frame.dropna().reset_index(drop=True)",
+          "quote": "frame = frame.rename(columns={\"default payment next month\": TARGET})\n    if \"ID\" in frame.columns:\n        frame = frame.drop(columns=[\"ID\"])\n    if TARGET not in frame.columns:\n        raise ValueError(f\"Dataset must contain target column {TARGET!r}\")\n    return frame.dropna().reset_index(drop=True)",
           "verified": true
         },
         {
           "file": "engine/data.py",
           "line_start": 103,
           "line_end": 103,
-          "quote": "        \"has_expected_shape\": len(frame) == 30_000 and len(frame.columns) == 25,",
+          "quote": "\"has_expected_shape\": len(frame) == 30_000 and len(frame.columns) == 25,",
           "verified": true
         },
         {
           "file": "engine/data.py",
-          "line_start": 141,
+          "line_start": 142,
           "line_end": 145,
-          "quote": "    features = frame.drop(columns=[TARGET])\n    target = frame[TARGET].astype(int)\n    return train_test_split(\n        features, target, test_size=test_size, random_state=seed, stratify=target\n    )",
+          "quote": "target = frame[TARGET].astype(int)\n    return train_test_split(\n        features, target, test_size=test_size, random_state=seed, stratify=target\n    )",
           "verified": true
         },
         {
-          "file": "engine/data.py",
-          "line_start": 151,
-          "line_end": 151,
-          "quote": "    return features.drop(columns=excluded)",
+          "file": "engine/models.py",
+          "line_start": 67,
+          "line_end": 67,
+          "quote": "\"gradient_boosting\": GradientBoostingClassifier(random_state=seed),",
           "verified": true
         }
       ],
-      "note": "Which loader (workbook vs official UCI vs demo) is used is not shown."
+      "note": "StandardScaler is used only in the logistic regression pipeline, not for gradient boosting."
     },
     "train_fraction": {
       "value": 0.8,
@@ -223,13 +221,13 @@
       "evidence": [
         {
           "file": "engine/data.py",
-          "line_start": 136,
-          "line_end": 136,
-          "quote": "    frame: pd.DataFrame, test_size: float = 0.2, seed: int = 42",
+          "line_start": 135,
+          "line_end": 137,
+          "quote": "def prepare_data(\n    frame: pd.DataFrame, test_size: float = 0.2, seed: int = 42\n) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:",
           "verified": true
         }
       ],
-      "note": "Computed as 1 - default test_size of 0.2; the caller could override it."
+      "note": "Computed as 1 minus the default test_size of 0.2. The calling code is not shown, so the actual value used could differ."
     },
     "decision_threshold": {
       "value": 0.5,
@@ -237,45 +235,45 @@
       "evidence": [
         {
           "file": "engine/models.py",
-          "line_start": 27,
+          "line_start": 26,
           "line_end": 27,
-          "quote": "        return np.asarray(self.model.predict(features[self.feature_names]), dtype=int)",
+          "quote": "def predict(self, features: pd.DataFrame) -> np.ndarray:\n        return np.asarray(self.model.predict(features[self.feature_names]), dtype=int)",
           "verified": true
         },
         {
           "file": "engine/models.py",
           "line_start": 140,
           "line_end": 140,
-          "quote": "        \"threshold\": 0.5,",
+          "quote": "\"threshold\": 0.5,",
           "verified": true
         }
       ],
-      "note": "Labels come from the classifier's own predict method; 0.5 is the threshold reported in parity reports."
+      "note": "Labels come from sklearn predict, which for a binary classifier equals a 0.5 probability cut-off. The parity report also records 0.5. No explicit threshold is set for this model."
     },
     "assumptions": [
       {
-        "value": "SEX and AGE are fairness-only attributes and must not be used as predictors.",
-        "status": "verified",
+        "value": "Excluding SEX and AGE from predictors is assumed to address fairness; these attributes are kept only for fairness analysis.",
+        "status": "inferred",
         "evidence": [
           {
             "file": "engine/data.py",
             "line_start": 149,
             "line_end": 149,
-            "quote": "    \"\"\"Remove identifiers and fairness-only attributes from model predictors.\"\"\"",
+            "quote": "\"\"\"Remove identifiers and fairness-only attributes from model predictors.\"\"\"",
             "verified": true
           }
         ],
-        "note": ""
+        "note": "Based on the docstring wording."
       },
       {
-        "value": "Expected default rate of the training data is approximately 22% (20-24%).",
+        "value": "The training data is expected to have a default rate of about 22% and no missing values.",
         "status": "verified",
         "evidence": [
           {
             "file": "engine/data.py",
             "line_start": 105,
             "line_end": 107,
-            "quote": "        \"default_rate_approximately_22_percent\": (\n            default_rate is not None and 0.20 <= default_rate <= 0.24\n        ),",
+            "quote": "\"default_rate_approximately_22_percent\": (\n            default_rate is not None and 0.20 <= default_rate <= 0.24\n        ),",
             "verified": true
           }
         ],
@@ -284,61 +282,214 @@
     ],
     "limitations": [
       {
-        "value": "Default hyperparameters used with no tuning or cross-validation shown.",
-        "status": "inferred",
+        "value": "No hyperparameter tuning; library defaults are used.",
+        "status": "verified",
         "evidence": [
           {
             "file": "engine/models.py",
             "line_start": 67,
             "line_end": 67,
-            "quote": "        \"gradient_boosting\": GradientBoostingClassifier(random_state=seed),",
+            "quote": "\"gradient_boosting\": GradientBoostingClassifier(random_state=seed),",
             "verified": true
           }
         ],
-        "note": "Only random_state is set; no tuning code is present."
+        "note": ""
       },
       {
-        "value": "No class imbalance handling for gradient boosting (unlike random forest which uses class_weight='balanced').",
-        "status": "inferred",
+        "value": "No class imbalance handling for gradient boosting, unlike the random forest which uses class_weight='balanced'.",
+        "status": "verified",
         "evidence": [
           {
             "file": "engine/models.py",
-            "line_start": 65,
+            "line_start": 64,
             "line_end": 67,
-            "quote": "            n_estimators=150, random_state=seed, n_jobs=-1, class_weight=\"balanced\"\n        ),\n        \"gradient_boosting\": GradientBoostingClassifier(random_state=seed),",
+            "quote": "\"random_forest\": RandomForestClassifier(\n            n_estimators=150, random_state=seed, n_jobs=-1, class_weight=\"balanced\"\n        ),\n        \"gradient_boosting\": GradientBoostingClassifier(random_state=seed),",
             "verified": true
           }
         ],
-        "note": "Inferred by comparison with the random forest configuration."
+        "note": ""
       },
       {
-        "value": "Categorical fields such as EDUCATION, MARRIAGE and PAY_* are used as raw numeric values without encoding.",
+        "value": "Proxy variables such as EDUCATION and MARRIAGE remain in the predictors even though sensitive attributes are excluded.",
         "status": "inferred",
         "evidence": [
           {
             "file": "engine/data.py",
-            "line_start": 151,
-            "line_end": 151,
-            "quote": "    return features.drop(columns=excluded)",
+            "line_start": 150,
+            "line_end": 150,
+            "quote": "excluded = [column for column in (\"ID\", *SENSITIVE_FEATURES) if column in features.columns]",
             "verified": true
           }
         ],
-        "note": "No encoding step appears in the code."
+        "note": "Only ID, SEX and AGE are removed, so the remaining columns could act as proxies."
+      },
+      {
+        "value": "A synthetic demo dataset may be used when UCI data is unavailable, which would change the feature set.",
+        "status": "verified",
+        "evidence": [
+          {
+            "file": "engine/data.py",
+            "line_start": 119,
+            "line_end": 119,
+            "quote": "\"\"\"Create a deterministic local fixture when the external UCI file is unavailable.\"\"\"",
+            "verified": true
+          }
+        ],
+        "note": ""
       }
     ],
     "missing_information": [
-      "Business owner and intended business use of the gradient boosting model",
-      "Performance metrics and acceptance criteria",
-      "Which data loader (workbook, official UCI, or demo fixture) is used in production",
-      "Justification for default hyperparameters",
-      "Business decision threshold and its calibration",
-      "Monitoring, retraining frequency and model approval status",
-      "Fairness evaluation results by SEX and age groups"
+      "Business owner, intended use and decision context for the gradient boosting model",
+      "Approved decision threshold and the rationale for it",
+      "Performance metrics, acceptance criteria and validation results",
+      "Hyperparameter selection rationale",
+      "Monitoring plan, retraining frequency and drift thresholds",
+      "Which data path (official UCI, workbook or demo) is used in production",
+      "Model version, approval status and deployment details",
+      "Fairness test results and tolerances"
     ]
   },
-  "discrepancies": [],
+  "discrepancies": [
+    {
+      "discrepancy_id": "D-001",
+      "field": "decision_threshold",
+      "type": "omission",
+      "documented_claim": "The document does not state the decision threshold.",
+      "document_ref": null,
+      "code_evidence": [
+        {
+          "file": "engine/models.py",
+          "line_start": 26,
+          "line_end": 27,
+          "quote": "def predict(self, features: pd.DataFrame) -> np.ndarray:\n        return np.asarray(self.model.predict(features[self.feature_names]), dtype=int)",
+          "verified": true
+        },
+        {
+          "file": "engine/models.py",
+          "line_start": 140,
+          "line_end": 140,
+          "quote": "\"threshold\": 0.5,",
+          "verified": true
+        }
+      ],
+      "explanation": "The code uses 0.5.",
+      "suggested_correction": "State the decision threshold: 0.5.",
+      "detected_by": "rule"
+    },
+    {
+      "discrepancy_id": "D-002",
+      "field": "model_name",
+      "type": "contradiction",
+      "documented_claim": "The model is a challenger model identified as python-gradient-boosting.",
+      "document_ref": {
+        "file": "models/gradient_boosting_model_document.md",
+        "line_start": 3,
+        "line_end": 3,
+        "quote": "This is the challenger model identified as `python-gradient-boosting`. It is",
+        "verified": true
+      },
+      "code_evidence": [
+        {
+          "file": "engine/models.py",
+          "line_start": 67,
+          "line_end": 67,
+          "quote": "        \"gradient_boosting\": GradientBoostingClassifier(random_state=seed),",
+          "verified": true
+        },
+        {
+          "file": "engine/models.py",
+          "line_start": 72,
+          "line_end": 72,
+          "quote": "        bundles[name] = ModelBundle(name, model, list(model_features.columns))",
+          "verified": true
+        }
+      ],
+      "explanation": "The code names this model 'gradient_boosting' as its dictionary key and ModelBundle name. It never uses 'python-gradient-boosting'. The comparison or challenger role is supported by the train_python_models docstring.",
+      "suggested_correction": "The model is a supporting comparison model identified in code as 'gradient_boosting'.",
+      "detected_by": "llm"
+    },
+    {
+      "discrepancy_id": "D-003",
+      "field": "performance",
+      "type": "unverifiable",
+      "documented_claim": "The validation report from engine/pipeline.py evaluates the migrated Statsmodels logistic model and does not report Gradient Boosting performance metrics.",
+      "document_ref": {
+        "file": "models/gradient_boosting_model_document.md",
+        "line_start": 27,
+        "line_end": 29,
+        "quote": "The pipeline trains this model as a supporting challenger. The validation\nreport produced by `engine/pipeline.py` evaluates the migrated Statsmodels\nlogistic model; it does not report Gradient Boosting performance metrics. For",
+        "verified": true
+      },
+      "code_evidence": [],
+      "explanation": "engine/pipeline.py is not among the provided files, so the contents of the validation report cannot be checked.",
+      "suggested_correction": "",
+      "detected_by": "llm"
+    },
+    {
+      "discrepancy_id": "D-004",
+      "field": "other",
+      "type": "unverifiable",
+      "documented_claim": "The real-data pipeline may produce SHAP explainability values for the Gradient Boosting model when the optional SHAP dependency is available.",
+      "document_ref": {
+        "file": "models/gradient_boosting_model_document.md",
+        "line_start": 29,
+        "line_end": 31,
+        "quote": "logistic model; it does not report Gradient Boosting performance metrics. For\nthe Gradient Boosting model, the real-data pipeline may produce SHAP\nexplainability values when the optional SHAP dependency is available.",
+        "verified": true
+      },
+      "code_evidence": [],
+      "explanation": "None of the provided files contain SHAP code or the real-data pipeline, so this claim cannot be checked.",
+      "suggested_correction": "",
+      "detected_by": "llm"
+    },
+    {
+      "discrepancy_id": "D-005",
+      "field": "limitations",
+      "type": "omission",
+      "documented_claim": "Not mentioned in the document.",
+      "document_ref": null,
+      "code_evidence": [
+        {
+          "file": "engine/data.py",
+          "line_start": 118,
+          "line_end": 119,
+          "quote": "def make_demo_dataset(n_samples: int = 1200, seed: int = 42) -> pd.DataFrame:\n    \"\"\"Create a deterministic local fixture when the external UCI file is unavailable.\"\"\"",
+          "verified": true
+        }
+      ],
+      "explanation": "The code provides a synthetic demo dataset as a fallback when the UCI data is unavailable. A model trained on that fixture would rest on simulated data with only a few columns. The document does not mention this.",
+      "suggested_correction": "Document that a synthetic demo dataset (make_demo_dataset, 1200 rows) exists as a fallback when the UCI file is unavailable, and that results from it are not representative.",
+      "detected_by": "llm"
+    },
+    {
+      "discrepancy_id": "D-006",
+      "field": "preprocessing",
+      "type": "omission",
+      "documented_claim": "Not mentioned in the document.",
+      "document_ref": null,
+      "code_evidence": [
+        {
+          "file": "engine/data.py",
+          "line_start": 43,
+          "line_end": 43,
+          "quote": "    return frame.dropna().reset_index(drop=True)",
+          "verified": true
+        },
+        {
+          "file": "engine/data.py",
+          "line_start": 109,
+          "line_end": 114,
+          "quote": "    if missing_columns or not result[\"has_expected_shape\"] or not result[\"has_expected_target\"]:\n        raise ValueError(f\"Official UCI dataset failed validation: {result}\")\n    if result[\"missing_value_count\"] != 0:\n        raise ValueError(f\"Official UCI dataset contains missing values: {result}\")\n    if not result[\"default_rate_approximately_22_percent\"]:\n        raise ValueError(f\"Unexpected UCI default rate: {result}\")",
+          "verified": true
+        }
+      ],
+      "explanation": "The document does not describe the data preparation that happens before training. load_dataset drops rows with missing values. The official UCI loader validates the data and raises an error unless the shape is 30,000x25, there are no missing values and the default rate is between 20% and 24%.",
+      "suggested_correction": "Document that the workbook loader drops rows with missing values. Also document that the official UCI loader stops with an error unless the data has 30,000 rows and 25 columns, contains no missing values and has a default rate between 20% and 24%.",
+      "detected_by": "llm"
+    }
+  ],
   "evidence_warnings": [],
   "llm_model": "claude-opus-5-5",
-  "generated_at": "2026-11-12T00:28:10+00:00",
+  "generated_at": "2026-11-12T22:47:36+00:00",
   "review_status": "pending_human_review"
 }

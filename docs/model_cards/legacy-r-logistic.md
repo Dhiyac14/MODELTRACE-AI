@@ -1,13 +1,13 @@
 # Model card: Legacy R Logistic Regression (legacy-r-logistic)
 
 Version 1.0.0 · Risk tier 1 · Review status: **pending_human_review**  
-Generated 2026-11-11T23:40:38+00:00 by Documentation Agent (LLM: claude-opus-5-5)
+Generated 2026-11-12T22:48:40+00:00 by Documentation Agent (LLM: claude-opus-5-5)
 
 > Draft for human review. Figures are copied from the cited files; no approval is implied.
 
 ## Model overview and intended purpose
 
-Legacy R Logistic Regression (model_id legacy-r-logistic, risk tier 1) estimates the probability that a credit-card customer defaults next month and is described as being used in credit decisions; the model name and business purpose are inferred rather than formally documented. It is trained on the UCI Default of Credit Card Clients dataset (30,000 records, Taiwan, April to September 2005), which is designated as public demonstration data only and is not representative of a UK bank's current portfolio. The formal model name, version, owner, intended users, decision context and approval status are not documented.
+Legacy R Logistic Regression (legacy-r-logistic) estimates the probability that a credit-card customer defaults next month and is described as being used in credit decisions; it carries risk tier 1. The model name and business purpose are inferred rather than confirmed, and the business owner, intended use and decision context of the legacy production model are not documented. It is built on the public UCI Default of Credit Card Clients dataset (30,000 records, Taiwan, April to September 2005), which is described as demonstration data only and not representative of a UK bank's current portfolio.
 
 ## Dataset and data provenance
 
@@ -21,18 +21,18 @@ Legacy R Logistic Regression (model_id legacy-r-logistic, risk tier 1) estimates
 
 ## Algorithm and methodology
 
-The model is a logistic regression fitted in R as a GLM with binomial family and logit link, using 21 predictors (LIMIT_BAL, EDUCATION, MARRIAGE, PAY_0 and PAY_2 to PAY_6, BILL_AMT1 to BILL_AMT6, PAY_AMT1 to PAY_AMT6), with SEX and AGE excluded from the predictors and reserved for fairness analysis, and no scaling or encoding applied. Data is validated (30,000 rows, 25 columns, no missing values, default rate between 0.20 and 0.24) and split into stratified 80% train and 20% test sets with random_state 42, although these are stated as defaults and the orchestration code confirming the actual split, seed and data source is not documented. Predictions are classified at a fixed 0.5 threshold, and the reported results show ROC AUC of about 0.707, accuracy of 0.809, precision of about 0.694, recall of about 0.244 and a Brier score of about 0.147. A parity check against a statsmodels implementation is reported as an overall pass, with a maximum probability difference of about 3.6e-07 against a tolerance of 1e-05.
+The model is a logistic regression fitted in R using glm with a binomial family and logit link, with the target column holding default.payment.next.month. Predictors are all columns in train.csv except row_id, target, SEX, AGE and ID (LIMIT_BAL, EDUCATION, MARRIAGE, PAY_0 to PAY_6, BILL_AMT1 to BILL_AMT6 and PAY_AMT1 to PAY_AMT6), used without transformation, scaling or encoding. Data come from an upstream stratified split (seed 42, inferred 0.8/0.2 train/test) with a hard-coded classification threshold of 0.35, although the actual split used at the call site is not documented. A parity check of R predictions against statsmodels is recorded as passing at a tolerance of 1e-05.
 
 ## Input features and target
 
 | Item | Value | Evidence |
 |---|---|---|
-| Target variable | target (renamed from default.payment.next.month) | models/legacy_model.R:L20; engine/data.py:L19; engine/data.py:L165 (verified) |
-| Input features (21) | LIMIT_BAL, EDUCATION, MARRIAGE, PAY_0, PAY_2, PAY_3, PAY_4, PAY_5, PAY_6, BILL_AMT1, BILL_AMT2, BILL_AMT3, BILL_AMT4, BILL_AMT5, BILL_AMT6, PAY_AMT1, PAY_AMT2, PAY_AMT3, PAY_AMT4, PAY_AMT5, PAY_AMT6 | models/legacy_model.R:L19; engine/data.py:L59-62 (inferred) |
+| Target variable | target (holds default.payment.next.month) | models/legacy_model.R:L20; engine/data.py:L165; engine/data.py:L142 (inferred) |
+| Input features (21) | LIMIT_BAL, EDUCATION, MARRIAGE, PAY_0, PAY_2, PAY_3, PAY_4, PAY_5, PAY_6, BILL_AMT1, BILL_AMT2, BILL_AMT3, BILL_AMT4, BILL_AMT5, BILL_AMT6, PAY_AMT1, PAY_AMT2, PAY_AMT3, PAY_AMT4, PAY_AMT5, PAY_AMT6 | models/legacy_model.R:L19; engine/data.py:L58-63 (inferred) |
 | Excluded columns | row_id, target, SEX, AGE, ID | models/legacy_model.R:L19 (verified) |
-| Preprocessing | Fetch UCI dataset 350 via ucimlrepo and rename columns X1..X23 to named features, Validate the dataset: 30,000 rows, 25 columns, no missing values, default rate between 0.20 and 0.24, Separate the target default.payment.next.month and cast it to int, Stratified train/test split with test_size=0.2 and random_state=42 (defaults), Write train.csv/test.csv with an inserted row_id column and the target column 'target', In R, exclude row_id, target, SEX, AGE and ID from the predictors; no scaling or encoding is applied | engine/data.py:L64-65; engine/data.py:L103; engine/data.py:L142-145; engine/data.py:L164-165; models/legacy_model.R:L19 (verified) |
-| Train/test split | 80% train / 20% test | engine/data.py:L136 (inferred) |
-| Decision threshold | 0.5 | models/legacy_model.R:L23 (verified) |
+| Preprocessing | Read train/test CSVs with read.csv(check.names = FALSE), Validate that train contains target and test contains row_id, Exclude row_id, target, SEX, AGE, ID from predictors, Build formula target ~ all remaining columns (no transformations, scaling or encoding), Upstream: stratified train/test split with seed 42 and row_id insertion via write_shared_split | models/legacy_model.R:L13-17; models/legacy_model.R:L19-20; engine/data.py:L143-145 (inferred) |
+| Train/test split | 80% train / 20% test | engine/data.py:L135-137 (inferred) |
+| Decision threshold | 0.35 | models/legacy_model.R:L23-24 (verified) |
 
 ## Performance metrics
 
@@ -209,7 +209,7 @@ The model is a logistic regression fitted in R as a GLM with binomial family and
 
 ## Limitations and assumptions
 
-Categorical codes such as EDUCATION, MARRIAGE and the PAY_* status variables enter the GLM as numeric values, imposing linear effects, and the justification for this treatment and for the variable choices is not documented. The 0.5 threshold is not calibrated to the roughly 22% base rate or to business costs, and its rationale is not documented; the reported recall of about 0.244 indicates most defaulters are not flagged at this threshold. Excluding SEX and AGE does not prevent proxy discrimination, and the reported age-group disparate impact is about 0.767 (about 0.907 for sex). A synthetic demo dataset can be substituted when the UCI data is unavailable and would produce a materially different model, and no monitoring plan, retraining frequency or performance triggers are documented.
+The feature set is not fixed and depends on whatever columns are in train.csv, so a schema change would silently change the model; there is also no missing-value handling, regularisation, scaling or interaction terms, and the fitted model is not saved. Log-odds are assumed linear in raw values, and categorical-coded columns (EDUCATION, MARRIAGE, PAY_*) are treated as numeric unless read as factors, with their intended treatment not documented. The 0.35 threshold has no documented rationale; validation metrics (e.g. accuracy 0.809 but low recall) and fairness metrics for sex and age groups are recorded, yet performance and fairness evaluation are also listed as missing information, so their status needs reviewer clarification. Model version, deployment details, monitoring plan and retraining frequency are not documented.
 
 ## Risk tier, approval and governance
 
@@ -232,12 +232,12 @@ Compared with models/outdated_model_document.md.
 
 | Item | Value | Evidence |
 |---|---|---|
-| D-001 input_features (omission) | Document: The document does not list the input features. Correction: List the input features: LIMIT_BAL, EDUCATION, MARRIAGE, PAY_0, PAY_2, PAY_3, PAY_4, PAY_5, PAY_6, BILL_AMT1, BILL_AMT2, BILL_AMT3, BILL_AMT4, BILL_AMT5, BILL_AMT6, PAY_AMT1, PAY_AMT2, PAY_AMT3, PAY_AMT4, PAY_AMT5, PAY_AMT6. | models/legacy_model.R:L19; engine/data.py:L59-62 |
-| D-002 train_test_split (omission) | Document: The document does not state the train/test split. Correction: State the train/test split: 80% train / 20% test. | engine/data.py:L136 |
-| D-003 other (unverifiable) | Document: The document is intentionally incomplete and is used by the Discovery test. Correction:  | no code evidence |
-| D-004 limitations (unverifiable) | Document: The document is missing preprocessing, data split, random seed, dataset version, and fairness assumptions. Correction:  | no code evidence |
-| D-005 preprocessing (omission) | Document: Not mentioned in the document. Correction: Document the preprocessing: the workbook is read with header=1, the target is renamed to default.payment.next.month, ID is dropped and rows with missing values are removed. | engine/data.py:L37-43 |
-| D-006 other (omission) | Document: Not mentioned in the document. Correction: State that data comes from UCI dataset 350, fetched via ucimlrepo. Also state that the dataset is validated for 30,000 rows, 25 columns, no missing values and a default rate between 20% and 24%, and that provenance is recorded. | engine/data.py:L103-114 |
-| D-007 limitations (omission) | Document: Not mentioned in the document. Correction: Note that a deterministic synthetic fixture (1,200 samples, seed 42) can replace the real data when the UCI source is unavailable. | engine/data.py:L118-119 |
-| D-008 other (omission) | Document: Not mentioned in the document. Correction: Document that SEX and AGE are treated as sensitive attributes for fairness analysis, using the age bands under_25, 25_34, 35_44 and 45_plus. | engine/data.py:L176-182 |
-| D-009 other (omission) | Document: Not mentioned in the document. Correction: Describe the model output: a CSV with row_id, the predicted default probability and a binary prediction. | models/legacy_model.R:L25-29 |
+| D-001 input_features (contradiction) | Document: SEX is a model input. Correction: Remove SEX from the documented input features. | models/legacy_model.R:L19 |
+| D-002 decision_threshold (contradiction) | Document: The decision threshold is 0.4. Correction: Change the documented decision threshold to 0.35. | models/legacy_model.R:L23-24 |
+| D-003 train_test_split (contradiction) | Document: The train/test split is 75% train / 25% test. Correction: Change the documented train/test split to 80% train / 20% test. | engine/data.py:L135-137 |
+| D-004 model_name (unverifiable) | Document: The model is called the Legacy credit default model. Correction:  | models/legacy_model.R:L3 |
+| D-005 target_variable (contradiction) | Document: The target variable is default. Correction: The target variable is 'target', a binary 0/1 indicator taken from the UCI column 'default.payment.next.month' (default payment next month). | models/legacy_model.R:L20; engine/data.py:L19; engine/data.py:L165 |
+| D-006 preprocessing (contradiction) | Document: All numeric predictors are standardized to zero mean and unit variance before fitting. Correction: Predictors are used in their raw form; no standardization or scaling is applied before fitting. | models/legacy_model.R:L19-21 |
+| D-007 preprocessing (omission) | Document: Not mentioned in the document. Correction: State that all predictor columns, including integer-coded categorical fields, enter the GLM as numeric terms without factor encoding or scaling. | models/legacy_model.R:L19-21 |
+| D-008 other (omission) | Document: Not mentioned in the document. Correction: Document that the UCI dataset 350 is validated for 30,000 rows and 25 columns, no missing values, and a default rate of 20–24% before splitting, and that provenance is recorded. | engine/data.py:L109-114 |
+| D-009 limitations (omission) | Document: Not mentioned in the document. Correction: Note that a synthetic 1,200-row demo dataset may be used when the UCI data is unavailable, and that results from it are not representative. | engine/data.py:L118-119 |
