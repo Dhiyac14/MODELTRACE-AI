@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from engine.data import TARGET, make_demo_dataset, prepare_data, predictive_features, validate_uci_dataset
 from engine.models import (
@@ -10,7 +11,7 @@ from engine.models import (
     train_python_models, train_statsmodels_logistic,
 )
 from engine.monitoring import monitor_batches
-from engine.pipeline import build_monitoring_batches
+from engine.pipeline import build_monitoring_batches, generate_agent_reports
 from engine.risk import build_risk_findings
 from engine.validation import age_group_fairness, feature_psi, performance_metrics, psi
 from engine.monitoring import _psi_band
@@ -198,4 +199,18 @@ def test_generated_reports_contain_no_absolute_windows_paths():
     )
     assert "C:\\Users\\" not in report_text
     assert "C:/Users/" not in report_text
+
+
+@pytest.mark.parametrize("with_key", [False, True])
+def test_agent_reports_run_with_or_without_the_answer_key(tmp_path, monkeypatch, with_key):
+    models = tmp_path / "models"
+    models.mkdir()
+    for name in ("legacy_model.R", "outdated_model_document.md"):
+        (models / name).write_text(Path("models", name).read_text(encoding="utf-8"), encoding="utf-8")
+    if with_key:
+        (models / "discovery_answer_key.json").write_text(json.dumps({"expected_target": "target"}))
+    monkeypatch.chdir(tmp_path)
+    generate_agent_reports(tmp_path / "reports", {}, {}, {})
+    discovery = json.loads((tmp_path / "reports" / "agents" / "discovery.json").read_text())
+    assert bool(discovery["metrics"]) is with_key
 
