@@ -201,12 +201,18 @@ def test_generated_reports_contain_no_absolute_windows_paths():
     assert "C:/Users/" not in report_text
 
 
-@pytest.mark.parametrize("with_key", [False, True])
-def test_agent_reports_run_with_or_without_the_answer_key(tmp_path, monkeypatch, with_key):
+def copy_models(tmp_path):
+    """The R model and its document, so generate_agent_reports can run in tmp_path, away from the repository."""
     models = tmp_path / "models"
     models.mkdir()
     for name in ("legacy_model.R", "outdated_model_document.md"):
         (models / name).write_text(Path("models", name).read_text(encoding="utf-8"), encoding="utf-8")
+    return models
+
+
+@pytest.mark.parametrize("with_key", [False, True])
+def test_agent_reports_run_with_or_without_the_answer_key(tmp_path, monkeypatch, with_key):
+    copy_models(tmp_path)
     monkeypatch.delenv("MODELTRACE_ANSWER_KEY", raising=False)
     if with_key:  # a fabricated key, outside the repository like the real one
         key = tmp_path / "private" / "discovery_answer_key.json"
@@ -220,18 +226,19 @@ def test_agent_reports_run_with_or_without_the_answer_key(tmp_path, monkeypatch,
 
 
 
-def test_pipeline_refuses_an_answer_key_inside_the_repository(monkeypatch):
+@pytest.mark.parametrize("setting, message", [("inside", "inside a git repository"), ("absent", "does not exist")])
+def test_a_bad_answer_key_setting_warns_and_runs_unscored(tmp_path, monkeypatch, setting, message):
+    copy_models(tmp_path)
     inside = Path(__file__).resolve().parents[1] / "models" / "discovery_answer_key.json"
-    monkeypatch.setenv("MODELTRACE_ANSWER_KEY", str(inside))
-    with pytest.raises(ValueError, match="inside a git repository"):
-        generate_agent_reports(Path("unused"), {}, {}, {})
+    monkeypatch.setenv("MODELTRACE_ANSWER_KEY", str(inside if setting == "inside" else tmp_path / "nowhere" / "key.json"))
+    monkeypatch.chdir(tmp_path)
+    with pytest.warns(UserWarning, match=message):  # the end of a long run: warn, never lose the other reports
+        generate_agent_reports(tmp_path / "reports", {}, {}, {})
+    assert json.loads((tmp_path / "reports" / "agents" / "discovery.json").read_text())["metrics"] == {}
 
 
 def test_pipeline_warns_about_a_key_left_at_the_old_location(tmp_path, monkeypatch):
-    models = tmp_path / "models"
-    models.mkdir()
-    for name in ("legacy_model.R", "outdated_model_document.md"):
-        (models / name).write_text(Path("models", name).read_text(encoding="utf-8"), encoding="utf-8")
+    models = copy_models(tmp_path)
     (models / "discovery_answer_key.json").write_text(json.dumps({"expected_target": "target"}))
     monkeypatch.delenv("MODELTRACE_ANSWER_KEY", raising=False)
     monkeypatch.chdir(tmp_path)

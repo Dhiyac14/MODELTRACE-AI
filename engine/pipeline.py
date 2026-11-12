@@ -257,6 +257,33 @@ def build_monitoring_report(
     )
 
 
+def _answer_key_from_env() -> Path | None:
+    """The private answer key named by MODELTRACE_ANSWER_KEY (kept outside the repository), or None.
+
+    Without a usable key Discovery runs unscored. Problems are warnings, not errors: this runs at the end of the
+    pipeline, after the other reports are written, and must not leave the agent reports stale.
+    """
+    from agents.discovery_agent import private_key_path
+
+    key_path = os.environ.get("MODELTRACE_ANSWER_KEY", "").strip()
+    old_location = Path("models") / "discovery_answer_key.json"
+    if not key_path:
+        if old_location.exists():
+            warnings.warn(f"{old_location} is no longer read, so Discovery runs unscored. Move the answer key "
+                          "outside the repository and set MODELTRACE_ANSWER_KEY to its path.", stacklevel=3)
+        return None
+    try:
+        path = private_key_path(key_path)
+    except ValueError as error:
+        warnings.warn(f"{error}. Discovery runs unscored.", stacklevel=3)
+        return None
+    if not path.is_file():
+        warnings.warn(f"MODELTRACE_ANSWER_KEY names {key_path}, which does not exist. Discovery runs unscored.",
+                      stacklevel=3)
+        return None
+    return path
+
+
 def generate_agent_reports(
     output_root: Path,
     validation: dict,
@@ -264,25 +291,18 @@ def generate_agent_reports(
     monitoring: dict,
 ) -> None:
     """Persist deterministic agent envelopes over the latest measured artifacts."""
-    from agents.discovery_agent import DiscoveryAgent, private_key_path
+    from agents.discovery_agent import DiscoveryAgent
     from agents.documentation_agent import DocumentationAgent
     from agents.migration_agent import MigrationAgent
     from agents.monitoring_agent import MonitoringAgent
     from agents.validation_agent import ValidationAgent
 
     source = Path("models") / "legacy_model.R"
-    # The private answer key lives outside the repository; MODELTRACE_ANSWER_KEY points at it.
-    # Without it Discovery runs unscored.
-    key_path = os.environ.get("MODELTRACE_ANSWER_KEY")
-    old_location = Path("models") / "discovery_answer_key.json"
-    if key_path is None and old_location.exists():
-        warnings.warn(f"{old_location} is no longer read, so Discovery runs unscored. Move the answer key outside "
-                      "the repository and set MODELTRACE_ANSWER_KEY to its path.", stacklevel=2)
     outputs = {
         "discovery": DiscoveryAgent().run(
             source,
             document=Path("models") / "outdated_model_document.md",
-            answer_key=private_key_path(key_path) if key_path else None,
+            answer_key=_answer_key_from_env(),
         ).to_dict(),
         "documentation": DocumentationAgent().run(Path("models") / "outdated_model_document.md").to_dict(),
         "migration_agent": MigrationAgent().run(source).to_dict(),
