@@ -12,6 +12,10 @@
 
 ![MODELTRACE AI process flow and use cases](docs/process_flow.svg)
 
+## Demo Video
+
+[▶ Watch MODELTRACE AI – Project Demonstration](https://drive.google.com/file/d/1Xy5f7FgsODnLROSPzcXega5wFj3Mr7_f/view?usp=sharing)
+
 ### Contents
 
 | Overview | Architecture & Implementation | Running It | Responsibility & Scope |
