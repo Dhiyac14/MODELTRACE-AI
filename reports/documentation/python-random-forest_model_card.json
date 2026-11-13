@@ -9,7 +9,7 @@
       "title": "Model overview and intended purpose",
       "status": "available",
       "source": "llm_draft",
-      "text": "Python Random Forest (python-random-forest) is a risk tier 3 classifier that predicts the target variable default.payment.next.month, using the public UCI Default of Credit Card Clients dataset (30,000 records of credit-card clients in Taiwan, April to September 2005). Its business purpose is recorded, as an inferred field, as a benchmark model for internal analysis that is not used in decisions, and it is described as a supporting comparison model rather than the migration target. The business owner, intended business use, model version and approval status are not documented.",
+      "text": "Python Random Forest (model_id: python-random-forest) is a benchmark model for internal analysis and is not used in decisions; it serves as a comparison model rather than the migration candidate. It predicts the binary target default.payment.next.month using the UCI Default of Credit Card Clients dataset (30,000 records of credit-card clients in Taiwan, payment history April to September 2005), which is public demonstration data and not representative of a UK bank's current portfolio. The business owner, intended use and decision context are not documented, and the business purpose and target variable are recorded as inferred. The model is assigned risk tier 3.",
       "rows": []
     },
     {
@@ -51,7 +51,7 @@
       "title": "Algorithm and methodology",
       "status": "available",
       "source": "llm_draft",
-      "text": "The model is a scikit-learn RandomForestClassifier with n_estimators=150, random_state set by a seed (default 42), n_jobs=-1 and class_weight=\"balanced\" to handle class imbalance, with no input scaling. Data is loaded either through the official ucimlrepo client (which checks shape, missing values and default rate) or from an Excel workbook (header=1, target renamed, ID dropped, rows with missing values removed). The target is cast to int, and a stratified train/test split is applied with test_size=0.2 and random_state=42. ID, SEX and AGE are excluded from the predictors, with SEX and AGE reserved for fairness analysis; the 21 listed input features, the 0.8 train fraction and the 0.5 decision threshold are inferred fields rather than confirmed specifications.",
+      "text": "The model is a scikit-learn RandomForestClassifier with n_estimators=150, random_state=seed (default 42), n_jobs=-1 and class_weight=\"balanced\" to address an expected default rate of about 22%; other hyperparameters use library defaults. It uses 21 predictors (LIMIT_BAL, EDUCATION, MARRIAGE, PAY_0 and PAY_2 to PAY_6, BILL_AMT1 to BILL_AMT6, PAY_AMT1 to PAY_AMT6), with ID, SEX and AGE excluded and SEX and AGE treated as fairness-only attributes. Preprocessing renames columns, drops ID and rows with missing values, validates the official dataset (30,000 rows, 25 columns, no missing values, default rate between 0.20 and 0.24), casts the target to int, and applies no scaling or encoding. Data is split with a stratified 80/20 train/test split (random_state=42 by default), shared with the R legacy model.",
       "rows": []
     },
     {
@@ -64,22 +64,22 @@
         {
           "label": "Target variable",
           "value": "default.payment.next.month",
-          "source": "engine/data.py:L19; engine/data.py:L142 (verified)"
+          "source": "engine/data.py:L19; engine/data.py:L142 (inferred)"
         },
         {
           "label": "Input features (21)",
           "value": "LIMIT_BAL, EDUCATION, MARRIAGE, PAY_0, PAY_2, PAY_3, PAY_4, PAY_5, PAY_6, BILL_AMT1, BILL_AMT2, BILL_AMT3, BILL_AMT4, BILL_AMT5, BILL_AMT6, PAY_AMT1, PAY_AMT2, PAY_AMT3, PAY_AMT4, PAY_AMT5, PAY_AMT6",
-          "source": "engine/data.py:L58-63; engine/data.py:L150-151; engine/models.py:L59 (inferred)"
+          "source": "engine/data.py:L58-63; engine/models.py:L63; engine/data.py:L150-151 (inferred)"
         },
         {
           "label": "Excluded columns",
           "value": "ID, SEX, AGE, default.payment.next.month",
-          "source": "engine/data.py:L20-22; engine/data.py:L150; engine/data.py:L141 (verified)"
+          "source": "engine/data.py:L20-22; engine/data.py:L149-150; engine/data.py:L141 (verified)"
         },
         {
           "label": "Preprocessing",
-          "value": "Load UCI dataset (official ucimlrepo client with validation of shape, missing values and default rate, or Excel workbook with header=1), Rename 'default payment next month' to 'default.payment.next.month' and drop ID (workbook path), Drop rows with missing values (workbook path), Cast target to int, Stratified train/test split with test_size=0.2 and random_state=42, Remove ID, SEX and AGE from predictors, No scaling applied to random forest inputs",
-          "source": "engine/data.py:L37-43; engine/data.py:L74; engine/data.py:L143-145; engine/models.py:L71 (verified)"
+          "value": "Rename the source target column 'default payment next month' to 'default.payment.next.month' (load_dataset), Drop the ID column and rows with missing values (load_dataset), For the official ucimlrepo source, rename columns X1..X23 to named features, Validate the official dataset: 30,000 rows, 25 columns, no missing values, default rate between 0.20 and 0.24, Cast the target to int, Stratified train/test split with test_size=0.2 and random_state=42 by default, Drop ID, SEX and AGE from the predictors (predictive_features), No scaling or encoding is applied to the random forest inputs",
+          "source": "engine/data.py:L38-43; engine/data.py:L64-65; engine/data.py:L103; engine/data.py:L142-145; engine/models.py:L75 (verified)"
         },
         {
           "label": "Train/test split",
@@ -88,8 +88,8 @@
         },
         {
           "label": "Decision threshold",
-          "value": "0.5",
-          "source": "engine/models.py:L27; engine/models.py:L140 (inferred)"
+          "value": "Not determined from the code",
+          "source": "engine/models.py:L31; engine/models.py:L21 (missing)"
         }
       ]
     },
@@ -136,27 +136,27 @@
         },
         {
           "label": "random_forest_shap.mean_abs_shap.EDUCATION",
-          "value": "0.0046",
+          "value": "0.0047",
           "source": "reports/validation/validation_results.json#explainability.random_forest_shap.mean_abs_shap.EDUCATION"
         },
         {
           "label": "random_forest_shap.mean_abs_shap.MARRIAGE",
-          "value": "0.0056",
+          "value": "0.0057",
           "source": "reports/validation/validation_results.json#explainability.random_forest_shap.mean_abs_shap.MARRIAGE"
         },
         {
           "label": "random_forest_shap.mean_abs_shap.PAY_0",
-          "value": "0.0797",
+          "value": "0.08",
           "source": "reports/validation/validation_results.json#explainability.random_forest_shap.mean_abs_shap.PAY_0"
         },
         {
           "label": "random_forest_shap.mean_abs_shap.PAY_2",
-          "value": "0.0388",
+          "value": "0.039",
           "source": "reports/validation/validation_results.json#explainability.random_forest_shap.mean_abs_shap.PAY_2"
         },
         {
           "label": "random_forest_shap.mean_abs_shap.PAY_3",
-          "value": "0.0238",
+          "value": "0.0239",
           "source": "reports/validation/validation_results.json#explainability.random_forest_shap.mean_abs_shap.PAY_3"
         },
         {
@@ -166,37 +166,37 @@
         },
         {
           "label": "random_forest_shap.mean_abs_shap.PAY_5",
-          "value": "0.0149",
+          "value": "0.0148",
           "source": "reports/validation/validation_results.json#explainability.random_forest_shap.mean_abs_shap.PAY_5"
         },
         {
           "label": "random_forest_shap.mean_abs_shap.PAY_6",
-          "value": "0.0121",
+          "value": "0.0119",
           "source": "reports/validation/validation_results.json#explainability.random_forest_shap.mean_abs_shap.PAY_6"
         },
         {
           "label": "random_forest_shap.mean_abs_shap.BILL_AMT1",
-          "value": "0.0188",
+          "value": "0.0191",
           "source": "reports/validation/validation_results.json#explainability.random_forest_shap.mean_abs_shap.BILL_AMT1"
         },
         {
           "label": "random_forest_shap.mean_abs_shap.BILL_AMT2",
-          "value": "0.0138",
+          "value": "0.0135",
           "source": "reports/validation/validation_results.json#explainability.random_forest_shap.mean_abs_shap.BILL_AMT2"
         },
         {
           "label": "random_forest_shap.mean_abs_shap.BILL_AMT3",
-          "value": "0.0119",
+          "value": "0.0124",
           "source": "reports/validation/validation_results.json#explainability.random_forest_shap.mean_abs_shap.BILL_AMT3"
         },
         {
           "label": "random_forest_shap.mean_abs_shap.BILL_AMT4",
-          "value": "0.0107",
+          "value": "0.0106",
           "source": "reports/validation/validation_results.json#explainability.random_forest_shap.mean_abs_shap.BILL_AMT4"
         },
         {
           "label": "random_forest_shap.mean_abs_shap.BILL_AMT5",
-          "value": "0.0107",
+          "value": "0.0104",
           "source": "reports/validation/validation_results.json#explainability.random_forest_shap.mean_abs_shap.BILL_AMT5"
         },
         {
@@ -206,17 +206,17 @@
         },
         {
           "label": "random_forest_shap.mean_abs_shap.PAY_AMT1",
-          "value": "0.02",
+          "value": "0.0195",
           "source": "reports/validation/validation_results.json#explainability.random_forest_shap.mean_abs_shap.PAY_AMT1"
         },
         {
           "label": "random_forest_shap.mean_abs_shap.PAY_AMT2",
-          "value": "0.0192",
+          "value": "0.0191",
           "source": "reports/validation/validation_results.json#explainability.random_forest_shap.mean_abs_shap.PAY_AMT2"
         },
         {
           "label": "random_forest_shap.mean_abs_shap.PAY_AMT3",
-          "value": "0.0188",
+          "value": "0.0189",
           "source": "reports/validation/validation_results.json#explainability.random_forest_shap.mean_abs_shap.PAY_AMT3"
         },
         {
@@ -226,7 +226,7 @@
         },
         {
           "label": "random_forest_shap.mean_abs_shap.PAY_AMT5",
-          "value": "0.0118",
+          "value": "0.0117",
           "source": "reports/validation/validation_results.json#explainability.random_forest_shap.mean_abs_shap.PAY_AMT5"
         },
         {
@@ -241,7 +241,7 @@
       "title": "Limitations and assumptions",
       "status": "available",
       "source": "llm_draft",
-      "text": "Hyperparameters other than n_estimators and class_weight use library defaults, no tuning is shown, and the selection rationale is not documented. The feature set depends on which loader is used (the demo fixture yields only three predictors), and the loader used in production is not documented. The UCI data is public demonstration data and not representative of a UK bank's current portfolio. Performance metrics, validation results, fairness results for SEX and AGE groups, prediction PSI, the approved decision threshold and its justification, and a monitoring plan are all not documented.",
+      "text": "Hyperparameters are fixed with no tuning shown in the code, and the rationale for n_estimators=150 and class_weight=balanced is not documented; no operational decision threshold is documented. The model_identity hash and coefficient extraction support only the Statsmodels candidate, not this model, and if the demo fixture is used instead of the UCI data the model trains on synthetic data with only 3 predictors. Performance metrics, validation results, acceptance criteria, fairness and monitoring results, and prediction PSI are not documented (the results fields are empty). Also not documented are the production data loader, how the train fraction is set at the call site, the interpretability approach, model version, approval status, deployment and retraining schedule.",
       "rows": []
     },
     {
@@ -277,19 +277,14 @@
           "source": "rule_template"
         },
         {
-          "label": "Tier review status",
+          "label": "Discover gate (tier and discovery report)",
           "value": "not_started",
-          "source": "inventory"
+          "source": "governance/approval_log.json"
         },
         {
           "label": "Approval records",
           "value": "None recorded",
           "source": "governance/approval_log.json"
-        },
-        {
-          "label": "Discovery report status",
-          "value": "pending_human_review",
-          "source": "reports/discovery/python-random-forest_discovery.json"
         },
         {
           "label": "Model card status",
@@ -312,10 +307,8 @@
       "rows": []
     }
   ],
-  "grounding_warnings": [
-    "limitations: the draft mentions approval or validation but none is recorded; check the wording."
-  ],
+  "grounding_warnings": [],
   "generated_by": "Documentation Agent (LLM: claude-opus-5-5)",
-  "generated_at": "2026-11-12T00:28:58+00:00",
+  "generated_at": "2026-11-13T15:18:36+00:00",
   "review_status": "pending_human_review"
 }

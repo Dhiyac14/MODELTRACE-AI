@@ -16,7 +16,7 @@ from .data import (
     prepare_data, write_shared_split,
 )
 from .models import (
-    ModelBundle, model_identity, statsmodels_coefficients, train_python_models,
+    CLASSIFICATION_THRESHOLD, ModelBundle, model_identity, statsmodels_coefficients, train_python_models,
     train_statsmodels_logistic,
 )
 from .persistence import save_model
@@ -47,6 +47,7 @@ def run_demo(output_root: Path) -> dict:
     candidate_hash = model_identity(candidate)
     validation = {
         "model": candidate.name,
+        "threshold": CLASSIFICATION_THRESHOLD,
         "metrics": performance_metrics(y_test, labels, probabilities),
         "fairness": {
             "sex": fairness_metrics(y_test, labels, x_test[GROUP]),
@@ -123,7 +124,7 @@ def run_migration(
     r_probability = r_predictions["probability"].to_numpy()
     r_labels = r_predictions["prediction"].to_numpy()
     python_probability = python_reference.predict_proba(x_test)
-    python_labels = python_reference.predict(x_test)
+    python_labels = (python_probability >= CLASSIFICATION_THRESHOLD).astype(int)
     difference = np.abs(r_probability - statsmodels_probability)
     mae = float(np.mean(difference))
     maximum = float(np.max(difference))
@@ -139,10 +140,13 @@ def run_migration(
         "label_agreement": float(np.mean(r_labels == statsmodels_labels)),
         "label_disagreements": int(np.sum(r_labels != statsmodels_labels)),
         "tolerance": tolerance,
-        "threshold": 0.5,
+        "threshold": CLASSIFICATION_THRESHOLD,
         "mae_pass": mae <= tolerance,
         "max_difference_pass": maximum <= tolerance,
-        "overall_pass": bool(row_alignment_verified and mae <= tolerance and maximum <= tolerance),
+        "labels_pass": bool(np.all(r_labels == statsmodels_labels)),
+        # P8: classification agreement is part of parity, so one differing decision fails it.
+        "overall_pass": bool(row_alignment_verified and mae <= tolerance and maximum <= tolerance
+                             and np.all(r_labels == statsmodels_labels)),
     }
     return {
         "reference_model": "r_glm_binomial_logit",
@@ -182,6 +186,7 @@ def run_real(output_root: Path, raw_path: Path | None = None) -> dict:
     probabilities = candidate.predict_proba(x_test)
     validation = {
         "model": candidate.name,
+        "threshold": CLASSIFICATION_THRESHOLD,
         "metrics": performance_metrics(y_test, labels, probabilities),
         "fairness": {
             "sex": fairness_metrics(y_test, labels, x_test[GROUP]),
@@ -224,6 +229,13 @@ def run_real(output_root: Path, raw_path: Path | None = None) -> dict:
     return reports
 
 
+MONITORING_SCENARIOS = (
+    "Baseline: original test distribution",
+    "Moderate drift: LIMIT_BAL x0.65, BILL_AMT1 x1.5",
+    "Strong drift: LIMIT_BAL x0.4, PAY_0 +2, BILL_AMT1 x2",
+)
+
+
 def build_monitoring_batches(x_test: pd.DataFrame) -> list[pd.DataFrame]:
     """Create the three exact independent held-out test-set monitoring scenarios."""
     batches = [x_test.copy(deep=True) for _ in range(3)]
@@ -246,7 +258,7 @@ def build_monitoring_report(
     candidate_hash: str,
 ) -> dict:
     probabilities = candidate.predict_proba(x_test)
-    return monitor_batches(
+    report = monitor_batches(
         predictive_features(x_test),
         probabilities,
         [predictive_features(batch) for batch in batches],
@@ -255,6 +267,9 @@ def build_monitoring_report(
         batch_groups=[x_test[GROUP]] * 3,
         model_hash=candidate_hash,
     )
+    for batch, scenario in zip(report["batches"], MONITORING_SCENARIOS):
+        batch["scenario"] = scenario
+    return report
 
 
 def _answer_key_from_env() -> Path | None:

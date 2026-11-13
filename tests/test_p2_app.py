@@ -76,6 +76,50 @@ def test_every_section_renders(data_root, section, samples):
     assert bool(sample_banners) == (samples and uses_person1_data)
 
 
+def test_a_comment_stays_with_its_author_and_decision(data_root):
+    at = app("Discovery", user="dev.alex")
+    at.button(key="submit-legacy-r-logistic-discover").click().run()
+    at = app("Discovery", user="mrm.jordan")
+    at.text_input(key="comment-legacy-r-logistic-discover-mrm.jordan-1").input("Cite the threshold line.").run()
+    at.button(key="request_changes-legacy-r-logistic-discover").click().run()
+    assert at.text_input(key="comment-legacy-r-logistic-discover-mrm.jordan-2").value == ""  # cleared by the action
+    at.session_state["user"] = USER_INDEX["lead.taylor"]  # same browser session, another person
+    at.run()
+    at.button(key="submit-legacy-r-logistic-discover").click().run()
+    records = json.loads((data_root / "governance/approval_log.json").read_text())
+    assert [(r["actor"], r["comment"]) for r in records] == [
+        ("dev.alex", ""), ("mrm.jordan", "Cite the threshold line."), ("lead.taylor", "")]
+
+
+def test_risk_register_shows_impact_and_a_missing_document(data_root):
+    at = app("Risk & Evidence", user="mrm.jordan")
+    frame = at.dataframe[0].value
+    assert "Potential impact" in frame.columns
+    missing = frame[frame["ID"] == "DOC-MISSING"]
+    assert list(missing["Model"]) == ["python-random-forest"] and missing["Potential impact"].str.len().gt(0).all()
+    assert frame.loc[frame["Source"] == "Discovery: document vs code", "Potential impact"].str.len().gt(0).all()
+
+
+def test_fairness_groups_are_named_in_order_and_small_groups_flagged(data_root):
+    dest = data_root / "reports/validation/validation_results.json"
+    dest.parent.mkdir(parents=True)
+    shutil.copy(ROOT / "reports/validation/validation_results.json", dest)
+    at = app("Validation", user="val.sam")
+    groups = [list(d.value["group"]) for d in at.dataframe if "group" in d.value.columns]
+    assert ["male (1)", "female (2)"] in groups and ["under 30", "30-44", "45-59", "60+"] in groups
+    assert any("60+ (" in c.value for c in at.caption)
+
+
+def test_validation_agent_result_lists_findings_and_remediation(data_root):
+    for rel in ("reports/validation/validation_results.json", "reports/risk_findings/risk_findings_results.json"):
+        (data_root / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(ROOT / rel, data_root / rel)
+    at = app("Validation", user="val.sam")
+    at.button(key="run-validation").click().run()
+    assert not at.exception and not at.json
+    assert any("Remediation" in d.value.columns for d in at.dataframe)
+
+
 def test_python_model_has_no_redevelopment(data_root):
     at = app("Migration", model="python-gradient-boosting")
     assert any("already implemented in Python" in i.value for i in at.info)

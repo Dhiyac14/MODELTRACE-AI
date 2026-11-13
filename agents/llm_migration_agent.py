@@ -162,7 +162,8 @@ def run_candidate(code: str, train_csv: Path, test_csv: Path,
 
 # --------------------------------------------------------------------------- parity
 def compare(r_predictions: pd.DataFrame, candidate: pd.DataFrame, tolerance: float) -> CandidateParity:
-    """Person 1's rule: rows aligned, and mean and maximum probability difference within the tolerance."""
+    """Person 1's rule: rows aligned, mean and maximum probability difference within the tolerance, and every
+    classification equal to R's."""
     aligned = len(candidate) == len(r_predictions) > 0 and np.array_equal(
         candidate["row_id"].to_numpy(), r_predictions["row_id"].to_numpy())
     if not aligned:
@@ -174,7 +175,7 @@ def compare(r_predictions: pd.DataFrame, candidate: pd.DataFrame, tolerance: flo
         row_alignment_verified=True, n_rows=len(candidate), mae=mae, max_probability_difference=maximum,
         label_agreement=float(np.mean(agree)), label_disagreements=int(np.sum(~agree)), tolerance=tolerance,
         mae_pass=mae <= tolerance, max_difference_pass=maximum <= tolerance,
-        overall_pass=bool(mae <= tolerance and maximum <= tolerance),
+        overall_pass=bool(mae <= tolerance and maximum <= tolerance and np.all(agree)),
     )
 
 
@@ -220,7 +221,7 @@ def run_llm_migration(
     inputs = inputs or default_inputs(model_id, root)
     missing = inputs.missing(root)
     if missing:  # checked before any LLM call
-        raise FileNotFoundError(f"run Person 1's pipeline first (python -m engine.pipeline); missing: {', '.join(missing)}")
+        raise FileNotFoundError(f"run the ML pipeline first (python -m engine.pipeline); missing: {', '.join(missing)}")
     r_lines = (root / r_source).read_text(encoding="utf-8").splitlines()
     listing = render_listing({Path(r_source).as_posix(): r_lines})
     r_predictions = pd.read_csv(root / inputs.r_predictions_csv)

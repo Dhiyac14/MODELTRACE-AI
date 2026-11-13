@@ -7,11 +7,11 @@ import pytest
 
 from engine.data import TARGET, make_demo_dataset, prepare_data, predictive_features, validate_uci_dataset
 from engine.models import (
-    model_identity, parity_report, statsmodels_coefficients,
+    CLASSIFICATION_THRESHOLD, model_identity, parity_report, statsmodels_coefficients,
     train_python_models, train_statsmodels_logistic,
 )
 from engine.monitoring import monitor_batches
-from engine.pipeline import build_monitoring_batches, generate_agent_reports
+from engine.pipeline import build_monitoring_batches, build_monitoring_report, generate_agent_reports
 from engine.risk import build_risk_findings
 from engine.validation import age_group_fairness, feature_psi, performance_metrics, psi
 from engine.monitoring import _psi_band
@@ -78,6 +78,33 @@ def test_required_metrics_and_psi():
     }
     assert psi(pd.Series([1, 2, 3, 4]), pd.Series([2, 3, 4, 5])) >= 0
     assert feature_psi(pd.DataFrame({"x": [1, 2]}), pd.DataFrame({"x": [2, 3]}))["x"] >= 0
+
+
+def test_python_threshold_matches_the_legacy_r_model():
+    import re
+
+    source = Path("models/legacy_model.R").read_text(encoding="utf-8")
+    r_threshold = float(re.search(r"CLASSIFICATION_THRESHOLD <- ([0-9.]+)", source).group(1))
+    assert CLASSIFICATION_THRESHOLD == r_threshold
+
+
+def test_candidate_and_monitoring_classify_at_the_legacy_threshold():
+    frame = make_demo_dataset(500)
+    x_train, x_test, y_train, _ = prepare_data(frame)
+    candidate = train_statsmodels_logistic(x_train, y_train)
+    probabilities = candidate.predict_proba(x_test)
+    assert np.array_equal(candidate.predict(x_test), (probabilities >= CLASSIFICATION_THRESHOLD).astype(int))
+    report = monitor_batches(predictive_features(x_test), probabilities, [predictive_features(x_test)] * 3,
+                             [probabilities] * 3)
+    assert report["batches"][0]["percentage_above_threshold"] == float(np.mean(probabilities >= CLASSIFICATION_THRESHOLD))
+    assert report["thresholds"]["classification"] == CLASSIFICATION_THRESHOLD
+
+
+def test_monitoring_report_names_each_scenario():
+    x_train, x_test, y_train, y_test = prepare_data(make_demo_dataset(500))
+    candidate = train_statsmodels_logistic(x_train, y_train)
+    report = build_monitoring_report(candidate, x_test, y_test, build_monitoring_batches(x_test), "hash")
+    assert [b["scenario"].split(":")[0] for b in report["batches"]] == ["Baseline", "Moderate drift", "Strong drift"]
 
 
 def test_monitoring_emits_drift_alert():

@@ -155,6 +155,14 @@ def test_sandbox_blocks_writes_outside_its_folder_and_env_reads(split):
 
 
 # --------------------------------------------------------------------------- agent
+def test_parity_fails_when_labels_differ_even_with_equal_probabilities():
+    r = pd.DataFrame({"row_id": [1, 2], "probability": [0.40, 0.10], "prediction": [1, 0]})
+    candidate = r.assign(prediction=[0, 0])  # same probabilities, classified at another threshold
+    parity = agent.compare(r, candidate, 1e-5)
+    assert parity.mae_pass and parity.max_difference_pass
+    assert parity.label_disagreements == 1 and not parity.overall_pass
+
+
 def test_a_correct_candidate_passes_in_one_round(split):
     llm = Fake(GOOD)
     report = migrate(split, llm)

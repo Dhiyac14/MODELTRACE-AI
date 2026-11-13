@@ -58,6 +58,10 @@ DOC_CLAIMS_SYSTEM = f"""You read an existing model document and list what it cla
 You do not judge whether the claims are true.
 
 Rules:
+- target_variable: fill only when the document explicitly names a target/response variable or column (for example,
+  "target variable is default" or "response column: target"). Do not convert a conceptual description such as
+  "the model estimates defaults" into a column-name claim; leave this field null and keep that description in
+  other_claims.
 - input_features, decision_threshold, train_fraction: fill only if the document states them, otherwise null.
   Expand ranges into single names written the way the document writes them.
 - other_claims: every other factual statement about the model, such as purpose, target definition,

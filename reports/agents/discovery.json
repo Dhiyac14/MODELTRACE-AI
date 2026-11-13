@@ -9,25 +9,25 @@
       "claim": "Facts extracted without inference.",
       "evidence": [
         {
-          "source": "models\\legacy_model.R",
+          "source": "models/legacy_model.R",
           "claim": "model_type observed at source line 21",
           "excerpt": null,
           "value": "binomial logistic regression"
         },
         {
-          "source": "models\\legacy_model.R",
+          "source": "models/legacy_model.R",
           "claim": "training_function observed at source line 21",
           "excerpt": null,
           "value": "glm"
         },
         {
-          "source": "models\\legacy_model.R",
+          "source": "models/legacy_model.R",
           "claim": "link observed at source line 21",
           "excerpt": null,
           "value": "logit"
         },
         {
-          "source": "models\\legacy_model.R",
+          "source": "models/legacy_model.R",
           "claim": "target observed at source line 15",
           "excerpt": null,
           "value": "target"
@@ -36,32 +36,29 @@
       "severity": "info"
     }
   ],
-  "metrics": {
-    "precision": 1.0,
-    "recall": 1.0
-  },
+  "metrics": {},
   "recommendations": [],
   "evidence": [
     {
-      "source": "models\\legacy_model.R",
+      "source": "models/legacy_model.R",
       "claim": "model_type observed at source line 21",
       "excerpt": null,
       "value": "binomial logistic regression"
     },
     {
-      "source": "models\\legacy_model.R",
+      "source": "models/legacy_model.R",
       "claim": "training_function observed at source line 21",
       "excerpt": null,
       "value": "glm"
     },
     {
-      "source": "models\\legacy_model.R",
+      "source": "models/legacy_model.R",
       "claim": "link observed at source line 21",
       "excerpt": null,
       "value": "logit"
     },
     {
-      "source": "models\\legacy_model.R",
+      "source": "models/legacy_model.R",
       "claim": "target observed at source line 15",
       "excerpt": null,
       "value": "target"

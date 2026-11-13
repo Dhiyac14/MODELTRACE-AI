@@ -14,11 +14,21 @@ from pydantic import BaseModel
 from llm.schemas import Fact, SourceRef
 
 Sources = dict[str, list[str]]  # display name -> file lines
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _display_name(path: Path) -> str:
+    """Repository-relative for a file inside the repository, so a report never holds a local home directory and
+    the scorer finds the file under its inventory path; other files keep the path as given."""
+    try:
+        return path.resolve().relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 
 def load_sources(paths: list[str | Path]) -> Sources:
-    """Read files keyed by the path as given (use repository-relative paths)."""
-    return {Path(p).as_posix(): Path(p).read_text(encoding="utf-8").splitlines() for p in paths}
+    """Read files keyed by their repository-relative path (the dashboard passes absolute ones)."""
+    return {_display_name(Path(p)): Path(p).read_text(encoding="utf-8").splitlines() for p in paths}
 
 
 def render_listing(sources: Sources) -> str:

@@ -65,6 +65,11 @@ def load_evidence(model_id: str, root: Path = Path(".")) -> EvidenceFiles:
         if shap is not None:  # only this model's SHAP block, nothing that belongs to the migrated model
             evidence["validation"] = (artifacts.relpath("validation", PERSON1_MODEL),
                                       {"explainability": {PERSON1_SHAP_KEYS[model_id]: shap}})
+    if "validation" in evidence:  # the migrated model's report also holds the supporting models' SHAP blocks
+        others = {key for owner, key in PERSON1_SHAP_KEYS.items() if owner != model_id}
+        path, data = evidence["validation"]
+        explain = {k: v for k, v in (data.get("explainability") or {}).items() if k not in others}
+        evidence["validation"] = (path, {**data, "explainability": explain} if "explainability" in data else data)
     return evidence
 
 
@@ -224,7 +229,7 @@ def _features_section(discovery: DiscoveryReport) -> CardSection:
     return CardSection(key="features_and_target", title="Input features and target", source="discovery", rows=rows)
 
 
-def _governance_section(record: InventoryRecord, discovery: DiscoveryReport, mapping_path: Path) -> CardSection:
+def _governance_section(record: InventoryRecord, mapping_path: Path) -> CardSection:
     mapping = json.loads(mapping_path.read_text(encoding="utf-8"))
     principles = [p for stage in mapping["stages"] if stage["stage"] in ("discover", "document") for p in stage["principles"]]
     rows = [
@@ -233,9 +238,9 @@ def _governance_section(record: InventoryRecord, discovery: DiscoveryReport, map
         CardRow(label="Complexity", value=f"{record.complexity}: {record.complexity_basis}", source="inventory"),
         CardRow(label="Tier rule", value=TIER_RULE, source="SS1/23 1.3"),
         CardRow(label="Tier rationale", value=record.tier_rationale or "Not drafted", source=record.tier_rationale_source),
-        CardRow(label="Tier review status", value=record.tier_status, source="inventory"),
+        CardRow(label="Discover gate (tier and discovery report)", value=record.tier_status,
+                source="governance/approval_log.json"),
         CardRow(label="Approval records", value=", ".join(record.approval_history) or "None recorded", source="governance/approval_log.json"),
-        CardRow(label="Discovery report status", value=discovery.review_status, source=f"reports/discovery/{discovery.model_id}_discovery.json"),
         CardRow(label="Model card status", value="pending_human_review", source="this card"),
         # Cite the repository path, wherever the mapping was read from.
         CardRow(label="SS1/23 principles covered", value="; ".join(principles), source=SS1_23_MAPPING.as_posix()),
@@ -283,7 +288,7 @@ def build_model_card(
         sections.append(CardSection(key="parity", title="Redevelopment and parity", source="evidence", rows=_rows_from(file, data, "parity")))
     sections += [
         CardSection(key="limitations", title="Limitations and assumptions", source=sources["limitations"], text=texts["limitations"]),
-        _governance_section(record, discovery, mapping_path),
+        _governance_section(record, mapping_path),
         _corrections_section(discovery),
     ]
     return ModelCard(

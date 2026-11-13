@@ -16,6 +16,10 @@ from sklearn.preprocessing import StandardScaler
 
 from .data import predictive_features
 
+# The legacy R model's decision rule (models/legacy_model.R, CLASSIFICATION_THRESHOLD). The migrated candidate,
+# its parity labels, validation, fairness and monitoring all classify with it; a test keeps the two equal.
+CLASSIFICATION_THRESHOLD = 0.35
+
 
 @dataclass
 class ModelBundle:
@@ -49,7 +53,7 @@ class StatsmodelsAdapter:
         return np.column_stack([1 - values, values])
 
     def predict(self, features: pd.DataFrame) -> np.ndarray:
-        return (self.predict_proba(features)[:, 1] >= 0.5).astype(int)
+        return (self.predict_proba(features)[:, 1] >= CLASSIFICATION_THRESHOLD).astype(int)
 
 
 def train_python_models(
@@ -137,6 +141,6 @@ def parity_report(
         "label_disagreements": int(np.sum(reference_labels != candidate_labels)),
         "max_probability_difference": float(np.max(np.abs(reference_probability - candidate_probability))),
         "mean_probability_difference": float(np.mean(np.abs(reference_probability - candidate_probability))),
-        "threshold": 0.5,
+        "threshold": CLASSIFICATION_THRESHOLD,
     }
 

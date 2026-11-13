@@ -117,6 +117,112 @@ def _compare_features(code: Fact, excluded: Fact, doc: Documented | None) -> lis
     return out
 
 
+def _source_ref(file: str, line_number: int, line: str) -> SourceRef:
+    return SourceRef(file=file, line_start=line_number, line_end=line_number, quote=line, verified=True)
+
+
+def _target_lineage(sources: Sources) -> tuple[set[str], list[SourceRef]] | None:
+    """Return target aliases only when source syntax establishes their relationship."""
+    constants: dict[str, tuple[str, SourceRef]] = {}
+    target_context: set[str] = set()
+    linked_constants: set[str] = set()
+    response_names: dict[str, SourceRef] = {}
+    string_or_name = r"""(?:"([^"]+)"|'([^']+)'|([A-Za-z_][\w.]*))"""
+
+    for file, lines in sources.items():
+        for line_number, line in enumerate(lines, start=1):
+            ref = _source_ref(file, line_number, line)
+            assignment = re.search(
+                r"\b([A-Za-z_][\w.]*)\s*(?:<-|=)\s*"
+                r"""(?:"([^"]+)"|'([^']+)')""",
+                line,
+            )
+            if assignment:
+                name = assignment.group(1)
+                value = assignment.group(2) or assignment.group(3)
+                if re.search(r"(?:target|response)", name, re.IGNORECASE):
+                    constants[name] = (value, ref)
+
+            lineage = re.search(
+                r"\b([A-Za-z_][\w.]*)\s*(?:<-|=)\s*[\w.]+\[\s*([A-Za-z_][\w.]*)\s*\]",
+                line,
+            )
+            if lineage and re.search(r"(?:target|response|^y(?:_|$))", lineage.group(1), re.IGNORECASE):
+                response_names[lineage.group(1)] = ref
+                linked_constants.add(lineage.group(2))
+
+            response = re.search(rf"\bresponse\s*=\s*{string_or_name}", line, re.IGNORECASE)
+            if response:
+                value = response.group(1) or response.group(2) or response.group(3)
+                response_names[value] = ref
+
+            formula = re.search(r"\b([A-Za-z_][\w.]*)\s*~", line)
+            if formula:
+                response_names[formula.group(1)] = ref
+
+            for name in constants:
+                if re.search(rf"\b{re.escape(name)}\b", line) and (
+                    "[" in line or "stratif" in line.lower() or "rename" in line.lower()
+                ):
+                    target_context.add(name)
+
+            column_assignment = re.search(
+                rf"\[\s*{string_or_name}\s*\]\s*=\s*[A-Za-z_][\w.]*", line
+            )
+            if column_assignment:
+                value = (
+                    column_assignment.group(1)
+                    or column_assignment.group(2)
+                    or column_assignment.group(3)
+                )
+                if value and re.search(r"(?:target|response|^y(?:_|$))", value, re.IGNORECASE):
+                    response_names[value] = ref
+
+    resolved_sources = {
+        constants[name][0]: constants[name][1]
+        for name in (linked_constants or (target_context if not response_names else set()))
+        if name in constants
+    }
+    if len(response_names) > 1:
+        return None
+    if response_names and resolved_sources:
+        aliases = set(response_names) | set(resolved_sources)
+        refs = [*response_names.values(), *resolved_sources.values()]
+        return aliases, refs
+    if response_names:
+        return set(response_names), list(response_names.values())
+    if len(resolved_sources) == 1:
+        return set(resolved_sources), list(resolved_sources.values())
+    return None
+
+
+def _compare_target(sources: Sources, doc: Documented[str] | None) -> list[Discrepancy]:
+    lineage = _target_lineage(sources)
+    if lineage is None:
+        return []
+    aliases, evidence = lineage
+    if doc is None:
+        return [_new(
+            field="target_variable",
+            type="omission",
+            documented_claim="The document does not state the target variable.",
+            code_evidence=evidence,
+            explanation=f"The source establishes the target as {', '.join(sorted(aliases))}.",
+            suggested_correction=f"State the target variable: {sorted(aliases)[0]}.",
+        )]
+    if _key(doc.value) in {_key(alias) for alias in aliases}:
+        return []
+    return [_new(
+        field="target_variable",
+        type="contradiction",
+        documented_claim=f"The target variable is {doc.value}.",
+        document_ref=doc.ref,
+        code_evidence=evidence,
+        explanation=f"The source establishes the target as {', '.join(sorted(aliases))}.",
+        suggested_correction=f"Change the documented target variable to {sorted(aliases)[0]}.",
+    )]
+
+
 def format_split(fraction: float) -> str:
     return f"{fraction:.0%} train / {1 - fraction:.0%} test"
 
@@ -139,9 +245,16 @@ def _compare_number(field: str, label: str, code: Fact, doc: Documented | None, 
                  suggested_correction=f"Change the documented {label} to {fmt(code.value)}.")]
 
 
-def compare_mechanical(metadata: ModelMetadata, claims: DocumentClaims, skip: frozenset[str] = frozenset()) -> list[Discrepancy]:
+def compare_mechanical(
+    metadata: ModelMetadata,
+    claims: DocumentClaims,
+    skip: frozenset[str] = frozenset(),
+    sources: Sources | None = None,
+) -> list[Discrepancy]:
     """Compare the fields that can be checked mechanically. ``skip`` holds fields whose document claim failed verification."""
     out: list[Discrepancy] = []
+    if sources is not None and "target_variable" not in skip:
+        out += _compare_target(sources, claims.target_variable)
     if "input_features" not in skip:
         out += _compare_features(metadata.input_features, metadata.excluded_columns, claims.input_features)
     if "decision_threshold" not in skip:
@@ -158,7 +271,8 @@ def verify_claims(claims: DocumentClaims, doc: Sources) -> tuple[DocumentClaims,
     warnings: list[str] = []
     skip: set[str] = set()
     update: dict = {}
-    for attr, field in (("input_features", "input_features"), ("decision_threshold", "decision_threshold"),
+    for attr, field in (("target_variable", "target_variable"), ("input_features", "input_features"),
+                        ("decision_threshold", "decision_threshold"),
                         ("train_fraction", "train_test_split")):
         documented = getattr(claims, attr)
         if documented is None:
@@ -200,6 +314,17 @@ def _names_one_of(text: str, names: frozenset[str]) -> bool:
     )
 
 
+def _correction(suggested: str, verdict: str, explanation: str) -> str:
+    """The LLM's correction, or a rule-based one when it left it empty, so every finding says what to change."""
+    if suggested.strip():
+        return suggested
+    if verdict == "unverifiable":
+        return "Confirm this claim against the model code or remove it."
+    if verdict == "omission":
+        return f"Add to the document: {explanation}"
+    return f"Rewrite the claim to match the code: {explanation}"
+
+
 def assess_free_text(check: ClaimCheck, claims: DocumentClaims, sources: Sources, warnings: list[str],
                      same_model: frozenset[str] = frozenset()) -> list[Discrepancy]:
     """``same_model`` holds the names of the model under review (``model_names``). A model_name contradiction whose
@@ -229,7 +354,7 @@ def assess_free_text(check: ClaimCheck, claims: DocumentClaims, sources: Sources
         out.append(Discrepancy(
             discrepancy_id="", field=claim.field, type=verdict, documented_claim=claim.statement,
             document_ref=claim.doc_ref, code_evidence=evidence, explanation=explanation,
-            suggested_correction=a.suggested_correction, detected_by="llm",
+            suggested_correction=_correction(a.suggested_correction, verdict, a.explanation), detected_by="llm",
         ))
     for claim_id in sorted(by_id.keys() - assessed):
         warnings.append(f"claim {claim_id} was not assessed by the LLM; review it manually.")
@@ -242,7 +367,8 @@ def assess_free_text(check: ClaimCheck, claims: DocumentClaims, sources: Sources
             continue
         out.append(Discrepancy(
             discrepancy_id="", field=o.field, type="omission", documented_claim="Not mentioned in the document.",
-            code_evidence=evidence, explanation=o.explanation, suggested_correction=o.suggested_correction,
+            code_evidence=evidence, explanation=o.explanation,
+            suggested_correction=_correction(o.suggested_correction, "omission", o.explanation),
             detected_by="llm",
         ))
     return out
@@ -277,7 +403,7 @@ def run_discovery(
         raw_claims = llm.structured(DOC_CLAIMS_SYSTEM, doc_claims_user(render_listing(doc)), DocumentClaims)
         claims, skip, claim_warnings = verify_claims(raw_claims, doc)
         warnings += claim_warnings
-        discrepancies += compare_mechanical(metadata, claims, skip)
+        discrepancies += compare_mechanical(metadata, claims, skip, sources)
         if claims.other_claims:
             claims_json = json.dumps([c.model_dump(include={"claim_id", "field", "statement"}) for c in claims.other_claims], indent=1)
             check = llm.structured(CLAIM_CHECK_SYSTEM, claim_check_user(claims_json, listing, scope), ClaimCheck)

@@ -29,6 +29,5 @@ report produced by `engine/pipeline.py` evaluates the migrated Statsmodels
 logistic model; it does not report Gradient Boosting performance metrics. SHAP
 is an optional installation dependency, but it is required to complete the
 real-data pipeline because `run_real` always computes Gradient Boosting SHAP
-explainability and raises a runtime error when SHAP is unavailable. Install it
-with `python -m pip install -e ".[validation]"` before running the real-data
-pipeline. The deterministic demo path does not invoke SHAP.
+explainability and raises a runtime error when SHAP is unavailable. The
+deterministic demo path does not invoke SHAP.

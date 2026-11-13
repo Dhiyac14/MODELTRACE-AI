@@ -1,0 +1,12 @@
+{
+  "model_id": "python-random-forest",
+  "metadata_scored": false,
+  "recall": null,
+  "precision": null,
+  "matched": [],
+  "missed": [],
+  "unmapped_keys": [],
+  "discrepancies": null,
+  "report_generated_at": "2026-11-13T15:14:05+00:00",
+  "scored_at": "2026-11-13T15:40:33+00:00"
+}
