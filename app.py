@@ -263,7 +263,7 @@ def page_discovery(model_id: str) -> None:
     cols[0].metric("Risk tier", f"Tier {record.risk_tier}")
     cols[1].metric("Materiality", record.materiality)
     cols[2].metric("Complexity", record.complexity)
-    st.markdown(f"**Tier review:** {STATUS_LABEL[record.tier_status]} (approved at the Discover gate)")
+    st.markdown(f"**Tier review (Discover gate):** {STATUS_LABEL[record.tier_status]}")
     st.caption(f"Tier rule (SS1/23 1.3): {TIER_RULE} The LLM may draft the rationale but never sets the tier.")
     st.markdown(f"**Tier rationale** (`{record.tier_rationale_source}`): {record.tier_rationale}")
     editable = WF.statuses(model_id)["discover"] in SUBMITTABLE
@@ -285,6 +285,7 @@ def page_discovery(model_id: str) -> None:
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 dest.write_bytes(upload.getvalue())
                 paths.append(dest.relative_to(ROOT).as_posix())
+            paths = list(dict.fromkeys(paths))  # the same file picked twice is registered once
             missing = [p for p in [*paths, doc_path] if p and not (ROOT / p).is_file()]
             if missing:
                 st.error(f"Not found: {', '.join(missing)}")
@@ -354,9 +355,9 @@ def page_discovery(model_id: str) -> None:
                 if scored:  # next to the type, so the outcome is visible without scrolling
                     result = scored.get(d.discrepancy_id, {})
                     row |= {"Score": result.get("outcome", "not in score"), "Evidence check": result.get("evidence", "")}
-                rows.append(row | {"Documented claim": d.documented_claim, "Suggested correction": d.suggested_correction,
-                                   "Detected by": d.detected_by,
-                                   "Code evidence": "; ".join(f"{r.file}:L{r.line_start}" for r in d.code_evidence)})
+                rows.append(row | {"Code evidence": "; ".join(f"{r.file}:L{r.line_start}" for r in d.code_evidence),
+                                   "Documented claim": d.documented_claim, "Suggested correction": d.suggested_correction,
+                                   "Detected by": d.detected_by})
             table(rows)
         with tabs[2]:
             for file in report.source_files:
@@ -374,8 +375,9 @@ def page_documentation(model_id: str) -> None:
     discovery = ARTIFACTS.load("discovery", model_id)
     open_stage = WF.statuses(model_id)["document"] in SUBMITTABLE
     if st.button("Generate model card", type="primary", disabled=discovery is None or not open_stage, key="run-docs"):
-        card = build_model_card(DiscoveryReport.model_validate(discovery), record, load_evidence(model_id, ROOT),
-                                LLM, mapping_path=ROOT / "governance/ss1_23_mapping.json")
+        with st.spinner("Writing the model card from the discovery report and the validation evidence..."):
+            card = build_model_card(DiscoveryReport.model_validate(discovery), record, load_evidence(model_id, ROOT),
+                                    LLM, mapping_path=ROOT / "governance/ss1_23_mapping.json")
         json_path, _ = save_model_card(card, ROOT / "reports", ROOT / "docs/model_cards")
         WF.log_agent_run(model_id, "document", "documentation", USER,
                          {"output": json_path.as_posix(), "generated_by": card.generated_by,
@@ -547,10 +549,19 @@ def page_validation(model_id: str) -> None:
         summary = ValidationAgent().run(data).to_dict()
         st.session_state[f"validation-summary-{model_id}"] = summary
         WF.log_agent_run(model_id, "validate", "validation", USER, {"summary": summary["summary"]})
-    st.caption(missing or (" ".join(duties) if duties else "Summarises the measured validation report."))
+    st.caption(missing or ("Only an independent validator who did not build the redevelopment can run the Validation "
+                           "Agent (SS1/23 4.1)." if duties else "Summarises the measured validation report."))
     if f"validation-summary-{model_id}" in st.session_state:
-        with st.expander("Validation Agent result", expanded=False):
-            st.json(st.session_state[f"validation-summary-{model_id}"])
+        result = st.session_state[f"validation-summary-{model_id}"]
+        with st.expander("Validation Agent result", expanded=True):
+            st.markdown(f"**Summary:** {result.get('summary', '')}")
+            table([{"Metric": k, "Value": show_value(v)} for k, v in (result.get("metrics") or {}).items()])
+            findings = ARTIFACTS.load("risk_findings", model_id) or []
+            if findings:
+                st.markdown("**Findings and remediation from the validation run**")
+                table([{"ID": f.get("id"), "Category": f.get("risk_category") or f.get("category"),
+                        "Severity": f.get("severity"), "Description": f.get("description"),
+                        "Potential impact": f.get("impact", ""), "Remediation": f.get("remediation")} for f in findings])
     if data is None:
         st.info(f"No validation report for this model yet ({ARTIFACTS.relpath('validation', model_id)}).")
         legacy, _, _ = load_display("validation", PERSON1_MODEL) if model_id in PERSON1_SHAP_KEYS else (None, None, False)

@@ -110,6 +110,16 @@ def test_fairness_groups_are_named_in_order_and_small_groups_flagged(data_root):
     assert any("60+ (" in c.value for c in at.caption)
 
 
+def test_validation_agent_result_lists_findings_and_remediation(data_root):
+    for rel in ("reports/validation/validation_results.json", "reports/risk_findings/risk_findings_results.json"):
+        (data_root / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(ROOT / rel, data_root / rel)
+    at = app("Validation", user="val.sam")
+    at.button(key="run-validation").click().run()
+    assert not at.exception and not at.json
+    assert any("Remediation" in d.value.columns for d in at.dataframe)
+
+
 def test_python_model_has_no_redevelopment(data_root):
     at = app("Migration", model="python-gradient-boosting")
     assert any("already implemented in Python" in i.value for i in at.info)
