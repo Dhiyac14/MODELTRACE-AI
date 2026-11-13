@@ -100,6 +100,16 @@ def test_risk_register_shows_impact_and_a_missing_document(data_root):
     assert frame.loc[frame["Source"] == "Discovery: document vs code", "Potential impact"].str.len().gt(0).all()
 
 
+def test_fairness_groups_are_named_in_order_and_small_groups_flagged(data_root):
+    dest = data_root / "reports/validation/validation_results.json"
+    dest.parent.mkdir(parents=True)
+    shutil.copy(ROOT / "reports/validation/validation_results.json", dest)
+    at = app("Validation", user="val.sam")
+    groups = [list(d.value["group"]) for d in at.dataframe if "group" in d.value.columns]
+    assert ["male (1)", "female (2)"] in groups and ["under 30", "30-44", "45-59", "60+"] in groups
+    assert any("60+ (" in c.value for c in at.caption)
+
+
 def test_python_model_has_no_redevelopment(data_root):
     at = app("Migration", model="python-gradient-boosting")
     assert any("already implemented in Python" in i.value for i in at.info)

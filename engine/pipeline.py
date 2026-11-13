@@ -229,6 +229,13 @@ def run_real(output_root: Path, raw_path: Path | None = None) -> dict:
     return reports
 
 
+MONITORING_SCENARIOS = (
+    "Baseline: original test distribution",
+    "Moderate drift: LIMIT_BAL x0.65, BILL_AMT1 x1.5",
+    "Strong drift: LIMIT_BAL x0.4, PAY_0 +2, BILL_AMT1 x2",
+)
+
+
 def build_monitoring_batches(x_test: pd.DataFrame) -> list[pd.DataFrame]:
     """Create the three exact independent held-out test-set monitoring scenarios."""
     batches = [x_test.copy(deep=True) for _ in range(3)]
@@ -251,7 +258,7 @@ def build_monitoring_report(
     candidate_hash: str,
 ) -> dict:
     probabilities = candidate.predict_proba(x_test)
-    return monitor_batches(
+    report = monitor_batches(
         predictive_features(x_test),
         probabilities,
         [predictive_features(batch) for batch in batches],
@@ -260,6 +267,9 @@ def build_monitoring_report(
         batch_groups=[x_test[GROUP]] * 3,
         model_hash=candidate_hash,
     )
+    for batch, scenario in zip(report["batches"], MONITORING_SCENARIOS):
+        batch["scenario"] = scenario
+    return report
 
 
 def _answer_key_from_env() -> Path | None:

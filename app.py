@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import math
 import os
 from pathlib import Path
 from typing import Any
@@ -40,6 +41,11 @@ STATUS_LABEL = {"approved": "✅ approved", "pending_review": "🕒 pending revi
                 "invalidated": "♻️ invalidated", "not_started": "not started", "not_applicable": "n/a"}
 GATE_ACTIONS = [("submit", "Submit for review"), ("approve", "Approve"),
                 ("request_changes", "Request changes"), ("reject", "Reject")]
+# UCI coding of SEX (1 = male, 2 = female) and the plan's age bands (step 9), in reading order.
+FAIRNESS_GROUPS = {"sex": {"1": "male (1)", "2": "female (2)"},
+                   "age_groups": {"under_30": "under 30", "30_44": "30-44", "45_59": "45-59", "60_plus": "60+"}}
+FAIRNESS_TITLES = {"sex": "Sex", "age_groups": "Age group"}
+SMALL_GROUP = 100
 DISCREPANCY_IMPACT = {
     "contradiction": "Reviewers who rely on the existing document get a wrong account of how the model works.",
     "omission": "The existing document is incomplete, so reviewers cannot rely on it alone.",
@@ -198,10 +204,12 @@ def page_overview() -> None:
     left, right = st.columns(2)
     tiers = pd.DataFrame({"Tier": [f"Tier {r.risk_tier}" for r in RECORDS], "Model": [r.model_id for r in RECORDS]})
     left.plotly_chart(px.histogram(tiers, x="Tier", color="Tier", title="Models by risk tier (SS1/23 1.3)",
-                                   category_orders={"Tier": ["Tier 1", "Tier 2", "Tier 3"]}), key="tiers")
+                                   category_orders={"Tier": ["Tier 1", "Tier 2", "Tier 3"]}).update_yaxes(dtick=1),
+                    key="tiers")
     stages = pd.DataFrame({"Stage": [r["Current stage"] for r in rows]})
     right.plotly_chart(px.histogram(stages, x="Stage", title="Models by current lifecycle stage",
-                                    category_orders={"Stage": [*STAGE_LABEL.values(), "complete"]}), key="stages")
+                                    category_orders={"Stage": [*STAGE_LABEL.values(), "complete"]}).update_yaxes(dtick=1),
+                     key="stages")
     st.caption("Counts use live report files only; sample data is never counted here.")
 
 
@@ -509,6 +517,12 @@ def group_chart(grouping: str, report: dict[str, Any], key: str) -> None:
     frame = pd.DataFrame.from_dict(report.get("by_group") or {}, orient="index")
     if frame.empty:
         return
+    labels = FAIRNESS_GROUPS.get(grouping, {})  # natural order and readable names; unknown groups keep theirs
+    frame = frame.loc[[g for g in labels if g in frame.index] + [g for g in frame.index if g not in labels]]
+    frame = frame.rename(index=lambda g: labels.get(g, g))
+    small = [f"{group} ({int(n)})" for group, n in frame.get("count", pd.Series(dtype=float)).items() if n < SMALL_GROUP]
+    if small:
+        st.caption(f"Groups under {SMALL_GROUP} people, whose rates are unstable: {', '.join(small)}.")
     table(frame.reset_index(names="group"))
     rates = [c for c in ("selection_rate", "true_positive_rate", "false_positive_rate") if c in frame.columns]
     if rates:
@@ -562,7 +576,7 @@ def page_validation(model_id: str) -> None:
     with tabs[2]:
         st.caption("Diagnostic evidence, not a pass/fail fairness verdict. Check group sizes before comparing rates.")
         for grouping, report in (data.get("fairness") or {}).items():
-            st.markdown(f"**{grouping}**")
+            st.markdown(f"**{FAIRNESS_TITLES.get(grouping, grouping)}**")
             group_chart(grouping, report, key=f"fair-{grouping}")
     with tabs[3]:
         explain = data.get("explainability") or {}
@@ -637,23 +651,34 @@ def page_monitoring(model_id: str) -> None:
         gate_panel(model_id, "monitor")
         return
     batches = monitoring.get("batches", [])
-    table([{"batch": b.get("batch"), "severity (rule)": b.get("severity"), "driving feature": b.get("driving_feature"),
-            "driving PSI": b.get("driving_feature_psi"), "prediction PSI": b.get("prediction_psi"),
-            "mean predicted PD": b.get("mean_predicted_probability"),
-            "share above threshold": b.get("percentage_above_threshold"), "type": b.get("diagnostic_type")}
+    table([{"batch": b.get("batch"), "scenario": b.get("scenario", ""), "severity (rule)": b.get("severity"),
+            "driving feature": b.get("driving_feature"), "driving PSI": b.get("driving_feature_psi"),
+            "prediction PSI": b.get("prediction_psi"), "mean predicted PD": b.get("mean_predicted_probability"),
+            "share above threshold": b.get("percentage_above_threshold"),
+            "schema changed": (b.get("schema_change") or {}).get("changed"),
+            "missing values": sum(m.get("count", 0) for m in (b.get("missing_values") or {}).values()),
+            "ROC AUC (simulated labels)": (b.get("performance") or {}).get("roc_auc"), "type": b.get("diagnostic_type")}
            for b in batches])
+    threshold = (monitoring.get("thresholds") or {}).get("classification")
+    if threshold is not None:
+        st.caption(f"Share above threshold: predicted default probability at or above the model's decision threshold, "
+                   f"{threshold:g}.")
     psi = pd.DataFrame([{"batch": str(b["batch"]), "feature": f, "psi": v}
                         for b in batches for f, v in (b.get("feature_psi") or {}).items() if v >= 0.01])
     if not psi.empty:
         fig = px.bar(psi, x="feature", y="psi", color="batch", barmode="group", log_y=True,
                      title="Feature PSI by batch (features with PSI ≥ 0.01, log scale)")
-        fig.add_hline(y=PSI_WARNING, line_dash="dot", annotation_text="warning 0.10")
-        fig.add_hline(y=PSI_HIGH, line_dash="dash", annotation_text="high 0.25")
+        for value, dash, label in ((PSI_WARNING, "dot", "warning 0.10"), (PSI_HIGH, "dash", "high 0.25")):
+            fig.add_hline(y=value, line_dash=dash)
+            # On a log axis an annotation's y is log10 of the value; add_hline's own label lands elsewhere.
+            fig.add_annotation(x=1, xref="paper", y=math.log10(value), yref="y", text=label, showarrow=False,
+                               xanchor="right", yanchor="bottom")
+        fig.update_yaxes(tickvals=[0.01, 0.1, 0.25, 1, 5], ticktext=["0.01", "0.10", "0.25", "1", "5"])
         st.plotly_chart(fig, key="psi")
     outputs = pd.DataFrame([{"batch": str(b["batch"]), "mean predicted PD": b.get("mean_predicted_probability"),
                              "share above threshold": b.get("percentage_above_threshold")} for b in batches])
     st.plotly_chart(px.line(outputs.melt(id_vars="batch"), x="batch", y="value", color="variable", markers=True,
-                            title="Prediction distribution by batch"), key="outputs")
+                            title="Prediction distribution by batch").update_xaxes(type="category"), key="outputs")
     st.caption("PSI bands are illustrative monitoring heuristics, not regulatory thresholds. Severity is set by rule; "
                "the LLM only explains alerts and cannot retrain, replace or deploy the model.")
 
