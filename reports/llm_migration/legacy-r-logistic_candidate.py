@@ -1,14 +1,5 @@
-"""Python port of models/legacy_model.R (logistic regression via statsmodels GLM).
-
-R reference:
-    feature_names <- setdiff(names(train), c("row_id", "target", "SEX", "AGE", "ID"))
-    formula <- reformulate(feature_names, response = "target")
-    legacy_model <- glm(formula, data = train, family = binomial(link = "logit"))
-    probability <- predict(legacy_model, newdata = test, type = "response")
-    prediction <- as.integer(probability >= 0.5)
-"""
-
-from typing import List, Optional, Tuple
+"""Python port of models/legacy_model.R (binomial GLM with logit link, fitted by IRLS)."""
+from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -16,102 +7,76 @@ import statsmodels.api as sm
 
 EXCLUDED_COLUMNS = ("row_id", "target", "SEX", "AGE", "ID")
 RESPONSE = "target"
-THRESHOLD = 0.5
+CLASSIFICATION_THRESHOLD = 0.35
 
 
-class LegacyModel:
-    """Container for the fitted GLM plus the design specification."""
-
-    def __init__(self, result, specs, exog_names):
-        self.result = result
-        self.specs = specs  # list of (column_name, levels or None)
-        self.exog_names = exog_names
-        self.params = result.params
-
-    def summary(self):
-        return self.result.summary()
+def _feature_names(df: pd.DataFrame) -> List[str]:
+    # setdiff(names(train), c("row_id", "target", "SEX", "AGE", "ID")), original column order kept
+    return [c for c in df.columns if c not in EXCLUDED_COLUMNS]
 
 
-def _feature_names(train_df: pd.DataFrame) -> List[str]:
-    # setdiff() keeps the original column order and removes duplicates.
-    seen = []
-    for name in train_df.columns:
-        if name not in EXCLUDED_COLUMNS and name not in seen:
-            seen.append(name)
-    return seen
+def _is_numeric(s: pd.Series) -> bool:
+    return pd.api.types.is_numeric_dtype(s) and not pd.api.types.is_bool_dtype(s)
 
 
-def _is_categorical(series: pd.Series) -> bool:
-    # Numeric and logical columns enter the model as-is; character columns
-    # are turned into factors by R's model.frame.
-    return not (pd.api.types.is_numeric_dtype(series) or pd.api.types.is_bool_dtype(series))
-
-
-def _design(df: pd.DataFrame, specs: List[Tuple[str, Optional[List[str]]]]) -> pd.DataFrame:
-    n = len(df)
-    cols = {"(Intercept)": np.ones(n, dtype=float)}
-    for name, levels in specs:
-        if levels is None:
-            cols[name] = pd.to_numeric(df[name], errors="coerce").astype(float).to_numpy()
+def _build_spec(df: pd.DataFrame, features: List[str]) -> List[Tuple[str, str, list]]:
+    spec = []
+    for col in features:
+        s = df[col]
+        if _is_numeric(s):
+            spec.append((col, "numeric", []))
         else:
-            values = df[name]
-            missing = values.isna().to_numpy()
-            str_values = values.astype(str)
-            unseen = set(str_values[~missing]) - set(levels)
+            # R: character/logical -> factor, treatment contrasts, unused levels dropped
+            levels = sorted(pd.unique(s.dropna()).tolist(), key=lambda v: (str(type(v)), v))
+            spec.append((col, "categorical", levels))
+    return spec
+
+
+def _design_matrix(df: pd.DataFrame, spec) -> pd.DataFrame:
+    cols: Dict[str, np.ndarray] = {"(Intercept)": np.ones(len(df), dtype=float)}
+    for col, kind, levels in spec:
+        s = df[col]
+        if kind == "numeric":
+            cols[col] = pd.to_numeric(s, errors="coerce").to_numpy(dtype=float)
+        else:
+            missing = s.isna().to_numpy()
+            unseen = set(pd.unique(s.dropna()).tolist()) - set(levels)
             if unseen:
-                raise ValueError(
-                    "factor %s has new levels %s" % (name, ", ".join(sorted(unseen)))
-                )
-            for level in levels[1:]:
-                col = (str_values == level).astype(float).to_numpy()
-                col[missing] = np.nan
-                cols[name + level] = col
+                raise ValueError("factor %s has new levels %s" % (col, sorted(map(str, unseen))))
+            for lvl in levels[1:]:
+                v = (s == lvl).to_numpy(dtype=float)
+                v[missing] = np.nan
+                cols["%s%s" % (col, "TRUE" if lvl is True else lvl)] = v
     return pd.DataFrame(cols, index=df.index)
 
 
-def _response(y: pd.Series) -> np.ndarray:
-    if pd.api.types.is_bool_dtype(y):
-        return y.astype(float).to_numpy()
-    if pd.api.types.is_numeric_dtype(y):
-        return y.astype(float).to_numpy()
-    # Factor response: first (sorted) level is failure, all others success.
-    levels = sorted(y.astype(str).unique())
-    return (y.astype(str) != levels[0]).astype(float).to_numpy()
-
-
-def fit(train_df: pd.DataFrame) -> LegacyModel:
+def fit(train_df: pd.DataFrame):
     if RESPONSE not in train_df.columns:
         raise ValueError("Train data must contain target")
     features = _feature_names(train_df)
-
-    # na.action = na.omit: drop rows with NA in any model variable.
-    used = [RESPONSE] + features
-    complete = train_df.loc[train_df[used].notna().all(axis=1)]
-
-    specs: List[Tuple[str, Optional[List[str]]]] = []
-    for name in features:
-        if _is_categorical(complete[name]):
-            levels = sorted(complete[name].astype(str).unique())
-            specs.append((name, levels))
-        else:
-            specs.append((name, None))
-
-    X = _design(complete, specs)
-    y = _response(complete[RESPONSE])
+    # glm() default na.action = na.omit over response + predictors
+    complete = train_df[[RESPONSE] + features].dropna()
+    spec = _build_spec(complete, features)
+    X = _design_matrix(complete, spec)
+    y = complete[RESPONSE]
+    if pd.api.types.is_bool_dtype(y):
+        y = y.astype(float)
+    y = y.astype(float)
     model = sm.GLM(y, X, family=sm.families.Binomial(link=sm.families.links.Logit()))
-    result = model.fit(method="IRLS")
-    return LegacyModel(result, specs, list(X.columns))
+    result = model.fit()  # IRLS, as in R glm()
+    result._legacy_spec = spec
+    result._legacy_columns = list(X.columns)
+    return result
 
 
-def predict_proba(model: LegacyModel, df: pd.DataFrame) -> np.ndarray:
-    X = _design(df, model.specs)[model.exog_names].to_numpy(dtype=float)
+def predict_proba(model, df: pd.DataFrame) -> np.ndarray:
+    X = _design_matrix(df, model._legacy_spec)[model._legacy_columns]
     params = np.asarray(model.params, dtype=float)
-    eta = X @ params  # rows with missing predictors give NaN, like R's NA
-    with np.errstate(over="ignore", invalid="ignore"):
-        prob = 1.0 / (1.0 + np.exp(-eta))
-    return np.asarray(prob, dtype=float).reshape(-1)
+    eta = X.to_numpy(dtype=float) @ params
+    # rows with missing predictors yield NaN (R: NA)
+    return np.asarray(1.0 / (1.0 + np.exp(-eta)), dtype=float)
 
 
 def classify(p) -> np.ndarray:
-    p = np.asarray(p, dtype=float).reshape(-1)
-    return (p >= THRESHOLD).astype(int)
+    p = np.asarray(p, dtype=float)
+    return (p >= CLASSIFICATION_THRESHOLD).astype(int)
