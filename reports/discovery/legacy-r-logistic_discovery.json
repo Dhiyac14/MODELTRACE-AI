@@ -26,7 +26,7 @@
           "verified": true
         }
       ],
-      "note": "Object name in code is legacy_model; the comment calls it the legacy production model. Inventory ID legacy-r-logistic."
+      "note": "Inventory ID legacy-r-logistic; also called Legacy R Logistic Regression / legacy credit default model / legacy production model."
     },
     "algorithm": {
       "value": "Logistic regression via R glm with binomial family and logit link",
@@ -43,9 +43,16 @@
       "note": ""
     },
     "business_purpose": {
-      "value": "Predict whether a credit card client defaults on payment next month (credit default classification)",
+      "value": "Predict the probability that a credit card client defaults on payment next month (credit default classification), serving as the legacy production reference model",
       "status": "inferred",
       "evidence": [
+        {
+          "file": "models/legacy_model.R",
+          "line_start": 3,
+          "line_end": 3,
+          "quote": "# Reference implementation for the legacy production model.",
+          "verified": true
+        },
         {
           "file": "engine/data.py",
           "line_start": 19,
@@ -61,11 +68,11 @@
           "verified": true
         }
       ],
-      "note": "The R script does not state a business purpose; inferred from the dataset name and target column name in the data pipeline that writes the shared train/test files."
+      "note": "Inferred from the comment, the target name and the dataset label; no business use statement exists in code."
     },
     "target_variable": {
-      "value": "target (derived from default.payment.next.month)",
-      "status": "inferred",
+      "value": "target",
+      "status": "verified",
       "evidence": [
         {
           "file": "models/legacy_model.R",
@@ -89,7 +96,7 @@
           "verified": true
         }
       ],
-      "note": "The response column 'target' is verified in the R script; its link to default.payment.next.month is inferred from write_shared_split and prepare_data in data.py, assuming the R script consumes those files."
+      "note": "The R column 'target' is populated upstream from default.payment.next.month (binary default indicator, cast to int)."
     },
     "input_features": {
       "value": [
@@ -128,11 +135,11 @@
           "file": "engine/data.py",
           "line_start": 58,
           "line_end": 63,
-          "quote": "    expected_features = [\n        \"LIMIT_BAL\", \"SEX\", \"EDUCATION\", \"MARRIAGE\", \"AGE\",\n        \"PAY_0\", \"PAY_2\", \"PAY_3\", \"PAY_4\", \"PAY_5\", \"PAY_6\",\n        \"BILL_AMT1\", \"BILL_AMT2\", \"BILL_AMT3\", \"BILL_AMT4\", \"BILL_AMT5\", \"BILL_AMT6\",\n        \"PAY_AMT1\", \"PAY_AMT2\", \"PAY_AMT3\", \"PAY_AMT4\", \"PAY_AMT5\", \"PAY_AMT6\",",
+          "quote": "    expected_features = [\n        \"LIMIT_BAL\", \"SEX\", \"EDUCATION\", \"MARRIAGE\", \"AGE\",\n        \"PAY_0\", \"PAY_2\", \"PAY_3\", \"PAY_4\", \"PAY_5\", \"PAY_6\",\n        \"BILL_AMT1\", \"BILL_AMT2\", \"BILL_AMT3\", \"BILL_AMT4\", \"BILL_AMT5\", \"BILL_AMT6\",\n        \"PAY_AMT1\", \"PAY_AMT2\", \"PAY_AMT3\", \"PAY_AMT4\", \"PAY_AMT5\", \"PAY_AMT6\",\n    ]",
           "verified": true
         }
       ],
-      "note": "The R script uses all train columns except the excluded ones, so features are determined at runtime. The list assumes the official UCI dataset columns from data.py are written to train.csv; with the demo dataset the features would be only LIMIT_BAL, BILL_AMT1, PAY_0."
+      "note": "The R script uses all columns of train.csv except the excluded ones; the list assumes train.csv is written from the official UCI dataset. With the demo fixture the features would be LIMIT_BAL, BILL_AMT1, PAY_0 only."
     },
     "excluded_columns": {
       "value": [
@@ -152,16 +159,15 @@
           "verified": true
         }
       ],
-      "note": "SEX and AGE are excluded as sensitive attributes (data.py SENSITIVE_FEATURES); ID and row_id are identifiers."
+      "note": "SEX and AGE are sensitive attributes per engine/data.py SENSITIVE_FEATURES; row_id and ID are identifiers."
     },
     "preprocessing_steps": {
       "value": [
-        "Read train and test CSV files with check.names = FALSE",
-        "Validate that train contains target and test contains row_id",
-        "Select all train columns except row_id, target, SEX, AGE, ID as predictors",
-        "Upstream (data.py): stratified train/test split via train_test_split with random_state=seed (default 42)",
-        "Upstream (data.py): row_id inserted from dataframe index and target column appended when writing shared split files",
-        "Upstream (data.py load_dataset path): drop ID column and drop rows with missing values"
+        "Read train and test CSV with check.names = FALSE",
+        "Validate train contains target and test contains row_id",
+        "Exclude row_id, target, SEX, AGE, ID from predictors",
+        "Upstream: stratified train/test split (random_state=42) and write shared train.csv/test.csv with row_id and target",
+        "No scaling, encoding or imputation in the R script; all features enter glm as-is"
       ],
       "status": "inferred",
       "evidence": [
@@ -182,12 +188,12 @@
         {
           "file": "engine/data.py",
           "line_start": 161,
-          "line_end": 168,
-          "quote": "    \"\"\"Write the exact train/test rows consumed by both Python and R.\"\"\"\n    directory.mkdir(parents=True, exist_ok=True)\n    train = x_train.copy()\n    train.insert(0, \"row_id\", train.index.astype(int))\n    train[\"target\"] = y_train\n    test = x_test.copy()\n    test.insert(0, \"row_id\", test.index.astype(int))\n    test[\"target\"] = y_test",
+          "line_end": 161,
+          "quote": "    \"\"\"Write the exact train/test rows consumed by both Python and R.\"\"\"",
           "verified": true
         }
       ],
-      "note": "R-side steps are verified; the upstream steps are inferred because the code shown does not show which data.py functions are actually called before the R script runs. No scaling, encoding or transformations are applied in R."
+      "note": "R-side steps are verified; linkage to the Python split pipeline is inferred from the docstring 'consumed by both Python and R'."
     },
     "train_fraction": {
       "value": 0.8,
@@ -195,13 +201,13 @@
       "evidence": [
         {
           "file": "engine/data.py",
-          "line_start": 135,
-          "line_end": 137,
-          "quote": "def prepare_data(\n    frame: pd.DataFrame, test_size: float = 0.2, seed: int = 42\n) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:",
+          "line_start": 136,
+          "line_end": 136,
+          "quote": "    frame: pd.DataFrame, test_size: float = 0.2, seed: int = 42",
           "verified": true
         }
       ],
-      "note": "Derived from default test_size=0.2 in prepare_data; the actual call site and arguments are not shown, and the R script itself receives pre-split files."
+      "note": "Default test_size of 0.2 implies 0.8 training; the actual call site is not shown."
     },
     "decision_threshold": {
       "value": 0.35,
@@ -215,25 +221,11 @@
           "verified": true
         }
       ],
-      "note": "Predicted probability >= 0.35 classified as 1."
+      "note": ""
     },
     "assumptions": [
       {
-        "value": "Train and test CSVs share the same columns and train contains a binary 0/1 'target' column suitable for a binomial GLM",
-        "status": "inferred",
-        "evidence": [
-          {
-            "file": "models/legacy_model.R",
-            "line_start": 22,
-            "line_end": 22,
-            "quote": "probability <- as.numeric(predict(legacy_model, newdata = test, type = ",
-            "verified": true
-          }
-        ],
-        "note": "Prediction on test requires all training predictors to be present in test; not explicitly validated."
-      },
-      {
-        "value": "Log-odds of default are linear in the predictors (logistic regression assumption)",
+        "value": "Log-odds of default are linear in the untransformed input features",
         "status": "inferred",
         "evidence": [
           {
@@ -244,12 +236,26 @@
             "verified": true
           }
         ],
-        "note": "Main-effects-only formula with logit link; no interactions or transformations."
+        "note": "Implied by additive logistic regression formula with no transformations or interactions."
+      },
+      {
+        "value": "Train and test files share the same columns and were produced by the shared Python split",
+        "status": "inferred",
+        "evidence": [
+          {
+            "file": "engine/data.py",
+            "line_start": 161,
+            "line_end": 161,
+            "quote": "    \"\"\"Write the exact train/test rows consumed by both Python and R.\"\"\"",
+            "verified": true
+          }
+        ],
+        "note": "From docstring; R script only checks target and row_id presence."
       }
     ],
     "limitations": [
       {
-        "value": "Categorical-coded variables such as EDUCATION, MARRIAGE and PAY_x status codes are read as numeric and entered linearly rather than as factors",
+        "value": "Categorical codes such as EDUCATION, MARRIAGE and PAY_* status are treated as numeric, not as factors",
         "status": "inferred",
         "evidence": [
           {
@@ -260,24 +266,24 @@
             "verified": true
           }
         ],
-        "note": "No factor conversion appears in the script; numeric CSV columns are treated as continuous by glm."
+        "note": "No factor conversion in the script; read.csv reads integer codes as numeric."
       },
       {
-        "value": "No regularization, scaling, missing-value handling or multicollinearity treatment in the R script (highly correlated BILL_AMT/PAY columns)",
+        "value": "No missing-value handling, scaling, regularisation or convergence checks in the R script",
         "status": "inferred",
         "evidence": [
           {
             "file": "models/legacy_model.R",
             "line_start": 21,
-            "line_end": 21,
-            "quote": "legacy_model <- glm(formula, data = train, family = binomial(link = \"logit\"))",
+            "line_end": 22,
+            "quote": "legacy_model <- glm(formula, data = train, family = binomial(link = \"logit\"))\nprobability <- as.numeric(predict(legacy_model, newdata = test, type = \"response\"))",
             "verified": true
           }
         ],
-        "note": "Plain glm fit; glm drops NA rows by default."
+        "note": "Absence of such steps in code."
       },
       {
-        "value": "Threshold 0.35 is hard-coded with no documented rationale",
+        "value": "Threshold 0.35 is hard-coded with no stated rationale",
         "status": "verified",
         "evidence": [
           {
@@ -291,22 +297,8 @@
         "note": ""
       },
       {
-        "value": "Feature set is determined dynamically by input file columns, so the model specification depends on upstream data (e.g., demo dataset yields only 3 features)",
-        "status": "inferred",
-        "evidence": [
-          {
-            "file": "models/legacy_model.R",
-            "line_start": 19,
-            "line_end": 19,
-            "quote": "feature_names <- setdiff(names(train), c(\"row_id\", \"target\", \"SEX\", \"AGE\", \"ID\"))",
-            "verified": true
-          }
-        ],
-        "note": ""
-      },
-      {
         "value": "Fitted model object is not persisted; only predictions are written",
-        "status": "verified",
+        "status": "inferred",
         "evidence": [
           {
             "file": "models/legacy_model.R",
@@ -316,21 +308,19 @@
             "verified": true
           }
         ],
-        "note": ""
+        "note": "No saveRDS or similar call."
       }
     ],
     "missing_information": [
-      "Model owner, developer and approval history",
-      "Formal business use and decision context for the 0.35 threshold",
-      "Rationale for threshold selection and cost of false positives/negatives",
-      "Performance metrics and validation results (AUC, KS, calibration)",
-      "Fairness assessment results by SEX and age band",
-      "Actual data split call parameters and data source used in production (official UCI vs demo)",
-      "Data time period, population definition and sampling",
-      "Monitoring plan, retraining frequency and performance triggers",
-      "R version and package versions used",
-      "Coefficient estimates and their significance/stability",
-      "Treatment of categorical variables and outliers rationale"
+      "Business owner, intended use and decision context of the model",
+      "Rationale for the 0.35 classification threshold",
+      "Model performance metrics and validation results",
+      "Development and production data time periods and population definition",
+      "Fairness / disparate impact assessment results for SEX and AGE",
+      "Monitoring plan, recalibration and retirement criteria",
+      "R version and package dependencies",
+      "Approval history and model tier/risk rating",
+      "Confirmation of which dataset (official UCI vs demo fixture) and split parameters were used in production"
     ]
   },
   "discrepancies": [
@@ -431,9 +421,9 @@
       "code_evidence": [
         {
           "file": "engine/data.py",
-          "line_start": 135,
-          "line_end": 137,
-          "quote": "def prepare_data(\n    frame: pd.DataFrame, test_size: float = 0.2, seed: int = 42\n) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:",
+          "line_start": 136,
+          "line_end": 136,
+          "quote": "    frame: pd.DataFrame, test_size: float = 0.2, seed: int = 42",
           "verified": true
         }
       ],
@@ -462,31 +452,12 @@
           "verified": true
         }
       ],
-      "explanation": "The code does not scale or standardize anything. The raw columns read from the CSV go straight into glm.",
-      "suggested_correction": "Rewrite the claim to match the code: The code does not scale or standardize anything. The raw columns read from the CSV go straight into glm.",
+      "explanation": "The code does not scale or standardize anything. The raw columns from the training CSV go straight into glm().",
+      "suggested_correction": "Predictors are used on their original scale without standardization. The only preprocessing is excluding row_id, target, SEX, AGE and ID from the formula.",
       "detected_by": "llm"
     },
     {
       "discrepancy_id": "D-006",
-      "field": "preprocessing",
-      "type": "omission",
-      "documented_claim": "Not mentioned in the document.",
-      "document_ref": null,
-      "code_evidence": [
-        {
-          "file": "models/legacy_model.R",
-          "line_start": 13,
-          "line_end": 14,
-          "quote": "train <- read.csv(train_path, check.names = FALSE)\ntest <- read.csv(test_path, check.names = FALSE)",
-          "verified": true
-        }
-      ],
-      "explanation": "The R script reads the CSVs as they are, with no transformation. Coded variables are therefore entered as plain numeric predictors without categorical encoding.",
-      "suggested_correction": "State that the predictors are used as read from the shared CSV split, with no scaling and no categorical encoding in the R script.",
-      "detected_by": "llm"
-    },
-    {
-      "discrepancy_id": "D-007",
       "field": "other",
       "type": "omission",
       "documented_claim": "Not mentioned in the document.",
@@ -494,26 +465,26 @@
       "code_evidence": [
         {
           "file": "models/legacy_model.R",
-          "line_start": 5,
-          "line_end": 7,
-          "quote": "if (length(args) != 3) {\n  stop(\"Usage: Rscript legacy_model.R <train.csv> <test.csv> <predictions.csv>\")\n}",
-          "verified": true
-        },
-        {
-          "file": "models/legacy_model.R",
           "line_start": 15,
           "line_end": 17,
           "quote": "if (!\"target\" %in% names(train) || !\"row_id\" %in% names(test)) {\n  stop(\"Train data must contain target and test data must contain row_id\")\n}",
           "verified": true
+        },
+        {
+          "file": "models/legacy_model.R",
+          "line_start": 5,
+          "line_end": 7,
+          "quote": "if (length(args) != 3) {\n  stop(\"Usage: Rscript legacy_model.R <train.csv> <test.csv> <predictions.csv>\")\n}",
+          "verified": true
         }
       ],
-      "explanation": "The script needs exactly three command-line arguments: train, test and output paths. It stops with an error if the train data has no target column or the test data has no row_id column. The document does not describe this input contract.",
-      "suggested_correction": "Document the invocation: Rscript legacy_model.R <train.csv> <test.csv> <predictions.csv>. State that the train data must contain 'target' and the test data must contain 'row_id', otherwise the run stops with an error.",
+      "explanation": "The document does not describe the script's input contract. The script needs exactly three file arguments, and it stops if the training data has no target column or the test data has no row_id column.",
+      "suggested_correction": "Document that the model runs as `Rscript legacy_model.R <train.csv> <test.csv> <predictions.csv>`. It requires a 'target' column in the training data and a 'row_id' column in the test data, and stops with an error otherwise.",
       "detected_by": "llm"
     }
   ],
   "evidence_warnings": [],
   "llm_model": "claude-opus-5-5",
-  "generated_at": "2026-11-13T15:11:37+00:00",
+  "generated_at": "2026-11-13T17:42:45+00:00",
   "review_status": "pending_human_review"
 }

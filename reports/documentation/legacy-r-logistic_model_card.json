@@ -9,7 +9,7 @@
       "title": "Model overview and intended purpose",
       "status": "available",
       "source": "llm_draft",
-      "text": "Legacy R Logistic Regression (legacy-r-logistic) estimates the probability that a credit-card customer defaults next month and is described as being used in credit decisions; it is recorded as risk tier 1. The business purpose, target variable, input features, preprocessing steps and train fraction were inferred rather than formally documented. The model owner, developer, approval history and formal decision context are not documented. The supplied dataset is the UCI Default of Credit Card Clients data (30,000 records, Taiwan, April to September 2005), labelled as public demonstration data only and not representative of a UK bank's current portfolio.",
+      "text": "Legacy R Logistic Regression (legacy-r-logistic) estimates the probability that a credit-card customer defaults next month and is described as being used in credit decisions; this business purpose was inferred rather than documented, and the business owner, intended use and decision context are not documented. The record lists risk tier 1, although the approval history and tier/risk rating are also listed as missing information, so the tier needs confirmation. The data described is the public UCI Default of Credit Card Clients dataset (30,000 records, 23 input variables, Taiwan clients, April to September 2005). That data is marked as demonstration data only and not representative of a UK bank's current portfolio, and it is not confirmed whether this dataset was used in production.",
       "rows": []
     },
     {
@@ -51,7 +51,7 @@
       "title": "Algorithm and methodology",
       "status": "available",
       "source": "llm_draft",
-      "text": "The model is a logistic regression fitted in R using glm with a binomial family and logit link, predicting a binary target derived from default.payment.next.month. Predictors are all training-file columns except row_id, target, SEX, AGE and ID, which yields 21 features (LIMIT_BAL, EDUCATION, MARRIAGE, PAY_0 and PAY_2 to PAY_6, BILL_AMT1 to BILL_AMT6, PAY_AMT1 to PAY_AMT6). Upstream Python code performs a stratified 80/20 train/test split (random_state default 42), drops the ID column and rows with missing values, and classifies using a hard-coded 0.35 threshold. Reported test results include ROC AUC of about 0.707, accuracy of about 0.807, precision of about 0.592 and recall of about 0.412, and R predictions matched a statsmodels reproduction within the 1e-05 tolerance. These results are not, by themselves, evidence of validation or approval.",
+      "text": "The model is a logistic regression fitted in R using glm with a binomial family and logit link, predicting the variable 'target' from 21 inferred input features (LIMIT_BAL, EDUCATION, MARRIAGE, PAY_0 and PAY_2 to PAY_6, BILL_AMT1 to BILL_AMT6, PAY_AMT1 to PAY_AMT6), with row_id, target, SEX, AGE and ID excluded from the predictors. An upstream stratified train/test split (random_state=42, inferred 0.8/0.2) produces shared train and test files, and the R script applies no scaling, encoding or imputation before fitting. Predicted probabilities are classified using a decision threshold of 0.35. The supplied results report test-set accuracy of 0.807, ROC AUC of 0.707, precision of 0.592 and recall of 0.412, and an R-versus-statsmodels reproduction check reported as passing (maximum probability difference about 3.6e-07 against a tolerance of 1e-05).",
       "rows": []
     },
     {
@@ -63,8 +63,8 @@
       "rows": [
         {
           "label": "Target variable",
-          "value": "target (derived from default.payment.next.month)",
-          "source": "models/legacy_model.R:L20; engine/data.py:L165; engine/data.py:L142 (inferred)"
+          "value": "target",
+          "source": "models/legacy_model.R:L20; engine/data.py:L165; engine/data.py:L142 (verified)"
         },
         {
           "label": "Input features (21)",
@@ -78,13 +78,13 @@
         },
         {
           "label": "Preprocessing",
-          "value": "Read train and test CSV files with check.names = FALSE, Validate that train contains target and test contains row_id, Select all train columns except row_id, target, SEX, AGE, ID as predictors, Upstream (data.py): stratified train/test split via train_test_split with random_state=seed (default 42), Upstream (data.py): row_id inserted from dataframe index and target column appended when writing shared split files, Upstream (data.py load_dataset path): drop ID column and drop rows with missing values",
-          "source": "models/legacy_model.R:L13-17; engine/data.py:L143-145; engine/data.py:L161-168 (inferred)"
+          "value": "Read train and test CSV with check.names = FALSE, Validate train contains target and test contains row_id, Exclude row_id, target, SEX, AGE, ID from predictors, Upstream: stratified train/test split (random_state=42) and write shared train.csv/test.csv with row_id and target, No scaling, encoding or imputation in the R script; all features enter glm as-is",
+          "source": "models/legacy_model.R:L13-17; engine/data.py:L143-145; engine/data.py:L161 (inferred)"
         },
         {
           "label": "Train/test split",
           "value": "80% train / 20% test",
-          "source": "engine/data.py:L135-137 (inferred)"
+          "source": "engine/data.py:L136 (inferred)"
         },
         {
           "label": "Decision threshold",
@@ -668,7 +668,7 @@
       "title": "Limitations and assumptions",
       "status": "available",
       "source": "llm_draft",
-      "text": "Categorical-coded variables (EDUCATION, MARRIAGE, PAY_x status codes) are entered as linear numeric terms, and the script applies no regularization, scaling, missing-value handling or treatment of the highly correlated BILL_AMT/PAY columns. It also assumes the log-odds of default are linear in the predictors. The 0.35 threshold has no documented rationale or cost analysis, and the feature set depends on the input file columns (a demo dataset yields only 3 features). The fitted model object is not persisted, and the production data source, data period, coefficient estimates, R/package versions and monitoring plan are not documented. Fairness metrics show an age-group disparate impact of about 0.766 and a sex disparate impact of about 0.902, but no formal fairness assessment by SEX and age band is documented.",
+      "text": "Categorical codes such as EDUCATION, MARRIAGE and the PAY_* statuses are treated as numeric rather than as factors, and the model assumes that log-odds are linear in the untransformed features; the R script has no missing-value handling, scaling, regularisation or convergence checks. The 0.35 threshold is hard-coded with no documented rationale, and the fitted model object is not saved, as only predictions are written. The supplied fairness summary shows a disparate impact of 0.766 across age groups and 0.902 by sex, but the missing-information list still includes performance metrics, validation results and fairness results, so the status of these figures should be confirmed. Data time periods, population definition, R version and package dependencies, the monitoring plan, and recalibration and retirement criteria are not documented.",
       "rows": []
     },
     {
@@ -750,28 +750,23 @@
         {
           "label": "D-004 train_test_split (contradiction)",
           "value": "Document: The train/test split is 75% train / 25% test. Correction: Change the documented train/test split to 80% train / 20% test.",
-          "source": "engine/data.py:L135-137"
+          "source": "engine/data.py:L136"
         },
         {
           "label": "D-005 preprocessing (contradiction)",
-          "value": "Document: All numeric predictors are standardized to zero mean and unit variance before fitting. Correction: Rewrite the claim to match the code: The code does not scale or standardize anything. The raw columns read from the CSV go straight into glm.",
+          "value": "Document: All numeric predictors are standardized to zero mean and unit variance before fitting. Correction: Predictors are used on their original scale without standardization. The only preprocessing is excluding row_id, target, SEX, AGE and ID from the formula.",
           "source": "models/legacy_model.R:L19-21"
         },
         {
-          "label": "D-006 preprocessing (omission)",
-          "value": "Document: Not mentioned in the document. Correction: State that the predictors are used as read from the shared CSV split, with no scaling and no categorical encoding in the R script.",
-          "source": "models/legacy_model.R:L13-14"
-        },
-        {
-          "label": "D-007 other (omission)",
-          "value": "Document: Not mentioned in the document. Correction: Document the invocation: Rscript legacy_model.R <train.csv> <test.csv> <predictions.csv>. State that the train data must contain 'target' and the test data must contain 'row_id', otherwise the run stops with an error.",
-          "source": "models/legacy_model.R:L5-7; models/legacy_model.R:L15-17"
+          "label": "D-006 other (omission)",
+          "value": "Document: Not mentioned in the document. Correction: Document that the model runs as `Rscript legacy_model.R <train.csv> <test.csv> <predictions.csv>`. It requires a 'target' column in the training data and a 'row_id' column in the test data, and stops with an error otherwise.",
+          "source": "models/legacy_model.R:L15-17; models/legacy_model.R:L5-7"
         }
       ]
     }
   ],
   "grounding_warnings": [],
   "generated_by": "Documentation Agent (LLM: claude-opus-5-5)",
-  "generated_at": "2026-11-13T15:18:21+00:00",
+  "generated_at": "2026-11-13T17:46:53+00:00",
   "review_status": "pending_human_review"
 }
