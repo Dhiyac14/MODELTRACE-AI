@@ -2,9 +2,9 @@
 
 ### An agentic model risk factory that discovers, documents, redevelops, validates, and monitors a bank's models, with a human approval gate at every stage.
 
-**Jump to:** [Problem](#the-problem) · [Solution](#what-modeltrace-ai-does) · [Results](#headline-results) · [Architecture](#system-architecture) · [Agents](#ai-agents-governance-and-dashboard) · [Reports](#automated-pdf-model-risk-reports) · [Quick Start](#quick-start) · [CLI](#command-line-agent-usage) · [Limitations](#known-limitations-and-scope)
+**Jump to:** [Demo](#demo-video) · [Problem](#the-problem) · [Solution](#what-modeltrace-ai-does) · [Results](#headline-results) · [Architecture](#system-architecture) · [Agents](#ai-agents-governance-and-dashboard) · [Reports](#automated-pdf-model-risk-reports) · [Quick Start](#quick-start) · [CLI](#command-line-agent-usage) · [Limitations](#known-limitations-and-scope) · [License](#license)
 
-## Demo Video
+### Demo Video
 
 [▶ Watch MODELTRACE AI – Project Demonstration](https://drive.google.com/file/d/1Xy5f7FgsODnLROSPzcXega5wFj3Mr7_f/view?usp=sharing)
 
@@ -22,13 +22,13 @@
 
 | Overview | Architecture & Implementation | Running It | Responsibility & Scope |
 |---|---|---|---|
-| [Challenge 04](#challenge-04--agentic-model-risk-factory) | [System Architecture](#system-architecture) | [Quick Start](#quick-start) | [Responsible AI](#responsible-ai) |
-| [The Problem](#the-problem) | [Dataset and Model Portfolio](#dataset-and-model-portfolio) | [Command-Line Agent Usage](#command-line-agent-usage) | [Judging Criteria Alignment](#alignment-with-hackathon-judging-criteria) |
-| [What MODELTRACE AI Does](#what-modeltrace-ai-does) | [ML Engineering Implementation](#ml-engineering-implementation) | [Scoring the Discovery Agent](#scoring-the-discovery-agent) | [Known Limitations and Scope](#known-limitations-and-scope) |
-| [Why It Is Trustworthy](#why-it-is-trustworthy) | [AI Agents, Governance and Dashboard](#ai-agents-governance-and-dashboard) | [MLflow Tracking](#mlflow-tracking) | [Our Objective](#our-objective) |
-| [Headline Results](#headline-results) | [Governance and Human Approval](#governance-and-human-approval) | [Tests and Reproducibility](#tests-and-reproducibility) | |
-| [Business Impact](#business-impact) | [Automated PDF Reports](#automated-pdf-model-risk-reports) | [Technology Stack](#technology-stack) | |
-| | [Dashboard](#dashboard) | | |
+| [Demo Video](#demo-video) | [System Architecture](#system-architecture) | [Quick Start](#quick-start) | [Responsible AI](#responsible-ai) |
+| [Challenge 04](#challenge-04--agentic-model-risk-factory) | [Dataset and Model Portfolio](#dataset-and-model-portfolio) | [Command-Line Agent Usage](#command-line-agent-usage) | [Judging Criteria Alignment](#alignment-with-hackathon-judging-criteria) |
+| [The Problem](#the-problem) | [ML Engineering Implementation](#ml-engineering-implementation) | [Scoring the Discovery Agent](#scoring-the-discovery-agent) | [Known Limitations and Scope](#known-limitations-and-scope) |
+| [What MODELTRACE AI Does](#what-modeltrace-ai-does) | [AI Agents, Governance and Dashboard](#ai-agents-governance-and-dashboard) | [MLflow Tracking](#mlflow-tracking) | [Our Objective](#our-objective) |
+| [Why It Is Trustworthy](#why-it-is-trustworthy) | [Governance and Human Approval](#governance-and-human-approval) | [Tests and Reproducibility](#tests-and-reproducibility) | [License](#license) |
+| [Headline Results](#headline-results) | [Automated PDF Reports](#automated-pdf-model-risk-reports) | [Technology Stack](#technology-stack) | |
+| [Business Impact](#business-impact) | [Dashboard](#dashboard) | | |
 
 ---
 
@@ -755,16 +755,16 @@ Project documentation:
 
 MODELTRACE AI is designed around the five judging criteria used for both EXL pre-screening and the finale.
 
-1. Business Impact 
-- Connects discovery, redevelopment, validation, monitoring and reporting to the operational challenges of managing a large model inventory.
-2. Technical Approach 
-- Combines specialised AI agents, R-to-Python redevelopment, quantitative parity testing, validation metrics, monitoring and an integrated dashboard.
-3. Innovation
-- Introduces an evidence-driven agentic workflow where specialised agents collaborate across the model lifecycle, supported by structured evidence and automated reporting.
-4. Responsible AI 
-- Implements human approval gates, separation of duties, source-grounded findings, private evaluation data, fairness analysis and explicit missing-evidence states.
-5. Presentation & Q&A
-- Provides a working Streamlit demonstration, reproducible command-line workflows, committed evidence reports and individual and portfolio-level PDF reports.
+1. **Business Impact**
+   - Connects discovery, redevelopment, validation, monitoring and reporting to the operational challenges of managing a large model inventory.
+2. **Technical Approach**
+   - Combines specialised AI agents, R-to-Python redevelopment, quantitative parity testing, validation metrics, monitoring and an integrated dashboard.
+3. **Innovation**
+   - Introduces an evidence-driven agentic workflow where specialised agents collaborate across the model lifecycle, supported by structured evidence and automated reporting.
+4. **Responsible AI**
+   - Implements human approval gates, separation of duties, source-grounded findings, private evaluation data, fairness analysis and explicit missing-evidence states.
+5. **Presentation & Q&A**
+   - Provides a working Streamlit demonstration, reproducible command-line workflows, committed evidence reports and individual and portfolio-level PDF reports.
 
 ### What Makes the Approach Different
 
