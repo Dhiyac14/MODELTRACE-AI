@@ -503,7 +503,7 @@ streamlit run app.py
 
 ### Prerequisites
 
-- Python version supported by the project dependencies.
+- Python 3.10 or later.
 - Git.
 - R and `Rscript` for the complete ML engineering pipeline.
 - Network access for the first UCI dataset download.
@@ -541,7 +541,7 @@ LLM_PROVIDER=anthropic
 LLM_API_KEY=your_api_key
 ```
 
-The project also supports `LLM_PROVIDER=openai` with an OpenAI-compatible endpoint.
+The project also supports `LLM_PROVIDER=openai` with an OpenAI-compatible endpoint. That provider also needs `LLM_MODEL`, and `LLM_BASE_URL` for a non-OpenAI endpoint; `.env.example` lists every setting.
 
 Without an API key, the dashboard and Documentation and Monitoring Agents can still run with template text. Discovery and LLM Migration require an LLM.
 
