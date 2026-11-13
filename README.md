@@ -811,3 +811,11 @@ MODELTRACE AI demonstrates how agentic AI can connect traditionally fragmented m
 By combining specialised AI agents, reproducible ML engineering, structured evidence, human approval gates, and automated reporting, the platform provides a practical foundation for more transparent and efficient model risk management.
 
 **Discover the model. Document the evidence. Redevelop with parity. Validate independently. Monitor continuously. Govern with human oversight.**
+
+---
+
+## License
+
+Copyright (c) 2026 Dhiya Chandrasekar and Zehua Fu.
+
+This project is licensed under the MIT License. You are free to use, copy, modify, merge, publish, distribute, sublicense, and sell copies of the software, subject to the conditions stated in the [LICENSE](LICENSE) file.
