@@ -16,7 +16,7 @@ from .data import (
     prepare_data, write_shared_split,
 )
 from .models import (
-    ModelBundle, model_identity, statsmodels_coefficients, train_python_models,
+    CLASSIFICATION_THRESHOLD, ModelBundle, model_identity, statsmodels_coefficients, train_python_models,
     train_statsmodels_logistic,
 )
 from .persistence import save_model
@@ -47,6 +47,7 @@ def run_demo(output_root: Path) -> dict:
     candidate_hash = model_identity(candidate)
     validation = {
         "model": candidate.name,
+        "threshold": CLASSIFICATION_THRESHOLD,
         "metrics": performance_metrics(y_test, labels, probabilities),
         "fairness": {
             "sex": fairness_metrics(y_test, labels, x_test[GROUP]),
@@ -123,7 +124,7 @@ def run_migration(
     r_probability = r_predictions["probability"].to_numpy()
     r_labels = r_predictions["prediction"].to_numpy()
     python_probability = python_reference.predict_proba(x_test)
-    python_labels = python_reference.predict(x_test)
+    python_labels = (python_probability >= CLASSIFICATION_THRESHOLD).astype(int)
     difference = np.abs(r_probability - statsmodels_probability)
     mae = float(np.mean(difference))
     maximum = float(np.max(difference))
@@ -139,7 +140,7 @@ def run_migration(
         "label_agreement": float(np.mean(r_labels == statsmodels_labels)),
         "label_disagreements": int(np.sum(r_labels != statsmodels_labels)),
         "tolerance": tolerance,
-        "threshold": 0.5,
+        "threshold": CLASSIFICATION_THRESHOLD,
         "mae_pass": mae <= tolerance,
         "max_difference_pass": maximum <= tolerance,
         "overall_pass": bool(row_alignment_verified and mae <= tolerance and maximum <= tolerance),
@@ -182,6 +183,7 @@ def run_real(output_root: Path, raw_path: Path | None = None) -> dict:
     probabilities = candidate.predict_proba(x_test)
     validation = {
         "model": candidate.name,
+        "threshold": CLASSIFICATION_THRESHOLD,
         "metrics": performance_metrics(y_test, labels, probabilities),
         "fairness": {
             "sex": fairness_metrics(y_test, labels, x_test[GROUP]),

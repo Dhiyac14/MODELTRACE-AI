@@ -7,6 +7,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from .models import CLASSIFICATION_THRESHOLD
 from .validation import fairness_metrics, feature_psi, performance_metrics, psi
 
 
@@ -40,6 +41,7 @@ def monitor_batches(
     reference_labels: np.ndarray | None = None,
     reference_groups: pd.Series | None = None,
     model_hash: str | None = None,
+    threshold: float = CLASSIFICATION_THRESHOLD,
 ) -> dict[str, Any]:
     """Monitor exactly three batches with explicit severity and diagnostics."""
     if len(batches) != 3 or len(batch_probabilities) != 3:
@@ -105,7 +107,7 @@ def monitor_batches(
             },
             "missing_values": _missing_report(features),
             "mean_predicted_probability": float(np.mean(probabilities)),
-            "percentage_above_threshold": float(np.mean(probabilities >= 0.5)),
+            "percentage_above_threshold": float(np.mean(probabilities >= threshold)),
             "alerts": alerts,
             "severity": severity,
             "alert": severity != "low",
@@ -116,13 +118,13 @@ def monitor_batches(
             result["observed_outcomes"] = False
             result["performance"] = performance_metrics(
                 pd.Series(batch_labels[index - 1]),
-                (probabilities >= 0.5).astype(int),
+                (probabilities >= threshold).astype(int),
                 probabilities,
             )
             if groups is not None:
                 result["fairness"] = fairness_metrics(
                     pd.Series(batch_labels[index - 1]),
-                    (probabilities >= 0.5).astype(int),
+                    (probabilities >= threshold).astype(int),
                     groups,
                 )
         results.append(result)
@@ -133,6 +135,7 @@ def monitor_batches(
     return {
         "model_hash": model_hash,
         "thresholds": {
+            "classification": threshold,
             "bands": {"low": "<0.10", "warning": "0.10-0.25", "high": ">0.25"},
             "alert_rule": "alert is true when batch severity is warning or high",
         },
