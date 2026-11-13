@@ -121,7 +121,7 @@ The following figures come from the committed demonstration reports in `reports/
 | Area | Demonstrated result |
 |---|---|
 | **R-to-Python prediction parity** | 6,000 test rows with row alignment verified; mean absolute difference 9.4e-09; maximum difference 3.6e-07; label agreement 1.0; passed the 1e-5 tolerance |
-| **LLM Migration Agent** | Generated Statsmodels candidate passed parity in round 1 of up to 3 attempts |
+| **LLM Migration Agent** | Generated Statsmodels candidate passed parity in round 2 of up to 3 attempts: the static check rejected round 1 (a disallowed `getattr` call) and the agent fixed it from that feedback |
 | **Model performance at 0.35 threshold** | Accuracy 0.807, precision 0.592, recall 0.412, F1 0.486, ROC-AUC 0.707, PR-AUC 0.495, Brier score 0.147 |
 | **Monitoring batches** | Batch 001: Low; Batch 002: High; Batch 003: High, based on PSI severity bands |
 | **Risk register** | 7 evidence-backed findings, each with category, severity, description, evidence, impact, remediation, and review status |
