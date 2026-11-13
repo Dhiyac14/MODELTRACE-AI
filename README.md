@@ -2,8 +2,6 @@
 
 ### An agentic model risk factory that discovers, documents, redevelops, validates, and monitors a bank's models, with a human approval gate at every stage.
 
-**Built for the EXL Data & AI Hackathon 2026 — Challenge 04: Agentic Model Risk Factory**
-
 [View the System Architecture](docs/architecture.png)
 
 ---
