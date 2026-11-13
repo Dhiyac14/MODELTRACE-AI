@@ -24,6 +24,7 @@ from agents.monitoring_agent import PSI_HIGH, PSI_WARNING, build_alert_report, s
 from inventory.risk_tier import TIER_RULE, draft_rationale
 from llm.client import llm_from_env
 from llm.schemas import AlertReport, DiscoveryReport, MigrationReport, ModelCard
+from reporting import ReportDataError, generate_individual_report, generate_portfolio_report
 from workflow.alerts import RULES as ALERT_RULES
 from workflow.alerts import alert_status, check_alert_action
 from workflow.approvals import check_duties, load_users
@@ -33,7 +34,7 @@ from workflow.state_machine import REOPENABLE, STAGES, SUBMITTABLE, Workflow, Wo
 
 ROOT = Path(os.environ.get("MODELTRACE_ROOT", "."))
 SECTIONS = ["Executive Overview", "Discovery", "Documentation", "Migration", "Validation",
-            "Risk & Evidence", "Monitoring", "Governance"]
+            "Risk & Evidence", "Monitoring", "Governance", "Model Risk Reports"]
 STAGE_LABEL = {"discover": "Discover", "document": "Document", "redevelop": "Redevelop",
                "validate": "Validate", "monitor": "Monitor"}
 STATUS_LABEL = {"approved": "✅ approved", "pending_review": "🕒 pending review", "rejected": "⛔ rejected",
@@ -814,6 +815,43 @@ def page_governance() -> None:
                     "Triggered by": e.details.get("triggered_by"), "Details": json.dumps(e.details)[:200]} for e in runs])
 
 
+def page_reports() -> None:
+    """Generate evidence-backed PDFs on demand and expose them for download."""
+    st.header("Model Risk Reports")
+    st.caption("Reports are generated from existing inventory and JSON evidence. Generation does not constitute independent approval.")
+    report_model = st.selectbox("Model report", [record.model_id for record in RECORDS],
+                                format_func=lambda value: next(record.name for record in RECORDS if record.model_id == value),
+                                key="pdf-model")
+    if st.button("Generate individual PDF", type="primary", key="generate-individual-pdf"):
+        try:
+            path = generate_individual_report(report_model, ROOT)
+        except (ReportDataError, OSError, ValueError) as exc:
+            st.error(f"Individual report generation failed: {exc}")
+        else:
+            st.session_state["individual-pdf-path"] = str(path)
+            st.success(f"Generated {path.name}.")
+    individual_path = Path(st.session_state.get("individual-pdf-path", ""))
+    if individual_path.is_file():
+        st.download_button("Download individual PDF", individual_path.read_bytes(), file_name=individual_path.name,
+                           mime="application/pdf", key="download-individual-pdf")
+
+    st.divider()
+    st.subheader("Portfolio report")
+    st.caption(f"Includes {len(RECORDS)} inventory models; missing validation evidence is labelled rather than treated as zero.")
+    if st.button("Generate portfolio PDF", type="primary", key="generate-portfolio-pdf"):
+        try:
+            path = generate_portfolio_report(ROOT)
+        except (ReportDataError, OSError, ValueError) as exc:
+            st.error(f"Portfolio report generation failed: {exc}")
+        else:
+            st.session_state["portfolio-pdf-path"] = str(path)
+            st.success(f"Generated {path.name}.")
+    portfolio_path = Path(st.session_state.get("portfolio-pdf-path", ""))
+    if portfolio_path.is_file():
+        st.download_button("Download portfolio PDF", portfolio_path.read_bytes(), file_name=portfolio_path.name,
+                           mime="application/pdf", key="download-portfolio-pdf")
+
+
 # --------------------------------------------------------------------------- layout
 WF = Workflow(ROOT)
 USERS = load_users(ROOT / "governance/users.json")
@@ -835,6 +873,7 @@ ARTIFACTS = Artifacts(ROOT, SAMPLE_ROOT if use_samples else None)
 MODEL_PAGES = {"Discovery": page_discovery, "Documentation": page_documentation, "Migration": page_migration,
                "Validation": page_validation, "Monitoring": page_monitoring}
 GLOBAL_PAGES = {"Executive Overview": page_overview, "Risk & Evidence": page_risk, "Governance": page_governance}
+GLOBAL_PAGES["Model Risk Reports"] = page_reports
 show_flash()
 if section in MODEL_PAGES:
     MODEL_PAGES[section](model_id)

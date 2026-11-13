@@ -16,7 +16,7 @@ from workflow.state_machine import Workflow
 ROOT = Path(__file__).resolve().parents[1]
 R_FILE = "models/legacy_model.R"
 SECTIONS = ["Executive Overview", "Discovery", "Documentation", "Migration", "Validation",
-            "Risk & Evidence", "Monitoring", "Governance"]
+            "Risk & Evidence", "Monitoring", "Governance", "Model Risk Reports"]
 USER_INDEX = {"dev.alex": 0, "val.sam": 1, "mrm.jordan": 2, "mon.riley": 3, "lead.taylor": 4}
 
 
@@ -123,6 +123,21 @@ def test_validation_agent_result_lists_findings_and_remediation(data_root):
 def test_python_model_has_no_redevelopment(data_root):
     at = app("Migration", model="python-gradient-boosting")
     assert any("already implemented in Python" in i.value for i in at.info)
+
+
+def test_model_risk_reports_generate_and_offer_downloads(data_root):
+    at = app("Model Risk Reports")
+    at.button(key="generate-individual-pdf").click().run()
+    assert not at.exception
+    assert any("Generated" in s.value for s in at.success)
+    assert len(at.download_button) == 1
+    assert any((data_root / "reports/pdf").glob("MODELTRACE_*_Model_Risk_Report.pdf"))
+
+    at.button(key="generate-portfolio-pdf").click().run()
+    assert not at.exception
+    assert any("Generated" in s.value for s in at.success)
+    assert len(at.download_button) == 2
+    assert (data_root / "reports/pdf/MODELTRACE_Portfolio_Model_Risk_Report.pdf").is_file()
 
 
 def test_submit_and_approve_through_the_ui(data_root):

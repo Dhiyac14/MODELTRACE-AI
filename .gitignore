@@ -27,6 +27,7 @@ models/discovery_answer_key.json
 *answerkey*
 reports/migration/shared_data/
 reports/migration/r_predictions.csv
+reports/pdf/
 # Optional MLflow export (governance/mlflow_export.py)
 mlflow.db
 mlruns/

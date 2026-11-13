@@ -16,3 +16,4 @@ ucimlrepo
 joblib
 streamlit
 plotly
+reportlab>=4.2
