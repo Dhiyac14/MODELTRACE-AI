@@ -34,6 +34,10 @@ PERSON1_SHAP_KEYS = {"python-random-forest": "random_forest_shap", "python-gradi
 # The name engine/models.py gives each supporting model (its train_python_models key and ModelBundle name). The
 # inventory ID stays the canonical one; this is the same model's implementation identifier, not another model.
 PERSON1_BUNDLE_NAMES = {"python-random-forest": "random_forest", "python-gradient-boosting": "gradient_boosting"}
+# Descriptive names used by the legacy model's source comments and document title.
+PERSON1_MODEL_ALIASES = {
+    "legacy-r-logistic": frozenset({"legacy_model", "legacy production model", "legacy credit default model"}),
+}
 PYTHON_CANDIDATE_SOURCE = "engine/models.py"  # Person 1's Statsmodels candidate (train_statsmodels_logistic)
 STAGE_EVIDENCE = {
     "discover": "discovery",

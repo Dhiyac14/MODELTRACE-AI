@@ -55,7 +55,7 @@ from llm.schemas import (
 )
 
 from inventory.registry import get_record, load_inventory
-from workflow.artifacts import PERSON1_BUNDLE_NAMES, PERSON1_MODEL
+from workflow.artifacts import PERSON1_BUNDLE_NAMES, PERSON1_MODEL, PERSON1_MODEL_ALIASES
 
 from ._common import read_source
 
@@ -184,13 +184,20 @@ def verify_claims(claims: DocumentClaims, doc: Sources) -> tuple[DocumentClaims,
 
 
 def model_names(model_id: str) -> frozenset[str]:
-    """The model's inventory ID and, if it has one, the name its code gives it (``PERSON1_BUNDLE_NAMES``)."""
-    return frozenset({model_id, PERSON1_BUNDLE_NAMES.get(model_id, model_id)})
+    """The model's registered ID, code name, and explicitly registered descriptive aliases."""
+    return frozenset({
+        model_id,
+        PERSON1_BUNDLE_NAMES.get(model_id, model_id),
+        *PERSON1_MODEL_ALIASES.get(model_id, ()),
+    })
 
 
 def _names_one_of(text: str, names: frozenset[str]) -> bool:
-    """``text`` contains one of ``names`` as a whole identifier (gradient_boosting, not gradient_boosting_shap)."""
-    return any(re.search(rf"(?<![\w-]){re.escape(name)}(?![\w-])", text) for name in names)
+    """``text`` contains one of ``names`` as a complete identifier, not a versioned name."""
+    return any(
+        re.search(rf"(?<![\w-]){re.escape(name)}(?![\w-]|\s+v\d+\b)", text, re.IGNORECASE)
+        for name in names
+    )
 
 
 def assess_free_text(check: ClaimCheck, claims: DocumentClaims, sources: Sources, warnings: list[str],
@@ -253,7 +260,12 @@ def run_discovery(
     The metadata and claim-check prompts get the same scope: the hint plus, when registered, the model's code name."""
     sources = load_sources(source_paths)
     listing = render_listing(sources)
-    scope = model_scope(model_hint, model_id, PERSON1_BUNDLE_NAMES.get(model_id))
+    scope = model_scope(
+        model_hint,
+        model_id,
+        PERSON1_BUNDLE_NAMES.get(model_id),
+        PERSON1_MODEL_ALIASES.get(model_id, ()),
+    )
     raw = llm.structured(DISCOVERY_SYSTEM, discovery_user(listing, scope), ModelMetadata)
     metadata, warnings = verify_facts(raw, sources)
 

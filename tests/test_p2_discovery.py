@@ -246,6 +246,66 @@ def test_claim_check_gets_the_same_model_scope_as_metadata_extraction(tmp_path):
     assert llm.prompts["ClaimCheck"].startswith(f"The document describes this model: {scope}.")
 
 
-def test_a_model_without_a_code_name_keeps_its_hint():
+def test_legacy_model_names_include_registered_aliases():
     assert model_scope("Legacy R Logistic Regression", "legacy-r-logistic") == "Legacy R Logistic Regression"
-    assert model_names("legacy-r-logistic") == {"legacy-r-logistic"}
+    assert model_names("legacy-r-logistic") == {
+        "legacy-r-logistic",
+        "legacy_model",
+        "legacy production model",
+        "legacy credit default model",
+    }
+
+
+def run_legacy(tmp_path, documented_name):
+    code, doc = tmp_path / "legacy_model.R", tmp_path / "legacy_doc.md"
+    code.write_text("# Reference implementation for the legacy production model.\nlegacy_model <- glm(target ~ x)\n")
+    line = f"# {documented_name}\n"
+    doc.write_text(line)
+    claim = DocClaim(
+        claim_id="C1",
+        field="model_name",
+        statement=f"The model is called {documented_name}.",
+        doc_ref=SourceRef(file=doc.as_posix(), line_start=1, line_end=1, quote=line.rstrip()),
+    )
+    cited = [SourceRef(file=code.as_posix(), line_start=1, line_end=1, quote=code.read_text().splitlines()[0])]
+    verdict = ClaimAssessment(
+        claim_id="C1",
+        verdict="contradiction",
+        code_evidence=cited,
+        explanation=f"The source calls it legacy production model; {documented_name} does not match.",
+    )
+    llm = Scripted(
+        ModelMetadata=metadata(),
+        DocumentClaims=DocumentClaims(other_claims=[claim]),
+        ClaimCheck=ClaimCheck(assessments=[verdict]),
+    )
+    return run_discovery(
+        "legacy-r-logistic",
+        [str(code)],
+        llm,
+        str(doc),
+        "Legacy R Logistic Regression",
+    ), llm
+
+
+def test_legacy_descriptive_aliases_are_not_model_name_discrepancies(tmp_path):
+    report, llm = run_legacy(tmp_path, "Legacy credit default model")
+    assert [d for d in report.discrepancies if d.field == "model_name"] == []
+    assert "legacy production model" in llm.prompts["ModelMetadata"]
+    assert "legacy production model" in llm.prompts["ClaimCheck"]
+
+
+def test_unregistered_legacy_model_name_is_still_a_contradiction(tmp_path):
+    report, _ = run_legacy(tmp_path, "credit-risk-v2")
+    assert [(d.field, d.type) for d in report.discrepancies] == [("model_name", "contradiction")]
+
+
+@pytest.mark.parametrize("documented_name", [
+    "legacy",
+    "legacy_model_v2",
+    "legacy production model v2",
+    "legacy credit default model v2",
+])
+def test_partial_or_versioned_legacy_model_name_is_not_an_alias(tmp_path, documented_name):
+    report, _ = run_legacy(tmp_path, documented_name)
+    assert [(d.field, d.type) for d in report.discrepancies] == [("model_name", "contradiction")]

@@ -6,6 +6,8 @@ The JSON schema is appended by ``LLMClient.structured``.
 """
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 _CITATION_RULE = (
     "For every citation give the file name exactly as in the listing header, the line numbers from "
     "the listing, and the exact text of those lines as quote (without the line-number prefix)."
@@ -25,12 +27,24 @@ Rules:
 - missing_information: what a model document must contain that the code cannot tell us."""
 
 
-def model_scope(model_hint: str | None, model_id: str, code_name: str | None = None) -> str | None:
+def model_scope(
+    model_hint: str | None,
+    model_id: str,
+    code_name: str | None = None,
+    aliases: Iterable[str] = (),
+) -> str | None:
     """What the metadata and claim-check prompts are told about the model: the hint and, when the code names
     the model differently from the inventory, that both names belong to the same model."""
-    if code_name is None:
+    names = sorted(set(aliases) - {model_id, code_name} if code_name is not None else set(aliases) - {model_id})
+    if code_name is None and not names:
         return model_hint
-    identity = f"inventory ID {model_id}, which the code names {code_name}: two names for one model, not separate models"
+    if code_name is None:
+        identity = f"inventory ID {model_id}, also known as {', '.join(names)}: these are names for one model, not separate models"
+    else:
+        identity = f"inventory ID {model_id}, which the code names {code_name}"
+        if names:
+            identity += f" and which is also known as {', '.join(names)}"
+        identity += ": these are names for one model, not separate models"
     return f"{model_hint}; {identity}" if model_hint else identity
 
 
