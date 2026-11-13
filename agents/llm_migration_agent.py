@@ -221,7 +221,7 @@ def run_llm_migration(
     inputs = inputs or default_inputs(model_id, root)
     missing = inputs.missing(root)
     if missing:  # checked before any LLM call
-        raise FileNotFoundError(f"run Person 1's pipeline first (python -m engine.pipeline); missing: {', '.join(missing)}")
+        raise FileNotFoundError(f"run the ML pipeline first (python -m engine.pipeline); missing: {', '.join(missing)}")
     r_lines = (root / r_source).read_text(encoding="utf-8").splitlines()
     listing = render_listing({Path(r_source).as_posix(): r_lines})
     r_predictions = pd.read_csv(root / inputs.r_predictions_csv)

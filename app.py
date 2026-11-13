@@ -87,7 +87,7 @@ def load_display(kind: str, model_id: str) -> tuple[dict | None, str | None, boo
     data, path, is_sample = ARTIFACTS.load_for_display(kind, model_id)
     if is_sample:
         st.warning(f"**SAMPLE DATA** from `{path}`: placeholder, not model results. "
-                   f"Person 1's report `{ARTIFACTS.relpath(kind, model_id)}` does not exist yet.")
+                   f"The ML engine's report `{ARTIFACTS.relpath(kind, model_id)}` does not exist yet.")
     return data, path, is_sample
 
 
@@ -216,19 +216,19 @@ def discovery_score_panel(model_id: str, score: dict[str, Any], report: Discover
     else:
         metadata_scored = False
         st.warning("This score file predates per-model metadata and compared this model with the R model's facts, "
-                   "so its fact scores are hidden. Ask Person 1 to re-score it.")
+                   "so its fact scores are hidden. The answer-key holder needs to re-score it.")
     if metadata_scored:
         cols = st.columns(3)
         cols[0].metric("Fact recall vs answer key", rate(score["recall"]))
         cols[1].metric("Fact precision vs answer key", rate(score["precision"]))
         cols[2].metric("Facts missed", len(score.get("missed", [])))
-        st.caption(f"Scored by Person 1 at {scored_at}; missed: {', '.join(score.get('missed', [])) or 'none'}.")
+        st.caption(f"Scored against the private answer key at {scored_at}; missed: {', '.join(score.get('missed', [])) or 'none'}.")
     else:
-        st.caption(f"Scored by Person 1 at {scored_at}. Facts not scored for this model.")
+        st.caption(f"Scored against the private answer key at {scored_at}. Facts not scored for this model.")
     stale = score.get("report_generated_at") != report.generated_at
     if stale:  # discrepancy ids are renumbered on every run, so per-row results would land on the wrong rows
         st.warning("This score is for an earlier Discovery report, so per-row results are hidden; "
-                   "ask Person 1 to score the current one.")
+                   "the answer-key holder needs to score the current one.")
     disc = score.get("discrepancies")
     if disc is None:
         st.caption("Discrepancies not scored: the answer key has no list for this model.")
@@ -336,10 +336,10 @@ def page_discovery(model_id: str) -> None:
                 try:
                     scored = discovery_score_panel(model_id, score, report)
                 except (KeyError, TypeError, AttributeError):  # a truncated or hand-edited file must not break the page
-                    st.warning("The score file is incomplete; ask Person 1 to re-score this model.")
+                    st.warning("The score file is incomplete; the answer-key holder needs to re-score this model.")
             else:
-                st.caption("Not scored yet. Person 1 holds the answer key and runs: python -m agents.discovery_agent "
-                           f"--model-id {model_id} --score \"$MODELTRACE_ANSWER_KEY\" (a path outside the repository)")
+                st.caption("Not scored yet: the answer key is kept private, outside the repository, and its holder scores "
+                           f"each report (python -m agents.discovery_agent --model-id {model_id} --score <key path>).")
             rows = []
             for d in report.discrepancies:
                 row = {"ID": d.discrepancy_id, "Field": d.field, "Type": d.type}
@@ -395,10 +395,10 @@ def page_migration(model_id: str) -> None:
         st.info(f"{model_id} is already implemented in {record.language}; redevelopment applies to legacy R or SAS models.")
         gate_panel(model_id, "redevelop")
         return
-    st.caption("Person 1's engine runs the R glm and the Statsmodels candidate on the same split and writes the parity "
+    st.caption("The ML engine runs the R glm and the Statsmodels candidate on the same split and writes the parity "
                "report (python -m engine.pipeline).")
     MigrationAgent, missing = optional_agent("agents.migration_agent", "MigrationAgent")
-    if st.button("Run Migration Agent (Person 1)", disabled=MigrationAgent is None or not record.source_files,
+    if st.button("Run Migration Agent", disabled=MigrationAgent is None or not record.source_files,
                  key="run-migration"):
         plan = MigrationAgent().run(ROOT / record.source_files[0]).to_dict()
         st.session_state[f"migration-plan-{model_id}"] = plan
@@ -444,14 +444,14 @@ def llm_migration_panel(model_id: str) -> None:
     st.divider()
     st.subheader("LLM migration candidate")
     st.caption("The LLM writes a Python module from the R code. Code checks it, runs it in a separate process on "
-               "Person 1's shared split and compares its predictions with R's; a failed round goes back to the LLM "
-               "with what failed, up to 3 rounds. Evidence for the reviewer: the gate reads Person 1's parity report.")
+               "the shared split and compares its predictions with R's; a failed round goes back to the LLM "
+               "with what failed, up to 3 rounds. Evidence for the reviewer: the gate reads the engine's parity report.")
     inputs = default_inputs(model_id, ROOT)
     missing = inputs.missing(ROOT)
     needs = [msg for ok, msg in [
         (LLM is not None, "configure the LLM in .env"),
         (bool(record.source_files), "save the source files"),
-        (not missing, f"run Person 1's pipeline, python -m engine.pipeline (missing: {', '.join(missing)})"),
+        (not missing, f"run the ML pipeline, python -m engine.pipeline (missing: {', '.join(missing)})"),
         (WF.statuses(model_id)["redevelop"] in SUBMITTABLE, "the Redevelop stage must be open (not submitted or approved)"),
     ] if not ok]
     if st.button("Run LLM Migration Agent", type="primary", disabled=bool(needs), key="run-llm-migration"):
@@ -528,12 +528,12 @@ def page_validation(model_id: str) -> None:
     ValidationAgent, missing = optional_agent("agents.validation_agent", "ValidationAgent")
     duties = check_duties("validate", "submit", USER, WF.history(model_id))
     data, _, _ = load_display("validation", model_id)
-    if st.button("Run Validation Agent (Person 1)", disabled=ValidationAgent is None or bool(duties) or data is None,
+    if st.button("Run Validation Agent", disabled=ValidationAgent is None or bool(duties) or data is None,
                  key="run-validation"):
         summary = ValidationAgent().run(data).to_dict()
         st.session_state[f"validation-summary-{model_id}"] = summary
         WF.log_agent_run(model_id, "validate", "validation", USER, {"summary": summary["summary"]})
-    st.caption(missing or (" ".join(duties) if duties else "Summarises Person 1's measured validation report."))
+    st.caption(missing or (" ".join(duties) if duties else "Summarises the measured validation report."))
     if f"validation-summary-{model_id}" in st.session_state:
         with st.expander("Validation Agent result", expanded=False):
             st.json(st.session_state[f"validation-summary-{model_id}"])
@@ -542,7 +542,7 @@ def page_validation(model_id: str) -> None:
         legacy, _, _ = load_display("validation", PERSON1_MODEL) if model_id in PERSON1_SHAP_KEYS else (None, None, False)
         shap = person1_shap(legacy, model_id)
         if shap:
-            st.markdown("**Explainability computed in Person 1's validation run**")
+            st.markdown("**Explainability computed in the validation run**")
             bar(shap["mean_abs_shap"], "mean |SHAP|", f"Mean absolute SHAP ({shap.get('n_rows')} test rows)", key="shap-own")
         gate_panel(model_id, "validate")
         return
@@ -584,7 +584,7 @@ def page_risk() -> None:
         findings, _, is_sample = ARTIFACTS.load_for_display("risk_findings", record.model_id)
         for f in findings or []:
             rows.append({"Model": record.model_id, "ID": f.get("id"),
-                         "Source": "Person 1 risk findings" + (" (SAMPLE COPY)" if is_sample else ""),
+                         "Source": "Validation risk findings" + (" (SAMPLE COPY)" if is_sample else ""),
                          "Category": f.get("risk_category") or f.get("category"), "Severity": f.get("severity"),
                          "Description": f.get("description"), "Potential impact": f.get("impact", ""),
                          "Evidence": json.dumps(f.get("evidence"))[:300],
@@ -633,11 +633,11 @@ def page_monitoring(model_id: str) -> None:
     st.header(f"Monitoring · {record.name}")
     monitoring, path, is_sample = load_display("monitoring", model_id)
     if monitoring is None:
-        st.info(f"No monitoring report yet ({ARTIFACTS.relpath('monitoring', model_id)}, written by Person 1's engine).")
+        st.info(f"No monitoring report yet ({ARTIFACTS.relpath('monitoring', model_id)}, written by the ML engine).")
         gate_panel(model_id, "monitor")
         return
     batches = monitoring.get("batches", [])
-    table([{"batch": b.get("batch"), "Person 1 severity": b.get("severity"), "driving feature": b.get("driving_feature"),
+    table([{"batch": b.get("batch"), "severity (rule)": b.get("severity"), "driving feature": b.get("driving_feature"),
             "driving PSI": b.get("driving_feature_psi"), "prediction PSI": b.get("prediction_psi"),
             "mean predicted PD": b.get("mean_predicted_probability"),
             "share above threshold": b.get("percentage_above_threshold"), "type": b.get("diagnostic_type")}
@@ -660,7 +660,7 @@ def page_monitoring(model_id: str) -> None:
     st.subheader("Alerts")
     if is_sample:
         report = build_alert_report(model_id, monitoring, path, None)
-        st.caption("Alerts derived in memory from the copy of Person 1's report, for layout only. Review actions are disabled.")
+        st.caption("Alerts derived in memory from the sample copy of the monitoring report, for layout only. Review actions are disabled.")
     else:
         if st.button("Run Monitoring Agent", type="primary", key="run-monitoring"):
             with st.spinner("Raising and explaining alerts..."):
@@ -792,7 +792,7 @@ with st.sidebar:
                             format_func=lambda m: f"{m} · Tier {next(r.risk_tier for r in RECORDS if r.model_id == m)}")
     USER = USERS[st.selectbox("Acting as (prototype: no login)", range(len(USERS)), key="user",
                               format_func=lambda i: USERS[i].name)]
-    use_samples = st.toggle("Show sample data where Person 1's reports are missing", key="samples")
+    use_samples = st.toggle("Show sample data where engine reports are missing", key="samples")
     st.caption(LLM_STATUS)
 
 ARTIFACTS = Artifacts(ROOT, SAMPLE_ROOT if use_samples else None)
