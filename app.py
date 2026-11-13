@@ -474,6 +474,8 @@ def llm_migration_panel(model_id: str) -> None:
             "Run": a.run_error or ("ran" if a.parity else "not run"),
             "Mean abs. difference": show_value(a.parity.mae if a.parity else None),
             "Max difference": show_value(a.parity.max_probability_difference if a.parity else None),
+            "Label agreement": show_value(a.parity.label_agreement if a.parity else None),
+            "Label disagreements": show_value(a.parity.label_disagreements if a.parity else None),
             "Parity": "pass" if a.passed else "fail"} for a in report.attempts])
     st.caption(f"Isolation: {report.isolation} · {report.generated_at} · {report.review_status.replace('_', ' ')}")
     st.markdown("**R to Python terms**")

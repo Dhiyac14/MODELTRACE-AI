@@ -256,7 +256,8 @@ class MigrationCandidate(BaseModel):
 
 # --------------------------------------------------------------------------- migration (report)
 class CandidateParity(BaseModel):
-    """Same measures and pass rule as Person 1's ``r_vs_statsmodels`` block (engine/pipeline.py, run_migration)."""
+    """Same measures and pass rule as Person 1's ``r_vs_statsmodels`` block (engine/pipeline.py, run_migration):
+    probabilities within the tolerance and no label disagreements."""
     row_alignment_verified: bool
     n_rows: int
     mae: float | None = None

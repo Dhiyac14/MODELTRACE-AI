@@ -162,7 +162,8 @@ def run_candidate(code: str, train_csv: Path, test_csv: Path,
 
 # --------------------------------------------------------------------------- parity
 def compare(r_predictions: pd.DataFrame, candidate: pd.DataFrame, tolerance: float) -> CandidateParity:
-    """Person 1's rule: rows aligned, and mean and maximum probability difference within the tolerance."""
+    """Person 1's rule: rows aligned, mean and maximum probability difference within the tolerance, and every
+    classification equal to R's."""
     aligned = len(candidate) == len(r_predictions) > 0 and np.array_equal(
         candidate["row_id"].to_numpy(), r_predictions["row_id"].to_numpy())
     if not aligned:
@@ -174,7 +175,7 @@ def compare(r_predictions: pd.DataFrame, candidate: pd.DataFrame, tolerance: flo
         row_alignment_verified=True, n_rows=len(candidate), mae=mae, max_probability_difference=maximum,
         label_agreement=float(np.mean(agree)), label_disagreements=int(np.sum(~agree)), tolerance=tolerance,
         mae_pass=mae <= tolerance, max_difference_pass=maximum <= tolerance,
-        overall_pass=bool(mae <= tolerance and maximum <= tolerance),
+        overall_pass=bool(mae <= tolerance and maximum <= tolerance and np.all(agree)),
     )
 
 

@@ -143,7 +143,10 @@ def run_migration(
         "threshold": CLASSIFICATION_THRESHOLD,
         "mae_pass": mae <= tolerance,
         "max_difference_pass": maximum <= tolerance,
-        "overall_pass": bool(row_alignment_verified and mae <= tolerance and maximum <= tolerance),
+        "labels_pass": bool(np.all(r_labels == statsmodels_labels)),
+        # P8: classification agreement is part of parity, so one differing decision fails it.
+        "overall_pass": bool(row_alignment_verified and mae <= tolerance and maximum <= tolerance
+                             and np.all(r_labels == statsmodels_labels)),
     }
     return {
         "reference_model": "r_glm_binomial_logit",
