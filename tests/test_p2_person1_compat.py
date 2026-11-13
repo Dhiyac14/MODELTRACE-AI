@@ -64,6 +64,7 @@ def test_model_card_from_person1_reports(person1_root):
     metrics = {r.label: r.value for r in sections["metrics"].rows}
     assert metrics["roc_auc"] == "0.707" and metrics["recall"] == "0.2442"
     assert not any("fairlearn" in r.label or "feature_names" in r.label for r in sections["fairness"].rows + sections["explainability"].rows)
+    assert all(r.label.startswith("coefficients.") for r in sections["explainability"].rows)  # no other model's SHAP
     assert {r.label: r.value for r in sections["parity"].rows}["r_vs_statsmodels.overall_pass"] == "True"
 
 
