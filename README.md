@@ -2,7 +2,8 @@
 
 ### An agentic model risk factory that discovers, documents, redevelops, validates, and monitors a bank's models, with a human approval gate at every stage.
 
-[View the System Architecture](docs/architecture.png)
+Architecture: [View System Architecture](docs/architecture.svg).
+Process flow and use cases: [View Process Flow](docs/process_flow.svg).
 
 ---
 
