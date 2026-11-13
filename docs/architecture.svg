@@ -1,170 +1,139 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" font-family="Helvetica, Arial, sans-serif">
-  <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#4b5563"/>
-    </marker>
-    <style>
-      .title { font-size: 30px; font-weight: 700; fill: #111827; }
-      .sub { font-size: 16px; fill: #4b5563; }
-      .col { font-size: 19px; font-weight: 700; fill: #111827; }
-      .colsub { font-size: 13px; fill: #4b5563; }
-      .box { font-size: 15px; font-weight: 600; fill: #111827; }
-      .small { font-size: 12.5px; fill: #374151; }
-      .p1 { fill: #e0ecff; stroke: #2f6fdf; stroke-width: 1.5; }
-      .p2 { fill: #efe7fb; stroke: #7c4dcc; stroke-width: 1.5; }
-      .in { fill: #f3f4f6; stroke: #6b7280; stroke-width: 1.5; }
-      .llm { fill: #fff4e5; stroke: #d9822b; stroke-width: 1.5; }
-      .human { fill: #e8f6ee; stroke: #2e9d5b; stroke-width: 1.5; }
-      .frame { fill: none; stroke: #d1d5db; stroke-width: 1.5; stroke-dasharray: 6 5; }
-      .flow { stroke: #4b5563; stroke-width: 2; fill: none; marker-end: url(#arrow); }
-      .soft { stroke: #9ca3af; stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; marker-end: url(#arrow); }
-    </style>
-  </defs>
-  <rect width="1600" height="900" fill="#ffffff"/>
-
-  <text x="40" y="52" class="title">MODELTRACE AI · system architecture</text>
-  <text x="40" y="80" class="sub">Components, data flow and AI models for evidence-backed model risk management</text>
-
-  <!-- column frames -->
-  <rect x="30" y="110" width="250" height="660" rx="14" class="frame"/>
-  <rect x="300" y="110" width="400" height="660" rx="14" class="frame"/>
-  <rect x="720" y="110" width="420" height="660" rx="14" class="frame"/>
-  <rect x="1160" y="110" width="410" height="660" rx="14" class="frame"/>
-  <text x="48" y="140" class="col">Inputs</text>
-  <text x="318" y="140" class="col">ML engineering engine</text>
-  <text x="318" y="160" class="colsub">engine/ · python -m engine.pipeline</text>
-  <text x="738" y="140" class="col">Agents and LLM</text>
-  <text x="738" y="160" class="colsub">agents/ · llm/</text>
-  <text x="1178" y="140" class="col">Governance and dashboard</text>
-  <text x="1178" y="160" class="colsub">workflow/ · inventory/ · app.py</text>
-
-  <!-- inputs -->
-  <rect x="50" y="185" width="210" height="108" rx="10" class="in"/>
-  <text x="64" y="212" class="box">UCI dataset 350</text>
-  <text x="64" y="234" class="small">30,000 credit-card clients</text>
-  <text x="64" y="254" class="small">public demo data, not a</text>
-  <text x="64" y="274" class="small">UK bank portfolio</text>
-  <rect x="50" y="305" width="210" height="88" rx="10" class="in"/>
-  <text x="64" y="332" class="box">Legacy R model</text>
-  <text x="64" y="354" class="small">models/legacy_model.R</text>
-  <text x="64" y="374" class="small">glm, binomial, logit</text>
-  <rect x="50" y="405" width="210" height="88" rx="10" class="in"/>
-  <text x="64" y="432" class="box">Outdated model document</text>
-  <text x="64" y="454" class="small">models/</text>
-  <text x="64" y="474" class="small">outdated_model_document.md</text>
-  <rect x="50" y="505" width="210" height="112" rx="10" class="in"/>
-  <text x="64" y="532" class="box">AI models</text>
-  <text x="64" y="554" class="small">Legacy R logistic regression</text>
-  <text x="64" y="574" class="small">Python Gradient Boosting</text>
-  <text x="64" y="594" class="small">Python Random Forest</text>
-  <text x="64" y="654" class="small">Discovery reads the model code,</text>
-  <text x="64" y="674" class="small">engine/data.py and documentation.</text>
-
-  <!-- engine -->
-  <rect x="320" y="185" width="360" height="62" rx="10" class="p1"/>
-  <text x="336" y="212" class="box">Data preparation</text>
-  <text x="336" y="233" class="small">80/20 stratified split · SEX, AGE kept for fairness only</text>
-  <rect x="320" y="263" width="360" height="62" rx="10" class="p1"/>
-  <text x="336" y="290" class="box">R glm vs Statsmodels parity</text>
-  <text x="336" y="311" class="small">same split · tolerance 1e-5 · overall_pass</text>
-  <rect x="320" y="341" width="360" height="62" rx="10" class="p1"/>
-  <text x="336" y="368" class="box">Validation</text>
-  <text x="336" y="389" class="small">metrics · fairness by SEX and age · PSI · SHAP</text>
-  <rect x="320" y="419" width="360" height="62" rx="10" class="p1"/>
-  <text x="336" y="446" class="box">Monitoring batches</text>
-  <text x="336" y="467" class="small">baseline, moderate, strong drift · PSI per feature</text>
-  <rect x="320" y="497" width="360" height="62" rx="10" class="p1"/>
-  <text x="336" y="524" class="box">Risk findings</text>
-  <text x="336" y="545" class="small">evidence-backed register</text>
-  <rect x="320" y="585" width="360" height="160" rx="10" class="in"/>
-  <text x="336" y="612" class="box">Reports (JSON)</text>
-  <text x="336" y="636" class="small">reports/migration/migration_results.json</text>
-  <text x="336" y="656" class="small">reports/validation/validation_results.json</text>
-  <text x="336" y="676" class="small">reports/monitoring/monitoring_results.json</text>
-  <text x="336" y="696" class="small">reports/risk_findings/risk_findings_results.json</text>
-  <text x="336" y="716" class="small">+ shared split and R predictions (CSV)</text>
-  <text x="336" y="737" class="small">Migration and Validation Agents summarise these</text>
-
-  <!-- agents -->
-  <rect x="740" y="185" width="380" height="88" rx="10" class="p2"/>
-  <text x="756" y="210" class="box">Discovery Agent</text>
-  <text x="756" y="230" class="small">reads the R model, engine/data.py, old document</text>
-  <text x="756" y="250" class="small">checked line references · document vs code check</text>
-  <rect x="740" y="283" width="380" height="66" rx="10" class="p2"/>
-  <text x="756" y="308" class="box">Documentation Agent</text>
-  <text x="756" y="330" class="small">model card: figures from reports, prose by the LLM</text>
-  <rect x="740" y="359" width="380" height="88" rx="10" class="p2"/>
-  <text x="756" y="384" class="box">LLM Migration Agent</text>
-  <text x="756" y="404" class="small">the LLM writes Python from the R code; static check,</text>
-  <text x="756" y="424" class="small">sandboxed run, parity with R ≤ 1e-5, up to 3 rounds</text>
-  <rect x="740" y="457" width="380" height="66" rx="10" class="p2"/>
-  <text x="756" y="482" class="box">Monitoring Agent</text>
-  <text x="756" y="504" class="small">alerts from fixed PSI rules, explained by the LLM</text>
-  <rect x="740" y="535" width="380" height="210" rx="10" class="llm"/>
-  <text x="756" y="560" class="box">LLM: Claude Opus 5.5 (medium effort)</text>
-  <text x="756" y="581" class="small">proposes; code verifies:</text>
-  <text x="756" y="602" class="small">• every quoted line checked against the file</text>
-  <text x="756" y="623" class="small">• features, threshold, split compared in code</text>
-  <text x="756" y="644" class="small">• numbers in prose must exist in the evidence</text>
-  <text x="756" y="665" class="small">• rules set risk tier and alert severity</text>
-  <text x="756" y="686" class="small">• generated code: static check, sandbox, parity</text>
-  <text x="756" y="707" class="small">• refusals raise errors · every call logged</text>
-  <text x="756" y="734" class="small">no customer records are sent to the LLM</text>
-
-  <!-- governance -->
-  <rect x="1180" y="185" width="370" height="62" rx="10" class="human"/>
-  <text x="1196" y="212" class="box">People (pick a user, no login)</text>
-  <text x="1196" y="233" class="small">developer · validator · risk manager · monitoring analyst</text>
-  <rect x="1180" y="263" width="370" height="46" rx="10" class="p2"/>
-  <text x="1196" y="292" class="box">Streamlit dashboard · 8 sections</text>
-  <rect x="1180" y="325" width="370" height="228" rx="10" class="p2"/>
-  <text x="1196" y="352" class="box">Five-stage approval workflow</text>
-  <g font-size="14" font-weight="600" fill="#111827">
-    <rect x="1196" y="366" width="338" height="28" rx="6" fill="#ffffff" stroke="#7c4dcc"/>
-    <text x="1208" y="385">1 Discover · inventory and risk tier</text>
-    <rect x="1196" y="400" width="338" height="28" rx="6" fill="#ffffff" stroke="#7c4dcc"/>
-    <text x="1208" y="419">2 Document · model card</text>
-    <rect x="1196" y="434" width="338" height="28" rx="6" fill="#ffffff" stroke="#7c4dcc"/>
-    <text x="1208" y="453">3 Redevelop · needs parity pass</text>
-    <rect x="1196" y="468" width="338" height="28" rx="6" fill="#ffffff" stroke="#7c4dcc"/>
-    <text x="1208" y="487">4 Validate · independent of the builder</text>
-    <rect x="1196" y="502" width="338" height="28" rx="6" fill="#ffffff" stroke="#7c4dcc"/>
-    <text x="1208" y="521">5 Monitor · alert review and escalation</text>
-  </g>
-  <text x="1196" y="546" class="small">approve · reject · request changes · reopen</text>
-  <rect x="1180" y="569" width="370" height="70" rx="10" class="p2"/>
-  <text x="1196" y="596" class="box">Separation of duties</text>
-  <text x="1196" y="617" class="small">role matrix · four-eyes · no agent approvals</text>
-  <rect x="1180" y="655" width="370" height="90" rx="10" class="p2"/>
-  <text x="1196" y="682" class="box">Audit log and evidence hashes</text>
-  <text x="1196" y="703" class="small">hash-chained events · approvals bound to file hashes</text>
-  <text x="1196" y="723" class="small">SS1/23 mapping: governance/ss1_23_mapping.json</text>
-
-  <!-- flows -->
-  <path d="M260 220 C290 220 295 216 318 216" class="flow"/>
-  <path d="M260 349 C290 349 290 294 318 294" class="flow"/>
-  <path d="M500 559 L500 583" class="flow"/>
-  <path d="M680 610 C708 610 712 403 738 403" class="flow"/>
-  <path d="M680 640 C708 640 710 316 738 316" class="flow"/>
-  <path d="M680 670 C712 670 714 490 738 490" class="flow"/>
-  <path d="M930 523 L930 533" class="soft"/>
-  <path d="M1120 229 C1150 229 1150 380 1194 380" class="flow"/>
-  <path d="M1120 316 C1150 316 1155 414 1194 414" class="flow"/>
-  <path d="M1120 403 C1150 403 1155 448 1194 448" class="flow"/>
-  <path d="M1120 490 C1150 490 1155 516 1194 516" class="flow"/>
-  <path d="M500 745 L500 784 L1168 784 L1168 482 L1194 482" class="flow"/>
-  <text x="720" y="799" class="small">reports are the evidence for gates 3 to 5</text>
-  <path d="M1365 247 L1365 261" class="flow"/>
-  <path d="M1365 309 L1365 323" class="flow"/>
-
-  <!-- legend -->
-  <g transform="translate(40,818)">
-    <rect width="22" height="16" rx="3" class="p1"/><text x="30" y="13" class="small">ML engineering</text>
-    <rect x="190" width="22" height="16" rx="3" class="p2"/><text x="220" y="13" class="small">Agents, governance, application</text>
-    <rect x="490" width="22" height="16" rx="3" class="llm"/><text x="520" y="13" class="small">LLM with deterministic checks</text>
-    <rect x="750" width="22" height="16" rx="3" class="human"/><text x="780" y="13" class="small">human decisions</text>
-    <path d="M930 8 L980 8" class="flow"/><text x="990" y="13" class="small">data and evidence</text>
-    <path d="M1150 8 L1200 8" class="soft"/><text x="1210" y="13" class="small">uses</text>
-  </g>
-  <text x="40" y="872" class="small">Prototype on public data. Nothing is retrained, replaced or deployed automatically; every stage needs a human decision recorded in the audit log.</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="899" viewBox="0 0 517.7 290.9" font-family="Arial, Helvetica, sans-serif">
+<defs><marker id="ah-12324B" markerUnits="userSpaceOnUse" markerWidth="5.5" markerHeight="5.5" refX="5.2" refY="2.75" orient="auto"><path d="M0,0 L5.5,2.75 L0,5.5 z" fill="#12324B"/></marker><marker id="ah-FF5000" markerUnits="userSpaceOnUse" markerWidth="5.5" markerHeight="5.5" refX="5.2" refY="2.75" orient="auto"><path d="M0,0 L5.5,2.75 L0,5.5 z" fill="#FF5000"/></marker><marker id="ah-5B6B7A" markerUnits="userSpaceOnUse" markerWidth="5.5" markerHeight="5.5" refX="5.2" refY="2.75" orient="auto"><path d="M0,0 L5.5,2.75 L0,5.5 z" fill="#5B6B7A"/></marker></defs>
+<rect width="517.7" height="290.9" fill="#FFFFFF"/>
+<text x="8.00" y="19.00" font-size="6.2" fill="#FF5000" font-weight="bold" text-anchor="start" letter-spacing="0.6">INPUTS</text>
+<text x="8.00" y="66.00" font-size="6.2" fill="#FF5000" font-weight="bold" text-anchor="start" letter-spacing="0.6">PROCESSING</text>
+<text x="8.00" y="74.00" font-size="5.8" fill="#5B6B7A" font-weight="normal" text-anchor="start">deterministic</text>
+<text x="8.00" y="81.25" font-size="5.8" fill="#5B6B7A" font-weight="normal" text-anchor="start">engine and</text>
+<text x="8.00" y="88.50" font-size="5.8" fill="#5B6B7A" font-weight="normal" text-anchor="start">AI agents</text>
+<text x="8.00" y="179.00" font-size="6.2" fill="#FF5000" font-weight="bold" text-anchor="start" letter-spacing="0.6">EVIDENCE</text>
+<text x="8.00" y="209.00" font-size="6.2" fill="#FF5000" font-weight="bold" text-anchor="start" letter-spacing="0.6">GOVERNANCE</text>
+<text x="8.00" y="217.00" font-size="5.8" fill="#5B6B7A" font-weight="normal" text-anchor="start">human decisions</text>
+<text x="8.00" y="277.00" font-size="6.2" fill="#FF5000" font-weight="bold" text-anchor="start" letter-spacing="0.6">OUTPUTS</text>
+<rect x="70.00" y="8.00" width="103.75" height="28.00" rx="3" fill="#F4F6F8" stroke="#8FA3BD" stroke-width="0.8"/>
+<text x="76.00" y="19.50" font-size="6.8" fill="#1F2D3A" font-weight="bold" text-anchor="start">UCI credit data</text>
+<text x="76.00" y="29.50" font-size="5.8" fill="#5B6B7A" font-weight="normal" text-anchor="start">30k clients, public demo</text>
+<path d="M121.88,36.00 L121.88,44.00" fill="none" stroke="#5B6B7A" stroke-width="0.9" stroke-linejoin="round"/>
+<rect x="181.75" y="8.00" width="103.75" height="28.00" rx="3" fill="#F4F6F8" stroke="#8FA3BD" stroke-width="0.8"/>
+<text x="187.75" y="19.50" font-size="6.8" fill="#1F2D3A" font-weight="bold" text-anchor="start">Legacy R model</text>
+<text x="187.75" y="29.50" font-size="5.8" fill="#5B6B7A" font-weight="normal" text-anchor="start">glm, logit link</text>
+<path d="M233.62,36.00 L233.62,44.00" fill="none" stroke="#5B6B7A" stroke-width="0.9" stroke-linejoin="round"/>
+<rect x="293.50" y="8.00" width="103.75" height="28.00" rx="3" fill="#F4F6F8" stroke="#8FA3BD" stroke-width="0.8"/>
+<text x="299.50" y="19.50" font-size="6.8" fill="#1F2D3A" font-weight="bold" text-anchor="start">Outdated model doc</text>
+<text x="299.50" y="29.50" font-size="5.8" fill="#5B6B7A" font-weight="normal" text-anchor="start">drifted from the code</text>
+<path d="M345.38,36.00 L345.38,44.00" fill="none" stroke="#5B6B7A" stroke-width="0.9" stroke-linejoin="round"/>
+<rect x="405.25" y="8.00" width="103.75" height="28.00" rx="3" fill="#F4F6F8" stroke="#8FA3BD" stroke-width="0.8"/>
+<text x="411.25" y="19.50" font-size="6.8" fill="#1F2D3A" font-weight="bold" text-anchor="start">Python models</text>
+<text x="411.25" y="29.50" font-size="5.8" fill="#5B6B7A" font-weight="normal" text-anchor="start">Gradient Boosting + RF</text>
+<path d="M457.12,36.00 L457.12,44.00" fill="none" stroke="#5B6B7A" stroke-width="0.9" stroke-linejoin="round"/>
+<path d="M121.88,44.00 L457.12,44.00" fill="none" stroke="#5B6B7A" stroke-width="0.9" stroke-linejoin="round"/>
+<rect x="70.00" y="56.00" width="188.00" height="94.00" rx="5" fill="#E9EFF5" stroke="#35627F" stroke-width="0.9"/>
+<rect x="274.00" y="56.00" width="235.00" height="94.00" rx="5" fill="#FFFFFF" stroke="#12324B" stroke-width="0.9"/>
+<text x="77.00" y="67.00" font-size="7.4" fill="#12324B" font-weight="bold" text-anchor="start">ML engineering engine</text>
+<text x="77.00" y="75.50" font-size="5.7" fill="#5B6B7A" font-weight="normal" text-anchor="start">engine/ · deterministic Python + R</text>
+<text x="281.00" y="67.00" font-size="7.4" fill="#12324B" font-weight="bold" text-anchor="start">AI agents + LLM</text>
+<text x="281.00" y="75.50" font-size="5.7" fill="#5B6B7A" font-weight="normal" text-anchor="start">agents/ · llm/ · the LLM proposes, code verifies</text>
+<path d="M164.00,44.00 L164.00,55.40" fill="none" stroke="#5B6B7A" stroke-width="0.9" stroke-linejoin="round" marker-end="url(#ah-5B6B7A)"/>
+<path d="M391.50,44.00 L391.50,55.40" fill="none" stroke="#5B6B7A" stroke-width="0.9" stroke-linejoin="round" marker-end="url(#ah-5B6B7A)"/>
+<text x="168.00" y="52.30" font-size="5.6" fill="#5B6B7A" font-weight="normal" text-anchor="start">data + R model</text>
+<text x="395.50" y="52.30" font-size="5.6" fill="#5B6B7A" font-weight="normal" text-anchor="start">code + documents</text>
+<rect x="77.00" y="81.00" width="84.50" height="19.50" rx="3" fill="#FFFFFF" stroke="#8FA3BD" stroke-width="0.7"/>
+<text x="81.50" y="89.80" font-size="6.3" fill="#1F2D3A" font-weight="bold" text-anchor="start">Data preparation</text>
+<text x="81.50" y="97.40" font-size="5.5" fill="#5B6B7A" font-weight="normal" text-anchor="start">80/20 stratified split</text>
+<rect x="166.50" y="81.00" width="84.50" height="19.50" rx="3" fill="#FFFFFF" stroke="#8FA3BD" stroke-width="0.7"/>
+<text x="171.00" y="89.80" font-size="6.3" fill="#1F2D3A" font-weight="bold" text-anchor="start">R vs Python parity</text>
+<text x="171.00" y="97.40" font-size="5.5" fill="#5B6B7A" font-weight="normal" text-anchor="start">same split, tolerance 1e-5</text>
+<rect x="77.00" y="103.50" width="84.50" height="19.50" rx="3" fill="#FFFFFF" stroke="#8FA3BD" stroke-width="0.7"/>
+<text x="81.50" y="112.30" font-size="6.3" fill="#1F2D3A" font-weight="bold" text-anchor="start">Validation</text>
+<text x="81.50" y="119.90" font-size="5.5" fill="#5B6B7A" font-weight="normal" text-anchor="start">metrics, fairness, PSI, SHAP</text>
+<rect x="166.50" y="103.50" width="84.50" height="19.50" rx="3" fill="#FFFFFF" stroke="#8FA3BD" stroke-width="0.7"/>
+<text x="171.00" y="112.30" font-size="6.3" fill="#1F2D3A" font-weight="bold" text-anchor="start">Monitoring batches</text>
+<text x="171.00" y="119.90" font-size="5.5" fill="#5B6B7A" font-weight="normal" text-anchor="start">baseline + 2 drift batches</text>
+<rect x="77.00" y="126.00" width="84.50" height="19.50" rx="3" fill="#FFFFFF" stroke="#8FA3BD" stroke-width="0.7"/>
+<text x="81.50" y="134.80" font-size="6.3" fill="#1F2D3A" font-weight="bold" text-anchor="start">Risk findings</text>
+<text x="81.50" y="142.40" font-size="5.5" fill="#5B6B7A" font-weight="normal" text-anchor="start">evidence-backed register</text>
+<rect x="166.50" y="126.00" width="84.50" height="19.50" rx="3" fill="#FFFFFF" stroke="#8FA3BD" stroke-width="0.7"/>
+<text x="171.00" y="134.80" font-size="6.3" fill="#1F2D3A" font-weight="bold" text-anchor="start">Shared CSV split</text>
+<text x="171.00" y="142.40" font-size="5.5" fill="#5B6B7A" font-weight="normal" text-anchor="start">R predictions for parity</text>
+<rect x="281.00" y="81.00" width="62.00" height="30.00" rx="3" fill="#FFFFFF" stroke="#8FA3BD" stroke-width="0.7"/>
+<text x="285.50" y="89.80" font-size="6.3" fill="#1F2D3A" font-weight="bold" text-anchor="start">Discovery</text>
+<text x="285.50" y="97.40" font-size="5.5" fill="#5B6B7A" font-weight="normal" text-anchor="start">line-checked facts,</text>
+<text x="285.50" y="104.11" font-size="5.5" fill="#5B6B7A" font-weight="normal" text-anchor="start">doc vs code gaps</text>
+<rect x="348.00" y="81.00" width="62.00" height="30.00" rx="3" fill="#FFFFFF" stroke="#8FA3BD" stroke-width="0.7"/>
+<text x="352.50" y="89.80" font-size="6.3" fill="#1F2D3A" font-weight="bold" text-anchor="start">Documentation</text>
+<text x="352.50" y="97.40" font-size="5.5" fill="#5B6B7A" font-weight="normal" text-anchor="start">model card with</text>
+<text x="352.50" y="104.11" font-size="5.5" fill="#5B6B7A" font-weight="normal" text-anchor="start">figures from JSON</text>
+<rect x="281.00" y="115.00" width="62.00" height="30.00" rx="3" fill="#FFFFFF" stroke="#8FA3BD" stroke-width="0.7"/>
+<text x="285.50" y="123.80" font-size="6.3" fill="#1F2D3A" font-weight="bold" text-anchor="start">LLM Migration</text>
+<text x="285.50" y="131.40" font-size="5.5" fill="#5B6B7A" font-weight="normal" text-anchor="start">R → Python code,</text>
+<text x="285.50" y="138.11" font-size="5.5" fill="#5B6B7A" font-weight="normal" text-anchor="start">sandbox + parity</text>
+<rect x="348.00" y="115.00" width="62.00" height="30.00" rx="3" fill="#FFFFFF" stroke="#8FA3BD" stroke-width="0.7"/>
+<text x="352.50" y="123.80" font-size="6.3" fill="#1F2D3A" font-weight="bold" text-anchor="start">Monitoring</text>
+<text x="352.50" y="131.40" font-size="5.5" fill="#5B6B7A" font-weight="normal" text-anchor="start">explains alerts;</text>
+<text x="352.50" y="138.11" font-size="5.5" fill="#5B6B7A" font-weight="normal" text-anchor="start">rules set severity</text>
+<rect x="434.00" y="81.00" width="68.00" height="64.00" rx="3" fill="#FFF4EE" stroke="#FF5000" stroke-width="0.9"/>
+<text x="439.00" y="90.50" font-size="6.2" fill="#FF5000" font-weight="bold" text-anchor="start">LLM</text>
+<text x="439.00" y="99.50" font-size="6.3" fill="#1F2D3A" font-weight="bold" text-anchor="start">Claude Opus 5.5</text>
+<text x="439.00" y="109.50" font-size="5.4" fill="#5B6B7A" font-weight="normal" text-anchor="start">Code checks quotes,</text>
+<text x="439.00" y="116.09" font-size="5.4" fill="#5B6B7A" font-weight="normal" text-anchor="start">numbers and rules;</text>
+<text x="439.00" y="122.68" font-size="5.4" fill="#5B6B7A" font-weight="normal" text-anchor="start">it never sets a risk</text>
+<text x="439.00" y="129.26" font-size="5.4" fill="#5B6B7A" font-weight="normal" text-anchor="start">tier or alert severity</text>
+<path d="M410.50,109.50 L433.40,109.50" fill="none" stroke="#FF5000" stroke-width="1" stroke-linejoin="round" marker-end="url(#ah-FF5000)"/>
+<path d="M434.00,116.50 L410.60,116.50" fill="none" stroke="#FF5000" stroke-width="1" stroke-linejoin="round" marker-end="url(#ah-FF5000)"/>
+<text x="422.00" y="105.50" font-size="5" fill="#FF5000" font-weight="bold" text-anchor="middle">prompt</text>
+<text x="422.00" y="125.50" font-size="5" fill="#FF5000" font-weight="bold" text-anchor="middle">draft</text>
+<rect x="70.00" y="168.00" width="439.00" height="16.00" rx="4" fill="#12324B"/>
+<text x="289.50" y="178.60" font-size="7" fill="#FFFFFF" font-weight="bold" text-anchor="middle">Evidence store  ·  reports/*.json  ·  evidence hashes</text>
+<path d="M164.00,150.00 L164.00,167.40" fill="none" stroke="#12324B" stroke-width="1.1" stroke-linejoin="round" marker-end="url(#ah-12324B)"/>
+<text x="168.00" y="161.00" font-size="5.6" fill="#12324B" font-weight="normal" text-anchor="start">writes parity, metrics, PSI</text>
+<path d="M351.50,150.00 L351.50,167.40" fill="none" stroke="#12324B" stroke-width="1.1" stroke-linejoin="round" marker-end="url(#ah-12324B)"/>
+<text x="355.50" y="161.00" font-size="5.6" fill="#12324B" font-weight="normal" text-anchor="start">writes findings, cards</text>
+<path d="M431.50,168.00 L431.50,150.60" fill="none" stroke="#12324B" stroke-width="1.1" stroke-linejoin="round" marker-end="url(#ah-12324B)"/>
+<text x="435.50" y="161.00" font-size="5.6" fill="#12324B" font-weight="normal" text-anchor="start">reads reports</text>
+<rect x="70.00" y="200.00" width="70.00" height="50.00" rx="3" fill="#FFFFFF" stroke="#8FA3BD" stroke-width="0.8"/>
+<text x="75.00" y="210.00" font-size="6.6" fill="#1F2D3A" font-weight="bold" text-anchor="start">People</text>
+<text x="75.00" y="219.50" font-size="5.4" fill="#5B6B7A" font-weight="normal" text-anchor="start">developer, validator,</text>
+<text x="75.00" y="226.25" font-size="5.4" fill="#5B6B7A" font-weight="normal" text-anchor="start">analyst, risk manager</text>
+<text x="75.00" y="233.00" font-size="5.4" fill="#5B6B7A" font-weight="normal" text-anchor="start">(demo: pick a user)</text>
+<rect x="158.00" y="200.00" width="351.00" height="50.00" rx="5" fill="#FFF4EE" stroke="#F2B79A" stroke-width="0.9"/>
+<text x="165.00" y="210.50" font-size="7.2" fill="#12324B" font-weight="bold" text-anchor="start">Five-stage approval workflow</text>
+<text x="502.00" y="210.50" font-size="5.6" fill="#5B6B7A" font-weight="normal" text-anchor="end">four-eyes · agents never approve · hash-chained audit log</text>
+<path d="M140.50,226.50 L157.40,226.50" fill="none" stroke="#12324B" stroke-width="1.1" stroke-linejoin="round" marker-end="url(#ah-12324B)"/>
+<text x="149.00" y="222.50" font-size="5" fill="#12324B" font-weight="bold" text-anchor="middle">decide</text>
+<rect x="165.00" y="216.00" width="60.20" height="21.00" rx="3" fill="#FFFFFF" stroke="#FF5000" stroke-width="0.8"/>
+<text x="195.10" y="225.00" font-size="6.3" fill="#1F2D3A" font-weight="bold" text-anchor="middle">1 Discover</text>
+<text x="195.10" y="233.00" font-size="5.2" fill="#5B6B7A" font-weight="normal" text-anchor="middle">risk tier</text>
+<path d="M225.70,226.50 L233.60,226.50" fill="none" stroke="#12324B" stroke-width="1.1" stroke-linejoin="round" marker-end="url(#ah-12324B)"/>
+<rect x="234.20" y="216.00" width="60.20" height="21.00" rx="3" fill="#FFFFFF" stroke="#FF5000" stroke-width="0.8"/>
+<text x="264.30" y="225.00" font-size="6.3" fill="#1F2D3A" font-weight="bold" text-anchor="middle">2 Document</text>
+<text x="264.30" y="233.00" font-size="5.2" fill="#5B6B7A" font-weight="normal" text-anchor="middle">model card</text>
+<path d="M294.90,226.50 L302.80,226.50" fill="none" stroke="#12324B" stroke-width="1.1" stroke-linejoin="round" marker-end="url(#ah-12324B)"/>
+<rect x="303.40" y="216.00" width="60.20" height="21.00" rx="3" fill="#FFFFFF" stroke="#FF5000" stroke-width="0.8"/>
+<text x="333.50" y="225.00" font-size="6.3" fill="#1F2D3A" font-weight="bold" text-anchor="middle">3 Redevelop</text>
+<text x="333.50" y="233.00" font-size="5.2" fill="#5B6B7A" font-weight="normal" text-anchor="middle">parity must pass</text>
+<path d="M364.10,226.50 L372.00,226.50" fill="none" stroke="#12324B" stroke-width="1.1" stroke-linejoin="round" marker-end="url(#ah-12324B)"/>
+<rect x="372.60" y="216.00" width="60.20" height="21.00" rx="3" fill="#FFFFFF" stroke="#FF5000" stroke-width="0.8"/>
+<text x="402.70" y="225.00" font-size="6.3" fill="#1F2D3A" font-weight="bold" text-anchor="middle">4 Validate</text>
+<text x="402.70" y="233.00" font-size="5.2" fill="#5B6B7A" font-weight="normal" text-anchor="middle">independent reviewer</text>
+<path d="M433.30,226.50 L441.20,226.50" fill="none" stroke="#12324B" stroke-width="1.1" stroke-linejoin="round" marker-end="url(#ah-12324B)"/>
+<rect x="441.80" y="216.00" width="60.20" height="21.00" rx="3" fill="#FFFFFF" stroke="#FF5000" stroke-width="0.8"/>
+<text x="471.90" y="225.00" font-size="6.3" fill="#1F2D3A" font-weight="bold" text-anchor="middle">5 Monitor</text>
+<text x="471.90" y="233.00" font-size="5.2" fill="#5B6B7A" font-weight="normal" text-anchor="middle">alert review</text>
+<text x="165.00" y="245.50" font-size="5.5" fill="#5B6B7A" font-weight="normal" text-anchor="start">Each gate: approve, reject or request changes. Reopening a stage voids later approvals.</text>
+<path d="M333.50,184.00 L333.50,199.40" fill="none" stroke="#12324B" stroke-width="1.1" stroke-linejoin="round" marker-end="url(#ah-12324B)"/>
+<text x="337.50" y="194.00" font-size="5.6" fill="#12324B" font-weight="normal" text-anchor="start">evidence for each gate</text>
+<rect x="70.00" y="264.00" width="141.00" height="22.00" rx="3" fill="#F4F6F8" stroke="#8FA3BD" stroke-width="0.8"/>
+<text x="76.00" y="273.50" font-size="6.5" fill="#1F2D3A" font-weight="bold" text-anchor="start">Streamlit dashboard</text>
+<text x="76.00" y="281.80" font-size="5.6" fill="#5B6B7A" font-weight="normal" text-anchor="start">9 sections, approvals in-app</text>
+<path d="M140.50,256.50 L140.50,263.40" fill="none" stroke="#12324B" stroke-width="1.1" stroke-linejoin="round" marker-end="url(#ah-12324B)"/>
+<rect x="219.00" y="264.00" width="141.00" height="22.00" rx="3" fill="#F4F6F8" stroke="#8FA3BD" stroke-width="0.8"/>
+<text x="225.00" y="273.50" font-size="6.5" fill="#1F2D3A" font-weight="bold" text-anchor="start">PDF model-risk reports</text>
+<text x="225.00" y="281.80" font-size="5.6" fill="#5B6B7A" font-weight="normal" text-anchor="start">per model + portfolio</text>
+<path d="M289.50,256.50 L289.50,263.40" fill="none" stroke="#12324B" stroke-width="1.1" stroke-linejoin="round" marker-end="url(#ah-12324B)"/>
+<rect x="368.00" y="264.00" width="141.00" height="22.00" rx="3" fill="#F4F6F8" stroke="#8FA3BD" stroke-width="0.8"/>
+<text x="374.00" y="273.50" font-size="6.5" fill="#1F2D3A" font-weight="bold" text-anchor="start">MLflow export</text>
+<text x="374.00" y="281.80" font-size="5.6" fill="#5B6B7A" font-weight="normal" text-anchor="start">optional</text>
+<path d="M438.50,256.50 L438.50,263.40" fill="none" stroke="#12324B" stroke-width="1.1" stroke-linejoin="round" marker-end="url(#ah-12324B)"/>
+<path d="M333.50,250.00 L333.50,256.50" fill="none" stroke="#12324B" stroke-width="1.1" stroke-linejoin="round"/>
+<path d="M140.50,256.50 L438.50,256.50" fill="none" stroke="#12324B" stroke-width="1.1" stroke-linejoin="round"/>
 </svg>
