@@ -137,3 +137,45 @@ python -m pytest
 
 Person 2's tests are `tests/test_p2_*.py`; they run offline with fake or replayed LLM replies.
 Responsible AI note: `governance/responsible_ai.md`. AI-use declaration: `governance/ai_use_declaration.md`.
+
+## Automated PDF model-risk reports
+
+The read-only `reporting/` package turns the existing inventory, Discovery reports,
+model cards, validation, migration, monitoring, risk-finding and SS1/23 mapping
+JSON into printable A4 PDFs. It does not create metrics or alter source reports.
+Missing evidence is labelled `Not Assessed`, `Not Available` or `Not Applicable`.
+
+Install the reporting dependency with the normal project setup:
+
+```bash
+python -m pip install -e ".[dev,validation,statsmodels]"
+```
+
+Generate reports from Python:
+
+```python
+from reporting import generate_individual_report, generate_portfolio_report
+
+generate_individual_report("legacy-r-logistic")
+generate_individual_report("python-gradient-boosting")
+generate_individual_report("python-random-forest")
+generate_portfolio_report()
+```
+
+The default output directory is `reports/pdf/`. The Streamlit dashboard's
+**Model Risk Reports** section provides the same individual-model and portfolio
+generation actions and download buttons. Reports distinguish recorded approval
+(`Approved (recorded)`), `Pending Review`, `Not Assessed`, and missing evidence;
+generating a PDF never constitutes independent model approval or PRA SS1/23
+compliance.
+
+Run the focused reporting tests with:
+
+```bash
+python -m pytest tests/test_pdf_reporting.py
+```
+
+Known limitation: the sample repository contains full engine validation,
+monitoring, migration and risk evidence only for the legacy R model. The two
+Python sample models therefore show explicit missing-evidence states where
+those reports are not present.
