@@ -1,13 +1,13 @@
 # Model card: Python Random Forest (python-random-forest)
 
 Version 1.0.0 · Risk tier 3 · Review status: **pending_human_review**  
-Generated 2026-11-13T13:45:33+00:00 by Documentation Agent (LLM: claude-opus-5-5)
+Generated 2026-11-13T15:18:36+00:00 by Documentation Agent (LLM: claude-opus-5-5)
 
 > Draft for human review. Figures are copied from the cited files; no approval is implied.
 
 ## Model overview and intended purpose
 
-Python Random Forest (model_id python-random-forest) is a classifier that predicts the target default.payment.next.month using the UCI Default of Credit Card Clients dataset. Its recorded business purpose is a benchmark model for internal analysis that is not used in decisions, but this purpose was inferred rather than confirmed. The business owner, intended use, the decisions it supports, and whether it runs in production or only as a benchmark are not documented. The development data is public demonstration data on credit-card clients in Taiwan (April to September 2005) and is not representative of a UK bank's current portfolio.
+Python Random Forest (model_id: python-random-forest) is a benchmark model for internal analysis and is not used in decisions; it serves as a comparison model rather than the migration candidate. It predicts the binary target default.payment.next.month using the UCI Default of Credit Card Clients dataset (30,000 records of credit-card clients in Taiwan, payment history April to September 2005), which is public demonstration data and not representative of a UK bank's current portfolio. The business owner, intended use and decision context are not documented, and the business purpose and target variable are recorded as inferred. The model is assigned risk tier 3.
 
 ## Dataset and data provenance
 
@@ -21,17 +21,17 @@ Python Random Forest (model_id python-random-forest) is a classifier that predic
 
 ## Algorithm and methodology
 
-The model is a scikit-learn RandomForestClassifier with n_estimators=150, random_state set to a seed (default 42), n_jobs=-1 and class_weight="balanced" to handle class imbalance. Preprocessing renames the target, drops ID, removes rows with missing values on the workbook path, casts the target to int, and uses a stratified train/test split (recorded as 0.8/0.2, with the train fraction inferred). Predictors are credit limit, education, marital status, repayment status (PAY_0 to PAY_6), bill amounts and payment amounts; ID, SEX and AGE are excluded, with SEX and AGE kept only for fairness analysis, and no feature scaling is applied. The input feature list was inferred, and the tuning rationale for n_estimators=150 with other parameters at defaults is not documented.
+The model is a scikit-learn RandomForestClassifier with n_estimators=150, random_state=seed (default 42), n_jobs=-1 and class_weight="balanced" to address an expected default rate of about 22%; other hyperparameters use library defaults. It uses 21 predictors (LIMIT_BAL, EDUCATION, MARRIAGE, PAY_0 and PAY_2 to PAY_6, BILL_AMT1 to BILL_AMT6, PAY_AMT1 to PAY_AMT6), with ID, SEX and AGE excluded and SEX and AGE treated as fairness-only attributes. Preprocessing renames columns, drops ID and rows with missing values, validates the official dataset (30,000 rows, 25 columns, no missing values, default rate between 0.20 and 0.24), casts the target to int, and applies no scaling or encoding. Data is split with a stratified 80/20 train/test split (random_state=42 by default), shared with the R legacy model.
 
 ## Input features and target
 
 | Item | Value | Evidence |
 |---|---|---|
-| Target variable | default.payment.next.month | engine/data.py:L19; engine/data.py:L142 (verified) |
+| Target variable | default.payment.next.month | engine/data.py:L19; engine/data.py:L142 (inferred) |
 | Input features (21) | LIMIT_BAL, EDUCATION, MARRIAGE, PAY_0, PAY_2, PAY_3, PAY_4, PAY_5, PAY_6, BILL_AMT1, BILL_AMT2, BILL_AMT3, BILL_AMT4, BILL_AMT5, BILL_AMT6, PAY_AMT1, PAY_AMT2, PAY_AMT3, PAY_AMT4, PAY_AMT5, PAY_AMT6 | engine/data.py:L58-63; engine/models.py:L63; engine/data.py:L150-151 (inferred) |
-| Excluded columns | ID, SEX, AGE, default.payment.next.month | engine/data.py:L20-22; engine/data.py:L150; engine/data.py:L141 (verified) |
-| Preprocessing | Rename 'default payment next month' to default.payment.next.month and drop ID (workbook path), Drop rows with missing values (workbook path); the official UCI path is validated to have no missing values, Separate the target from the features and cast the target to int, Stratified train/test split with random_state=seed, Remove ID, SEX and AGE from the predictors via predictive_features, No scaling for the random forest (StandardScaler is used only in the logistic regression pipeline) | engine/data.py:L38-43; engine/data.py:L143-145; engine/models.py:L75 (verified) |
-| Train/test split | 80% train / 20% test | engine/data.py:L135-137 (inferred) |
+| Excluded columns | ID, SEX, AGE, default.payment.next.month | engine/data.py:L20-22; engine/data.py:L149-150; engine/data.py:L141 (verified) |
+| Preprocessing | Rename the source target column 'default payment next month' to 'default.payment.next.month' (load_dataset), Drop the ID column and rows with missing values (load_dataset), For the official ucimlrepo source, rename columns X1..X23 to named features, Validate the official dataset: 30,000 rows, 25 columns, no missing values, default rate between 0.20 and 0.24, Cast the target to int, Stratified train/test split with test_size=0.2 and random_state=42 by default, Drop ID, SEX and AGE from the predictors (predictive_features), No scaling or encoding is applied to the random forest inputs | engine/data.py:L38-43; engine/data.py:L64-65; engine/data.py:L103; engine/data.py:L142-145; engine/models.py:L75 (verified) |
+| Train/test split | 80% train / 20% test | engine/data.py:L136 (inferred) |
 | Decision threshold | Not determined from the code | engine/models.py:L31; engine/models.py:L21 (missing) |
 
 ## Performance metrics
@@ -75,7 +75,7 @@ _Pending: produced at the Validate stage. No figures are shown until the report 
 
 ## Limitations and assumptions
 
-The model does not use the documented 0.35 classification threshold, so its labels are not directly comparable with those of the migration candidate, and the cutoff actually applied to its outputs is not documented. Performance metrics, validation results, fairness results for SEX and age groups, and prediction PSI are not available, and no monitoring plan, monitoring thresholds, approval status, data time period or sample representativeness are documented. The model has no parameter-based identity hash because model_identity hashes only Statsmodels parameters; only its feature list is hashed. A synthetic demo dataset with reduced features may be used when the UCI data is unavailable, which would change the inputs relative to the expected 30,000-row UCI data.
+Hyperparameters are fixed with no tuning shown in the code, and the rationale for n_estimators=150 and class_weight=balanced is not documented; no operational decision threshold is documented. The model_identity hash and coefficient extraction support only the Statsmodels candidate, not this model, and if the demo fixture is used instead of the UCI data the model trains on synthetic data with only 3 predictors. Performance metrics, validation results, acceptance criteria, fairness and monitoring results, and prediction PSI are not documented (the results fields are empty). Also not documented are the production data loader, how the train fraction is set at the call site, the interpretability approach, model version, approval status, deployment and retraining schedule.
 
 ## Risk tier, approval and governance
 

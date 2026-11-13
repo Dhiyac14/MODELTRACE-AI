@@ -21,10 +21,10 @@
           "verified": true
         }
       ],
-      "note": "Inventory ID python-gradient-boosting; the code key is gradient_boosting. The fitted artifact is saved as models/artifacts/gradient_boosting.joblib (pipeline.py line 176)."
+      "note": "The code key is gradient_boosting. The inventory ID python-gradient-boosting refers to the same model."
     },
     "algorithm": {
-      "value": "scikit-learn GradientBoostingClassifier with default hyperparameters and random_state=seed (seed defaults to 42)",
+      "value": "scikit-learn GradientBoostingClassifier with default hyperparameters and random_state=seed (default seed 42)",
       "status": "verified",
       "evidence": [
         {
@@ -49,10 +49,10 @@
           "verified": true
         }
       ],
-      "note": "Only random_state is set. No other hyperparameters are specified."
+      "note": "Only random_state is set. All other hyperparameters are library defaults."
     },
     "business_purpose": {
-      "value": "Supporting comparison and challenger model for credit card default prediction (UCI Default of Credit Card Clients), used in the pipeline only for SHAP explainability alongside the logistic regression migration candidate",
+      "value": "Supporting comparison model for the logistic regression migration, used in validation for SHAP explainability of credit card default prediction.",
       "status": "inferred",
       "evidence": [
         {
@@ -77,7 +77,7 @@
           "verified": true
         }
       ],
-      "note": "Inferred from the docstring, which separates the migration target from supporting comparison models, and from the only downstream use (SHAP in run_real). No business use is stated in the code."
+      "note": "Inferred from the docstring, the model's only use in the pipeline (SHAP explainability) and the dataset name. No business purpose is stated explicitly."
     },
     "target_variable": {
       "value": "default.payment.next.month",
@@ -148,7 +148,7 @@
           "verified": true
         }
       ],
-      "note": "Features are taken dynamically as all non-target columns after removing ID, SEX and AGE. For the real UCI pipeline (run_real) this gives the 20 columns listed here. In the demo run the features would be only LIMIT_BAL, BILL_AMT1 and PAY_0 (data.py lines 130-131)."
+      "note": "Features are all dataset columns except the target, ID, SEX and AGE, so they depend on the data at runtime. The list shown is the official UCI expected_features minus SEX and AGE. In the demo path (make_demo_dataset) the features would be only LIMIT_BAL, BILL_AMT1 and PAY_0."
     },
     "excluded_columns": {
       "value": [
@@ -168,9 +168,9 @@
         },
         {
           "file": "engine/data.py",
-          "line_start": 150,
-          "line_end": 150,
-          "quote": "excluded = [column for column in (\"ID\", *SENSITIVE_FEATURES) if column in features.columns]",
+          "line_start": 148,
+          "line_end": 151,
+          "quote": "def predictive_features(features: pd.DataFrame) -> pd.DataFrame:\n    \"\"\"Remove identifiers and fairness-only attributes from model predictors.\"\"\"\n    excluded = [column for column in (\"ID\", *SENSITIVE_FEATURES) if column in features.columns]\n    return features.drop(columns=excluded)",
           "verified": true
         },
         {
@@ -181,16 +181,16 @@
           "verified": true
         }
       ],
-      "note": "ID is an identifier. SEX and AGE are fairness-only attributes. The target is removed from the features."
+      "note": "ID is an identifier. SEX and AGE are fairness-only attributes. The target is separated from the features before the split."
     },
     "preprocessing_steps": {
       "value": [
-        "Fetch UCI dataset 350 via ucimlrepo and rename generic X1..X23 columns to the expected feature names",
-        "Validate dataset: 30,000 rows, 25 columns, no missing values, default rate between 0.20 and 0.24",
-        "Separate target default.payment.next.month and cast it to int",
-        "Stratified train/test split, test_size=0.2, random_state=42",
-        "Drop ID, SEX and AGE from the predictors (predictive_features)",
-        "No scaling or encoding applied to this model (StandardScaler is used only in the logistic regression pipeline)"
+        "Fetch UCI dataset 350 via ucimlrepo and rename X1..X23 columns to the expected feature names",
+        "Validate the dataset: 30,000 rows, 25 columns, no missing values, default rate between 0.20 and 0.24",
+        "Separate the target default.payment.next.month and cast it to int",
+        "Stratified train/test split with test_size=0.2 and random_state=42",
+        "Drop ID, SEX and AGE from the predictors via predictive_features",
+        "No scaling or encoding is applied for gradient_boosting"
       ],
       "status": "verified",
       "evidence": [
@@ -210,31 +210,24 @@
         },
         {
           "file": "engine/data.py",
-          "line_start": 111,
-          "line_end": 112,
-          "quote": "if result[\"missing_value_count\"] != 0:\n        raise ValueError(f\"Official UCI dataset contains missing values: {result}\")",
-          "verified": true
-        },
-        {
-          "file": "engine/data.py",
           "line_start": 143,
           "line_end": 145,
           "quote": "return train_test_split(\n        features, target, test_size=test_size, random_state=seed, stratify=target\n    )",
           "verified": true
         },
         {
-          "file": "engine/data.py",
-          "line_start": 148,
-          "line_end": 151,
-          "quote": "def predictive_features(features: pd.DataFrame) -> pd.DataFrame:\n    \"\"\"Remove identifiers and fairness-only attributes from model predictors.\"\"\"\n    excluded = [column for column in (\"ID\", *SENSITIVE_FEATURES) if column in features.columns]\n    return features.drop(columns=excluded)",
+          "file": "engine/models.py",
+          "line_start": 71,
+          "line_end": 71,
+          "quote": "\"gradient_boosting\": GradientBoostingClassifier(random_state=seed),",
           "verified": true
         }
       ],
-      "note": ""
+      "note": "Unlike python_logistic_regression, the gradient_boosting model is not wrapped in a StandardScaler pipeline."
     },
     "train_fraction": {
       "value": 0.8,
-      "status": "verified",
+      "status": "inferred",
       "evidence": [
         {
           "file": "engine/data.py",
@@ -242,16 +235,9 @@
           "line_end": 137,
           "quote": "def prepare_data(\n    frame: pd.DataFrame, test_size: float = 0.2, seed: int = 42\n) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:",
           "verified": true
-        },
-        {
-          "file": "engine/pipeline.py",
-          "line_start": 173,
-          "line_end": 173,
-          "quote": "x_train, x_test, y_train, y_test = prepare_data(dataset)",
-          "verified": true
         }
       ],
-      "note": "The code sets test_size=0.2, so the train fraction is 0.8. The split is stratified on the target."
+      "note": "Computed as 1 - test_size, where test_size defaults to 0.2. The pipeline calls prepare_data with defaults."
     },
     "decision_threshold": {
       "value": null,
@@ -263,20 +249,27 @@
           "line_end": 31,
           "quote": "def predict(self, features: pd.DataFrame) -> np.ndarray:\n        return np.asarray(self.model.predict(features[self.feature_names]), dtype=int)",
           "verified": true
-        },
-        {
-          "file": "engine/models.py",
-          "line_start": 19,
-          "line_end": 21,
-          "quote": "# The legacy R model's decision rule (models/legacy_model.R, CLASSIFICATION_THRESHOLD). The migrated candidate,\n# its parity labels, validation, fairness and monitoring all classify with it; a test keeps the two equal.\nCLASSIFICATION_THRESHOLD = 0.35",
-          "verified": true
         }
       ],
-      "note": "CLASSIFICATION_THRESHOLD=0.35 applies to the migrated candidate, not to this model. ModelBundle.predict for gradient_boosting calls the estimator's own predict(), and the code sets no explicit threshold for it. The pipeline never produces labels from this model."
+      "note": "ModelBundle.predict delegates to the estimator's own predict method. CLASSIFICATION_THRESHOLD = 0.35 is applied only to the Statsmodels candidate and the logistic reference in migration, not to gradient_boosting. The code states no explicit threshold for this model, and its labels are never used in the pipeline."
     },
     "assumptions": [
       {
-        "value": "SEX and AGE are treated as fairness-only attributes and are not used as predictors",
+        "value": "Library default hyperparameters (number of estimators, learning rate, depth and so on) are assumed adequate, since only random_state is set.",
+        "status": "inferred",
+        "evidence": [
+          {
+            "file": "engine/models.py",
+            "line_start": 71,
+            "line_end": 71,
+            "quote": "\"gradient_boosting\": GradientBoostingClassifier(random_state=seed),",
+            "verified": true
+          }
+        ],
+        "note": "No tuning appears in the code."
+      },
+      {
+        "value": "SEX and AGE are treated as fairness-only attributes and are excluded from the predictors.",
         "status": "verified",
         "evidence": [
           {
@@ -288,89 +281,40 @@
           }
         ],
         "note": ""
-      },
-      {
-        "value": "Default GradientBoostingClassifier hyperparameters are assumed adequate; no tuning is performed",
-        "status": "inferred",
-        "evidence": [
-          {
-            "file": "engine/models.py",
-            "line_start": 71,
-            "line_end": 71,
-            "quote": "\"gradient_boosting\": GradientBoostingClassifier(random_state=seed),",
-            "verified": true
-          }
-        ],
-        "note": "Only random_state is passed, and no hyperparameter search exists in the code."
-      },
-      {
-        "value": "The model is a tree-based model suitable for SHAP TreeExplainer",
-        "status": "verified",
-        "evidence": [
-          {
-            "file": "engine/validation.py",
-            "line_start": 129,
-            "line_end": 129,
-            "quote": "explanation = shap.TreeExplainer(model).shap_values(sample)",
-            "verified": true
-          }
-        ],
-        "note": ""
       }
     ],
     "limitations": [
       {
-        "value": "The model is not evaluated for performance, fairness, stability or monitoring; those reports use the statsmodels candidate only",
+        "value": "Performance, fairness, stability and monitoring metrics are computed only for the Statsmodels candidate. For gradient_boosting, only SHAP explainability is produced.",
         "status": "verified",
         "evidence": [
           {
             "file": "engine/pipeline.py",
-            "line_start": 187,
-            "line_end": 190,
-            "quote": "validation = {\n        \"model\": candidate.name,\n        \"threshold\": CLASSIFICATION_THRESHOLD,\n        \"metrics\": performance_metrics(y_test, labels, probabilities),",
+            "line_start": 200,
+            "line_end": 202,
+            "quote": "\"gradient_boosting_shap\": shap_explainability(\n                models[\"gradient_boosting\"].model, x_test[models[\"gradient_boosting\"].feature_names]\n            ),",
             "verified": true
           }
         ],
         "note": ""
       },
       {
-        "value": "SHAP explainability is computed on only the first 500 test rows",
+        "value": "SHAP explanations use only the first 500 test rows.",
         "status": "verified",
         "evidence": [
           {
             "file": "engine/validation.py",
             "line_start": 120,
-            "line_end": 120,
-            "quote": "def shap_explainability(model: Any, features: pd.DataFrame, sample_size: int = 500) -> dict[str, Any]:",
-            "verified": true
-          },
-          {
-            "file": "engine/validation.py",
-            "line_start": 128,
             "line_end": 128,
-            "quote": "sample = features.iloc[:sample_size]",
+            "quote": "def shap_explainability(model: Any, features: pd.DataFrame, sample_size: int = 500) -> dict[str, Any]:\n    \"\"\"Generate mean absolute SHAP values for a tree-based model.\"\"\"\n    try:\n        import shap\n    except ImportError as exc:\n        raise RuntimeError(\n            \"SHAP is required for tree-model explainability; install the validation extra.\"\n        ) from exc\n    sample = features.iloc[:sample_size]",
             "verified": true
           }
         ],
         "note": ""
       },
       {
-        "value": "No class imbalance handling, unlike the random forest which uses class_weight='balanced'",
-        "status": "verified",
-        "evidence": [
-          {
-            "file": "engine/models.py",
-            "line_start": 68,
-            "line_end": 71,
-            "quote": "\"random_forest\": RandomForestClassifier(\n            n_estimators=150, random_state=seed, n_jobs=-1, class_weight=\"balanced\"\n        ),\n        \"gradient_boosting\": GradientBoostingClassifier(random_state=seed),",
-            "verified": true
-          }
-        ],
-        "note": ""
-      },
-      {
-        "value": "Training data is historical Taiwanese demonstration data; representativeness of the deployment population is unknown",
-        "status": "verified",
+        "value": "The training data is historical Taiwanese demonstration data. Deployment population representativeness and production calibration are listed as unknowns.",
+        "status": "inferred",
         "evidence": [
           {
             "file": "engine/pipeline.py",
@@ -380,49 +324,37 @@
             "verified": true
           }
         ],
-        "note": "This is stated in the model card for the logistic regression model, but it applies to the same training data used here."
+        "note": "These statements appear in the model card for python-logistic-regression. They are assumed to apply equally to gradient_boosting, which is trained on the same data."
+      },
+      {
+        "value": "In demo mode the model is trained on a synthetic dataset with only 3 predictors.",
+        "status": "verified",
+        "evidence": [
+          {
+            "file": "engine/data.py",
+            "line_start": 118,
+            "line_end": 119,
+            "quote": "def make_demo_dataset(n_samples: int = 1200, seed: int = 42) -> pd.DataFrame:\n    \"\"\"Create a deterministic local fixture when the external UCI file is unavailable.\"\"\"",
+            "verified": true
+          }
+        ],
+        "note": ""
       }
     ],
     "missing_information": [
-      "Business owner, intended use and decision context for the gradient boosting model",
-      "Decision threshold or cut-off for this model",
-      "Performance metrics (AUC, precision/recall, calibration) of the gradient boosting model",
-      "Fairness assessment of this model's outputs",
-      "Rationale for using default hyperparameters and any tuning results",
-      "Approval status, model tier and whether the model is used in production or only for comparison",
-      "Monitoring plan and thresholds specific to this model",
-      "Data time period and the sampling window of the training data",
-      "Software and library versions used for training"
+      "Model owner and intended business use or decision",
+      "Rationale for the hyperparameters and any tuning performed",
+      "Decision threshold and cut-off policy for this model",
+      "Performance metrics (AUC, accuracy and others) for gradient_boosting",
+      "Fairness and stability results for gradient_boosting",
+      "Approval status, deployment status and monitoring plan",
+      "Model version and the stored artifact hash",
+      "Data period and the representativeness of the training population"
     ]
   },
   "discrepancies": [
     {
       "discrepancy_id": "D-001",
-      "field": "other",
-      "type": "unverifiable",
-      "documented_claim": "SHAP should be installed with python -m pip install -e \".[validation]\" before running the real-data pipeline.",
-      "document_ref": {
-        "file": "models/gradient_boosting_model_document.md",
-        "line_start": 32,
-        "line_end": 34,
-        "quote": "explainability and raises a runtime error when SHAP is unavailable. Install it\nwith `python -m pip install -e \".[validation]\"` before running the real-data\npipeline. The deterministic demo path does not invoke SHAP.",
-        "verified": true
-      },
-      "code_evidence": [
-        {
-          "file": "engine/validation.py",
-          "line_start": 126,
-          "line_end": 126,
-          "quote": "            \"SHAP is required for tree-model explainability; install the validation extra.\"",
-          "verified": true
-        }
-      ],
-      "explanation": "The code only says to install the validation extra. The exact pip command and the packaging configuration are not in the listed files.",
-      "suggested_correction": "",
-      "detected_by": "llm"
-    },
-    {
-      "discrepancy_id": "D-002",
       "field": "other",
       "type": "omission",
       "documented_claim": "Not mentioned in the document.",
@@ -436,12 +368,12 @@
           "verified": true
         }
       ],
-      "explanation": "The fitted gradient boosting model is saved as an artifact in both the demo and the real pipelines. The document does not mention this.",
-      "suggested_correction": "State that the fitted model is saved to models/artifacts/gradient_boosting.joblib in both run_demo and run_real.",
+      "explanation": "The fitted gradient boosting model is saved as models/artifacts/gradient_boosting.joblib in both the demo and real pipelines. The document does not mention this.",
+      "suggested_correction": "State that the fitted model is saved to models/artifacts/gradient_boosting.joblib on every demo and real pipeline run.",
       "detected_by": "llm"
     },
     {
-      "discrepancy_id": "D-003",
+      "discrepancy_id": "D-002",
       "field": "other",
       "type": "omission",
       "documented_claim": "Not mentioned in the document.",
@@ -453,22 +385,15 @@
           "line_end": 129,
           "quote": "    sample = features.iloc[:sample_size]\n    explanation = shap.TreeExplainer(model).shap_values(sample)",
           "verified": true
-        },
-        {
-          "file": "engine/validation.py",
-          "line_start": 120,
-          "line_end": 120,
-          "quote": "def shap_explainability(model: Any, features: pd.DataFrame, sample_size: int = 500) -> dict[str, Any]:",
-          "verified": true
         }
       ],
-      "explanation": "The document does not describe how the SHAP explainability is computed. It uses TreeExplainer on the first 500 test rows and reports mean absolute SHAP values per feature.",
-      "suggested_correction": "Document that gradient boosting SHAP explainability uses shap.TreeExplainer on the first 500 rows of the test set and reports mean absolute SHAP values per feature under validation explainability as gradient_boosting_shap.",
+      "explanation": "SHAP explainability for gradient boosting is computed with TreeExplainer on only the first 500 test rows (sample_size default) and is reported as mean absolute SHAP values.",
+      "suggested_correction": "State that Gradient Boosting SHAP uses shap.TreeExplainer on the first 500 rows of the test set and reports mean absolute SHAP values per feature.",
       "detected_by": "llm"
     }
   ],
   "evidence_warnings": [],
   "llm_model": "claude-opus-5-5",
-  "generated_at": "2026-11-13T13:45:07+00:00",
+  "generated_at": "2026-11-13T15:13:12+00:00",
   "review_status": "pending_human_review"
 }

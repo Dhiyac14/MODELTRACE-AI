@@ -1,13 +1,13 @@
 # Model card: Python Gradient Boosting (python-gradient-boosting)
 
 Version 1.0.0 · Risk tier 2 · Review status: **pending_human_review**  
-Generated 2026-11-13T13:45:32+00:00 by Documentation Agent (LLM: claude-opus-5-5)
+Generated 2026-11-13T15:18:29+00:00 by Documentation Agent (LLM: claude-opus-5-5)
 
 > Draft for human review. Figures are copied from the cited files; no approval is implied.
 
 ## Model overview and intended purpose
 
-Python Gradient Boosting (python-gradient-boosting) is a credit default classifier that predicts default.payment.next.month on the UCI Default of Credit Card Clients dataset. Its business purpose is recorded as a challenger compared against the production default model that informs but does not drive decisions, but this purpose and the input feature list are marked as inferred rather than confirmed. The business owner, intended use, decision context, decision threshold and whether the model is used in production or only for comparison are not documented.
+Python Gradient Boosting (python-gradient-boosting) is a challenger model that is compared against the production default model; it informs but does not drive decisions. The business purpose shown here is inferred, and the model owner and intended business use or decision are not documented. It predicts the target default.payment.next.month using the UCI Default of Credit Card Clients dataset (30,000 records, 23 input variables), which is public demonstration data and not representative of a UK bank's current portfolio. The facts list the model as risk tier 2.
 
 ## Dataset and data provenance
 
@@ -21,7 +21,7 @@ Python Gradient Boosting (python-gradient-boosting) is a credit default classifi
 
 ## Algorithm and methodology
 
-The model is a scikit-learn GradientBoostingClassifier with default hyperparameters and random_state set to a seed that defaults to 42. It is trained on a stratified 80/20 train/test split (random_state=42) of the 30,000-record dataset, after validation checks on row count, column count, missing values and default rate. It uses 21 predictors (credit limit, education, marriage, repayment status, bill amounts and payment amounts), excluding ID, SEX and AGE, with no scaling or encoding applied. No class imbalance handling or hyperparameter tuning is performed, and the rationale for using defaults is not documented.
+The model is a scikit-learn GradientBoostingClassifier with default hyperparameters and random_state set to the seed (default 42). The data is fetched from UCI dataset 350 and checked for 30,000 rows, 25 columns, no missing values and a default rate between 0.20 and 0.24. A stratified train/test split of 80/20 is then applied with random_state=42; the train fraction is inferred. The model uses 21 predictors: LIMIT_BAL, EDUCATION, MARRIAGE, the PAY, BILL_AMT and PAY_AMT series. ID, SEX and AGE are excluded, and no scaling or encoding is applied.
 
 ## Input features and target
 
@@ -29,10 +29,10 @@ The model is a scikit-learn GradientBoostingClassifier with default hyperparamet
 |---|---|---|
 | Target variable | default.payment.next.month | engine/data.py:L19; engine/data.py:L141-142 (verified) |
 | Input features (21) | LIMIT_BAL, EDUCATION, MARRIAGE, PAY_0, PAY_2, PAY_3, PAY_4, PAY_5, PAY_6, BILL_AMT1, BILL_AMT2, BILL_AMT3, BILL_AMT4, BILL_AMT5, BILL_AMT6, PAY_AMT1, PAY_AMT2, PAY_AMT3, PAY_AMT4, PAY_AMT5, PAY_AMT6 | engine/data.py:L58-63; engine/data.py:L150-151; engine/models.py:L63 (inferred) |
-| Excluded columns | ID, SEX, AGE, default.payment.next.month | engine/data.py:L20-22; engine/data.py:L150; engine/data.py:L141 (verified) |
-| Preprocessing | Fetch UCI dataset 350 via ucimlrepo and rename generic X1..X23 columns to the expected feature names, Validate dataset: 30,000 rows, 25 columns, no missing values, default rate between 0.20 and 0.24, Separate target default.payment.next.month and cast it to int, Stratified train/test split, test_size=0.2, random_state=42, Drop ID, SEX and AGE from the predictors (predictive_features), No scaling or encoding applied to this model (StandardScaler is used only in the logistic regression pipeline) | engine/data.py:L64-65; engine/data.py:L103; engine/data.py:L111-112; engine/data.py:L143-145; engine/data.py:L148-151 (verified) |
-| Train/test split | 80% train / 20% test | engine/data.py:L135-137; engine/pipeline.py:L173 (verified) |
-| Decision threshold | Not determined from the code | engine/models.py:L30-31; engine/models.py:L19-21 (missing) |
+| Excluded columns | ID, SEX, AGE, default.payment.next.month | engine/data.py:L20-22; engine/data.py:L148-151; engine/data.py:L141 (verified) |
+| Preprocessing | Fetch UCI dataset 350 via ucimlrepo and rename X1..X23 columns to the expected feature names, Validate the dataset: 30,000 rows, 25 columns, no missing values, default rate between 0.20 and 0.24, Separate the target default.payment.next.month and cast it to int, Stratified train/test split with test_size=0.2 and random_state=42, Drop ID, SEX and AGE from the predictors via predictive_features, No scaling or encoding is applied for gradient_boosting | engine/data.py:L64-65; engine/data.py:L103; engine/data.py:L143-145; engine/models.py:L71 (verified) |
+| Train/test split | 80% train / 20% test | engine/data.py:L135-137 (inferred) |
+| Decision threshold | Not determined from the code | engine/models.py:L30-31 (missing) |
 
 ## Performance metrics
 
@@ -75,7 +75,7 @@ _Pending: produced at the Validate stage. No figures are shown until the report 
 
 ## Limitations and assumptions
 
-No performance, fairness, stability or monitoring results exist for this model; those reports cover only the statsmodels candidate, and no decision threshold is set. SHAP explanations are computed on only the first 500 test rows. The training data is public demonstration data on credit-card clients in Taiwan (April to September 2005) and is not representative of a UK bank's current portfolio. Software and library versions and a model-specific monitoring plan are not documented, and SEX and AGE are assumed to be fairness-only attributes.
+Performance, fairness, stability and monitoring metrics are computed only for the Statsmodels candidate; for this model only SHAP explainability is produced, using just the first 500 test rows. The decision threshold, hyperparameter rationale or tuning, model version, artifact hash, approval, deployment and monitoring status are not documented. The training data is historical Taiwanese data (April to September 2005), and deployment population representativeness and production calibration are unknown. The model assumes the library default hyperparameters are adequate and treats SEX and AGE as fairness-only attributes, and in demo mode it is trained on a synthetic dataset with only 3 predictors.
 
 ## Risk tier, approval and governance
 
@@ -97,6 +97,5 @@ Compared with models/gradient_boosting_model_document.md.
 
 | Item | Value | Evidence |
 |---|---|---|
-| D-001 other (unverifiable) | Document: SHAP should be installed with python -m pip install -e ".[validation]" before running the real-data pipeline. Correction:  | engine/validation.py:L126 |
-| D-002 other (omission) | Document: Not mentioned in the document. Correction: State that the fitted model is saved to models/artifacts/gradient_boosting.joblib in both run_demo and run_real. | engine/pipeline.py:L175-176 |
-| D-003 other (omission) | Document: Not mentioned in the document. Correction: Document that gradient boosting SHAP explainability uses shap.TreeExplainer on the first 500 rows of the test set and reports mean absolute SHAP values per feature under validation explainability as gradient_boosting_shap. | engine/validation.py:L128-129; engine/validation.py:L120 |
+| D-001 other (omission) | Document: Not mentioned in the document. Correction: State that the fitted model is saved to models/artifacts/gradient_boosting.joblib on every demo and real pipeline run. | engine/pipeline.py:L175-176 |
+| D-002 other (omission) | Document: Not mentioned in the document. Correction: State that Gradient Boosting SHAP uses shap.TreeExplainer on the first 500 rows of the test set and reports mean absolute SHAP values per feature. | engine/validation.py:L128-129 |
