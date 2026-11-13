@@ -754,7 +754,7 @@
         },
         {
           "label": "D-005 preprocessing (contradiction)",
-          "value": "Document: All numeric predictors are standardized to zero mean and unit variance before fitting. Correction: ",
+          "value": "Document: All numeric predictors are standardized to zero mean and unit variance before fitting. Correction: Rewrite the claim to match the code: The code does not scale or standardize anything. The raw columns read from the CSV go straight into glm.",
           "source": "models/legacy_model.R:L19-21"
         },
         {

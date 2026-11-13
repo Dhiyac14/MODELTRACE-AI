@@ -463,7 +463,7 @@
         }
       ],
       "explanation": "The code does not scale or standardize anything. The raw columns read from the CSV go straight into glm.",
-      "suggested_correction": "",
+      "suggested_correction": "Rewrite the claim to match the code: The code does not scale or standardize anything. The raw columns read from the CSV go straight into glm.",
       "detected_by": "llm"
     },
     {
