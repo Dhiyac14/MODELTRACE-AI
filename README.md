@@ -8,6 +8,8 @@
 
 [▶ Watch MODELTRACE AI – Project Demonstration](https://drive.google.com/file/d/1Xy5f7FgsODnLROSPzcXega5wFj3Mr7_f/view?usp=sharing)
 
+[📄 View MODELTRACE AI – PDF Reports](https://drive.google.com/drive/folders/176JaRgH9wxkG0bNtzXlF9dck8KA2yTFK?usp=sharing)
+
 **System architecture**
 
 ![MODELTRACE AI system architecture](docs/architecture.svg)
