@@ -6,12 +6,12 @@
     "severity": "high",
     "description": "The migrated logistic model has low positive-class recall.",
     "evidence": {
-      "recall": 0.24415975885455915
+      "recall": 0.41220798794272795
     },
     "impact": "Defaults may be missed by the model.",
     "remediation": "Review threshold, class weighting, and calibration with an independent validator.",
     "review_status": "open",
-    "model_hash": "43afdbfaef44dd0093f0efdacf0c90b1266681e64d116452f189c184042ecfa0"
+    "model_hash": "f88138e5870d139409a76918ee9568aade8e84166629b1d1c3e5e6a793e8672f"
   },
   {
     "id": "age-group-selection-diagnostic",
@@ -20,31 +20,31 @@
     "severity": "review",
     "description": "Age-group selection rates differ and require human assessment; this is not a legal conclusion.",
     "evidence": {
-      "disparate_impact": 0.7670089858793324,
+      "disparate_impact": 0.7657846870414837,
       "by_group": {
         "30_44": {
           "count": 3002,
-          "selection_rate": 0.0709526982011992,
-          "true_positive_rate": 0.2334384858044164,
-          "false_positive_rate": 0.027449324324324325
+          "selection_rate": 0.13657561625582945,
+          "true_positive_rate": 0.3832807570977918,
+          "false_positive_rate": 0.07052364864864864
         },
         "45_59": {
           "count": 1010,
-          "selection_rate": 0.08415841584158416,
-          "true_positive_rate": 0.24691358024691357,
-          "false_positive_rate": 0.03259452411994785
+          "selection_rate": 0.15841584158415842,
+          "true_positive_rate": 0.3950617283950617,
+          "false_positive_rate": 0.08344198174706649
         },
         "60_plus": {
           "count": 76,
-          "selection_rate": 0.06578947368421052,
-          "true_positive_rate": 0.13043478260869565,
-          "false_positive_rate": 0.03773584905660377
+          "selection_rate": 0.17105263157894737,
+          "true_positive_rate": 0.34782608695652173,
+          "false_positive_rate": 0.09433962264150944
         },
         "under_30": {
           "count": 1912,
-          "selection_rate": 0.08577405857740586,
-          "true_positive_rate": 0.2646370023419204,
-          "false_positive_rate": 0.03434343434343434
+          "selection_rate": 0.17834728033472802,
+          "true_positive_rate": 0.468384074941452,
+          "false_positive_rate": 0.09494949494949495
         }
       },
       "sixty_plus_sample_size": 76,
@@ -53,7 +53,7 @@
     "impact": "Some age groups may receive fewer positive predictions.",
     "remediation": "Conduct documented human fairness review; do not treat disparate impact as a definitive breach.",
     "review_status": "open",
-    "model_hash": "43afdbfaef44dd0093f0efdacf0c90b1266681e64d116452f189c184042ecfa0"
+    "model_hash": "f88138e5870d139409a76918ee9568aade8e84166629b1d1c3e5e6a793e8672f"
   },
   {
     "id": "sex-selection-diagnostic",
@@ -62,27 +62,27 @@
     "severity": "review",
     "description": "SEX disparate impact is recorded as a diagnostic for human assessment.",
     "evidence": {
-      "disparate_impact": 0.906982554842477,
+      "disparate_impact": 0.902015114418952,
       "by_group": {
         "1": {
           "count": 2402,
-          "selection_rate": 0.08243130724396336,
-          "true_positive_rate": 0.24064171122994651,
-          "false_positive_rate": 0.034220532319391636
+          "selection_rate": 0.16361365528726063,
+          "true_positive_rate": 0.40998217468805703,
+          "false_positive_rate": 0.08853883758826725
         },
         "2": {
           "count": 3598,
-          "selection_rate": 0.07476375764313507,
-          "true_positive_rate": 0.24673629242819844,
-          "false_positive_rate": 0.02824858757062147
+          "selection_rate": 0.14758198999444136,
+          "true_positive_rate": 0.41383812010443866,
+          "false_positive_rate": 0.07556497175141243
         }
       },
-      "interpretation": "A ratio of 0.907 is a diagnostic and is not treated as an automatic regulatory breach."
+      "interpretation": "A ratio of 0.902 is a diagnostic and is not treated as an automatic regulatory breach."
     },
     "impact": "Selection-rate differences may warrant additional fairness review.",
     "remediation": "Review group outcomes, context, and applicable policy with a human assessor.",
     "review_status": "open",
-    "model_hash": "43afdbfaef44dd0093f0efdacf0c90b1266681e64d116452f189c184042ecfa0"
+    "model_hash": "f88138e5870d139409a76918ee9568aade8e84166629b1d1c3e5e6a793e8672f"
   },
   {
     "id": "migration-parity-control",
@@ -93,24 +93,25 @@
     "evidence": {
       "parity": {
         "row_alignment_verified": true,
-        "mae": 9.442906431675003e-09,
-        "mean_probability_difference": 9.442906431675003e-09,
+        "mae": 9.442906423768011e-09,
+        "mean_probability_difference": 9.442906423768011e-09,
         "max_probability_difference": 3.6460883068301086e-07,
         "prediction_correlation": 0.9999999999999907,
         "classification_agreement": 1.0,
         "label_agreement": 1.0,
         "label_disagreements": 0,
         "tolerance": 1e-05,
-        "threshold": 0.5,
+        "threshold": 0.35,
         "mae_pass": true,
         "max_difference_pass": true,
+        "labels_pass": true,
         "overall_pass": true
       }
     },
     "impact": "A failed parity result could change production decisions.",
     "remediation": "Require review of row-level differences before migration approval.",
     "review_status": "open",
-    "model_hash": "43afdbfaef44dd0093f0efdacf0c90b1266681e64d116452f189c184042ecfa0"
+    "model_hash": "f88138e5870d139409a76918ee9568aade8e84166629b1d1c3e5e6a793e8672f"
   },
   {
     "id": "monitoring-002-drift",
@@ -128,7 +129,7 @@
     "impact": "Observed drift may invalidate model assumptions.",
     "remediation": "Investigate the affected batch and obtain human approval before escalation.",
     "review_status": "open",
-    "model_hash": "43afdbfaef44dd0093f0efdacf0c90b1266681e64d116452f189c184042ecfa0"
+    "model_hash": "f88138e5870d139409a76918ee9568aade8e84166629b1d1c3e5e6a793e8672f"
   },
   {
     "id": "monitoring-003-drift",
@@ -146,7 +147,7 @@
     "impact": "Observed drift may invalidate model assumptions.",
     "remediation": "Investigate the affected batch and obtain human approval before escalation.",
     "review_status": "open",
-    "model_hash": "43afdbfaef44dd0093f0efdacf0c90b1266681e64d116452f189c184042ecfa0"
+    "model_hash": "f88138e5870d139409a76918ee9568aade8e84166629b1d1c3e5e6a793e8672f"
   },
   {
     "id": "model-explainability-evidence",
@@ -156,27 +157,27 @@
     "description": "Measured coefficient and SHAP evidence is available for reviewer assessment.",
     "evidence": {
       "coefficients": {
-        "LIMIT_BAL": -9.683667107703592e-07,
-        "EDUCATION": -0.10787526557505624,
-        "MARRIAGE": -0.18998757776960018,
+        "LIMIT_BAL": -9.683667107703596e-07,
+        "EDUCATION": -0.10787526557505615,
+        "MARRIAGE": -0.1899875777696001,
         "PAY_0": 0.588782071176077,
-        "PAY_2": 0.07800697158696093,
-        "PAY_3": 0.08164254001151454,
-        "PAY_4": 0.05378131838140297,
-        "PAY_5": -0.0011991635859085763,
-        "PAY_6": 0.014380911287800809,
-        "BILL_AMT1": -4.3505306164871975e-06,
-        "BILL_AMT2": 1.5435427586899647e-06,
-        "BILL_AMT3": 4.990186015298472e-07,
-        "BILL_AMT4": 7.186735795254949e-07,
-        "BILL_AMT5": 4.405338561470856e-07,
-        "BILL_AMT6": -1.0136090511710603e-07,
-        "PAY_AMT1": -1.252080067946659e-05,
-        "PAY_AMT2": -8.790111302299805e-06,
-        "PAY_AMT3": -1.899050086206e-06,
-        "PAY_AMT4": -2.47958010666555e-06,
-        "PAY_AMT5": -1.4551748816835606e-06,
-        "PAY_AMT6": -1.7128893788456054e-06
+        "PAY_2": 0.07800697158696096,
+        "PAY_3": 0.0816425400115145,
+        "PAY_4": 0.053781318381403015,
+        "PAY_5": -0.0011991635859086365,
+        "PAY_6": 0.0143809112878008,
+        "BILL_AMT1": -4.350530616487186e-06,
+        "BILL_AMT2": 1.5435427586899482e-06,
+        "BILL_AMT3": 4.990186015298499e-07,
+        "BILL_AMT4": 7.186735795254914e-07,
+        "BILL_AMT5": 4.4053385614709177e-07,
+        "BILL_AMT6": -1.0136090511710669e-07,
+        "PAY_AMT1": -1.2520800679466571e-05,
+        "PAY_AMT2": -8.790111302299807e-06,
+        "PAY_AMT3": -1.8990500862060005e-06,
+        "PAY_AMT4": -2.479580106665556e-06,
+        "PAY_AMT5": -1.4551748816835614e-06,
+        "PAY_AMT6": -1.7128893788456035e-06
       },
       "shap": {
         "random_forest_shap": {
@@ -205,27 +206,27 @@
             "PAY_AMT6"
           ],
           "mean_abs_shap": {
-            "LIMIT_BAL": 0.032804048033819956,
-            "EDUCATION": 0.004633355126179236,
-            "MARRIAGE": 0.005555428623768087,
-            "PAY_0": 0.07968037237331263,
-            "PAY_2": 0.03883460345113437,
-            "PAY_3": 0.02383546599220289,
-            "PAY_4": 0.01707475136621155,
-            "PAY_5": 0.014858568415785292,
-            "PAY_6": 0.012109560310088375,
-            "BILL_AMT1": 0.018836414885460846,
-            "BILL_AMT2": 0.013836743172349304,
-            "BILL_AMT3": 0.011928274790347608,
-            "BILL_AMT4": 0.01072029718173536,
-            "BILL_AMT5": 0.01071294660449604,
-            "BILL_AMT6": 0.011432784586467267,
-            "PAY_AMT1": 0.01995321293486825,
-            "PAY_AMT2": 0.01923422343307955,
-            "PAY_AMT3": 0.018776856580759015,
-            "PAY_AMT4": 0.012891101113937995,
-            "PAY_AMT5": 0.011800934418291002,
-            "PAY_AMT6": 0.013461431923984033
+            "LIMIT_BAL": 0.032800645874171974,
+            "EDUCATION": 0.004669529626684052,
+            "MARRIAGE": 0.005663897369846762,
+            "PAY_0": 0.08002331306325439,
+            "PAY_2": 0.03900146204368609,
+            "PAY_3": 0.02388286529365021,
+            "PAY_4": 0.017149223654603304,
+            "PAY_5": 0.01482067300599262,
+            "PAY_6": 0.011916972756002397,
+            "BILL_AMT1": 0.01912477139329711,
+            "BILL_AMT2": 0.01348202898508615,
+            "BILL_AMT3": 0.01244097370438669,
+            "BILL_AMT4": 0.010617235041798588,
+            "BILL_AMT5": 0.010387088965587184,
+            "BILL_AMT6": 0.011375448176694647,
+            "PAY_AMT1": 0.019534779702405795,
+            "PAY_AMT2": 0.019141337838113278,
+            "PAY_AMT3": 0.018915900216641333,
+            "PAY_AMT4": 0.012892816125557302,
+            "PAY_AMT5": 0.011732903588424505,
+            "PAY_AMT6": 0.013510578888707695
           }
         },
         "gradient_boosting_shap": {
@@ -254,27 +255,27 @@
             "PAY_AMT6"
           ],
           "mean_abs_shap": {
-            "LIMIT_BAL": 0.18622718463800078,
-            "EDUCATION": 0.012674330756206368,
-            "MARRIAGE": 0.051064537404155265,
+            "LIMIT_BAL": 0.18622383106728518,
+            "EDUCATION": 0.012674330756206366,
+            "MARRIAGE": 0.05106453740415528,
             "PAY_0": 0.4707503253922949,
             "PAY_2": 0.10876817574449882,
             "PAY_3": 0.08845230383315425,
-            "PAY_4": 0.05160508077806575,
-            "PAY_5": 0.04946530861328144,
-            "PAY_6": 0.06112959467141733,
-            "BILL_AMT1": 0.10815219100025932,
-            "BILL_AMT2": 0.037966353062714335,
+            "PAY_4": 0.051605080778065734,
+            "PAY_5": 0.049459092080217766,
+            "PAY_6": 0.06112959467141734,
+            "BILL_AMT1": 0.1081521910002593,
+            "BILL_AMT2": 0.03796635306271433,
             "BILL_AMT3": 0.023352861751722447,
             "BILL_AMT4": 0.007740910020205028,
-            "BILL_AMT5": 0.014517357576710733,
-            "BILL_AMT6": 0.029696669875558725,
-            "PAY_AMT1": 0.07995611417771598,
-            "PAY_AMT2": 0.08618964450630591,
-            "PAY_AMT3": 0.08524954990301276,
+            "BILL_AMT5": 0.01452110293501914,
+            "BILL_AMT6": 0.02969666987555872,
+            "PAY_AMT1": 0.07995611417771596,
+            "PAY_AMT2": 0.08618964450630592,
+            "PAY_AMT3": 0.08524508592760983,
             "PAY_AMT4": 0.0373935868261435,
             "PAY_AMT5": 0.03195518013407703,
-            "PAY_AMT6": 0.05500690457223539
+            "PAY_AMT6": 0.055006904572235386
           }
         }
       }
@@ -282,6 +283,6 @@
     "impact": "Unreviewed model behavior can limit effective challenge.",
     "remediation": "Review coefficient direction and SHAP feature importance before deployment.",
     "review_status": "open",
-    "model_hash": "43afdbfaef44dd0093f0efdacf0c90b1266681e64d116452f189c184042ecfa0"
+    "model_hash": "f88138e5870d139409a76918ee9568aade8e84166629b1d1c3e5e6a793e8672f"
   }
 ]

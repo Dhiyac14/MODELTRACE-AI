@@ -1,28 +1,29 @@
 {
   "reference_model": "r_glm_binomial_logit",
   "candidate_model": "statsmodels_logistic_regression",
-  "model_hash": "43afdbfaef44dd0093f0efdacf0c90b1266681e64d116452f189c184042ecfa0",
+  "model_hash": "f88138e5870d139409a76918ee9568aade8e84166629b1d1c3e5e6a793e8672f",
   "n_rows": 6000,
   "r_vs_statsmodels": {
     "row_alignment_verified": true,
-    "mae": 9.442906431675003e-09,
-    "mean_probability_difference": 9.442906431675003e-09,
+    "mae": 9.442906423768011e-09,
+    "mean_probability_difference": 9.442906423768011e-09,
     "max_probability_difference": 3.6460883068301086e-07,
     "prediction_correlation": 0.9999999999999907,
     "classification_agreement": 1.0,
     "label_agreement": 1.0,
     "label_disagreements": 0,
     "tolerance": 1e-05,
-    "threshold": 0.5,
+    "threshold": 0.35,
     "mae_pass": true,
     "max_difference_pass": true,
+    "labels_pass": true,
     "overall_pass": true
   },
   "r_vs_python": {
-    "label_agreement": 1.0,
-    "label_disagreements": 0,
-    "max_probability_difference": 0.00737442914480857,
-    "mean_probability_difference": 0.00023386936189338092
+    "label_agreement": 0.9998333333333334,
+    "label_disagreements": 1,
+    "max_probability_difference": 0.007374429144603012,
+    "mean_probability_difference": 0.000233869361919917
   },
   "shared_train_csv": "data/processed/train.csv",
   "shared_test_csv": "data/processed/test.csv",

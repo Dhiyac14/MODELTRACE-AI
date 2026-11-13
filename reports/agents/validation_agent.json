@@ -12,25 +12,25 @@
           "source": "<mapping>",
           "claim": "Measured validation metric: accuracy",
           "excerpt": null,
-          "value": 0.809
+          "value": 0.8071666666666667
         },
         {
           "source": "<mapping>",
           "claim": "Measured validation metric: precision",
           "excerpt": null,
-          "value": 0.6937901498929336
+          "value": 0.591991341991342
         },
         {
           "source": "<mapping>",
           "claim": "Measured validation metric: recall",
           "excerpt": null,
-          "value": 0.24415975885455915
+          "value": 0.41220798794272795
         },
         {
           "source": "<mapping>",
           "claim": "Measured validation metric: f1",
           "excerpt": null,
-          "value": 0.3612040133779264
+          "value": 0.48600621945801864
         },
         {
           "source": "<mapping>",
@@ -54,21 +54,21 @@
           "source": "<mapping>",
           "claim": "Measured validation metric: specificity",
           "excerpt": null,
-          "value": 0.9693986732291889
+          "value": 0.9193237748769527
         }
       ],
       "severity": "info"
     }
   ],
   "metrics": {
-    "accuracy": 0.809,
-    "precision": 0.6937901498929336,
-    "recall": 0.24415975885455915,
-    "f1": 0.3612040133779264,
+    "accuracy": 0.8071666666666667,
+    "precision": 0.591991341991342,
+    "recall": 0.41220798794272795,
+    "f1": 0.48600621945801864,
     "roc_auc": 0.7069738437118362,
     "pr_auc": 0.49540701679156546,
     "brier": 0.1467338961000436,
-    "specificity": 0.9693986732291889
+    "specificity": 0.9193237748769527
   },
   "recommendations": [],
   "evidence": [
@@ -76,25 +76,25 @@
       "source": "<mapping>",
       "claim": "Measured validation metric: accuracy",
       "excerpt": null,
-      "value": 0.809
+      "value": 0.8071666666666667
     },
     {
       "source": "<mapping>",
       "claim": "Measured validation metric: precision",
       "excerpt": null,
-      "value": 0.6937901498929336
+      "value": 0.591991341991342
     },
     {
       "source": "<mapping>",
       "claim": "Measured validation metric: recall",
       "excerpt": null,
-      "value": 0.24415975885455915
+      "value": 0.41220798794272795
     },
     {
       "source": "<mapping>",
       "claim": "Measured validation metric: f1",
       "excerpt": null,
-      "value": 0.3612040133779264
+      "value": 0.48600621945801864
     },
     {
       "source": "<mapping>",
@@ -118,7 +118,7 @@
       "source": "<mapping>",
       "claim": "Measured validation metric: specificity",
       "excerpt": null,
-      "value": 0.9693986732291889
+      "value": 0.9193237748769527
     }
   ]
 }

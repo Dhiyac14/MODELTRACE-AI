@@ -9,19 +9,19 @@
       "claim": "Steps are included only when their legacy contract is observed.",
       "evidence": [
         {
-          "source": "models\\legacy_model.R",
+          "source": "models/legacy_model.R",
           "claim": "Migration step supported by source text",
           "excerpt": "Reproduce the legacy GLM training contract.",
           "value": null
         },
         {
-          "source": "models\\legacy_model.R",
+          "source": "models/legacy_model.R",
           "claim": "Migration step supported by source text",
           "excerpt": "Preserve the logit link.",
           "value": null
         },
         {
-          "source": "models\\legacy_model.R",
+          "source": "models/legacy_model.R",
           "claim": "Migration step supported by source text",
           "excerpt": "Align the target column before comparison.",
           "value": null
@@ -38,19 +38,19 @@
   ],
   "evidence": [
     {
-      "source": "models\\legacy_model.R",
+      "source": "models/legacy_model.R",
       "claim": "Migration step supported by source text",
       "excerpt": "Reproduce the legacy GLM training contract.",
       "value": null
     },
     {
-      "source": "models\\legacy_model.R",
+      "source": "models/legacy_model.R",
       "claim": "Migration step supported by source text",
       "excerpt": "Preserve the logit link.",
       "value": null
     },
     {
-      "source": "models\\legacy_model.R",
+      "source": "models/legacy_model.R",
       "claim": "Migration step supported by source text",
       "excerpt": "Align the target column before comparison.",
       "value": null
