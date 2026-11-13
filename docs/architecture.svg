@@ -22,8 +22,8 @@
   </defs>
   <rect width="1600" height="900" fill="#ffffff"/>
 
-  <text x="40" y="52" class="title">MODELTRACE AI · architecture</text>
-  <text x="40" y="80" class="sub">Agentic model risk factory: discover, document, redevelop, validate and monitor credit models, with a human approval gate at every stage</text>
+  <text x="40" y="52" class="title">MODELTRACE AI · system architecture</text>
+  <text x="40" y="80" class="sub">Components, data flow and AI models for evidence-backed model risk management</text>
 
   <!-- column frames -->
   <rect x="30" y="110" width="250" height="660" rx="14" class="frame"/>
@@ -31,11 +31,11 @@
   <rect x="720" y="110" width="420" height="660" rx="14" class="frame"/>
   <rect x="1160" y="110" width="410" height="660" rx="14" class="frame"/>
   <text x="48" y="140" class="col">Inputs</text>
-  <text x="318" y="140" class="col">ML engine · Person 1</text>
+  <text x="318" y="140" class="col">ML engineering engine</text>
   <text x="318" y="160" class="colsub">engine/ · python -m engine.pipeline</text>
-  <text x="738" y="140" class="col">Agents and LLM · Person 2</text>
+  <text x="738" y="140" class="col">Agents and LLM</text>
   <text x="738" y="160" class="colsub">agents/ · llm/</text>
-  <text x="1178" y="140" class="col">Governance and dashboard · Person 2</text>
+  <text x="1178" y="140" class="col">Governance and dashboard</text>
   <text x="1178" y="160" class="colsub">workflow/ · inventory/ · app.py</text>
 
   <!-- inputs -->
@@ -52,9 +52,13 @@
   <text x="64" y="432" class="box">Outdated model document</text>
   <text x="64" y="454" class="small">models/</text>
   <text x="64" y="474" class="small">outdated_model_document.md</text>
-  <text x="64" y="530" class="small">The Discovery Agent reads</text>
-  <text x="64" y="550" class="small">the R model, engine/data.py</text>
-  <text x="64" y="570" class="small">and this document.</text>
+  <rect x="50" y="505" width="210" height="112" rx="10" class="in"/>
+  <text x="64" y="532" class="box">AI models</text>
+  <text x="64" y="554" class="small">Legacy R logistic regression</text>
+  <text x="64" y="574" class="small">Python Gradient Boosting</text>
+  <text x="64" y="594" class="small">Python Random Forest</text>
+  <text x="64" y="654" class="small">Discovery reads the model code,</text>
+  <text x="64" y="674" class="small">engine/data.py and documentation.</text>
 
   <!-- engine -->
   <rect x="320" y="185" width="360" height="62" rx="10" class="p1"/>
@@ -155,12 +159,12 @@
 
   <!-- legend -->
   <g transform="translate(40,818)">
-    <rect width="22" height="16" rx="3" class="p1"/><text x="30" y="13" class="small">Person 1 (ML engineering)</text>
-    <rect x="240" width="22" height="16" rx="3" class="p2"/><text x="270" y="13" class="small">Person 2 (agents, governance, application)</text>
-    <rect x="560" width="22" height="16" rx="3" class="llm"/><text x="590" y="13" class="small">LLM with deterministic checks</text>
-    <rect x="820" width="22" height="16" rx="3" class="human"/><text x="850" y="13" class="small">human decisions</text>
-    <path d="M1010 8 L1060 8" class="flow"/><text x="1070" y="13" class="small">data and evidence</text>
-    <path d="M1230 8 L1280 8" class="soft"/><text x="1290" y="13" class="small">uses</text>
+    <rect width="22" height="16" rx="3" class="p1"/><text x="30" y="13" class="small">ML engineering</text>
+    <rect x="190" width="22" height="16" rx="3" class="p2"/><text x="220" y="13" class="small">Agents, governance, application</text>
+    <rect x="490" width="22" height="16" rx="3" class="llm"/><text x="520" y="13" class="small">LLM with deterministic checks</text>
+    <rect x="750" width="22" height="16" rx="3" class="human"/><text x="780" y="13" class="small">human decisions</text>
+    <path d="M930 8 L980 8" class="flow"/><text x="990" y="13" class="small">data and evidence</text>
+    <path d="M1150 8 L1200 8" class="soft"/><text x="1210" y="13" class="small">uses</text>
   </g>
   <text x="40" y="872" class="small">Prototype on public data. Nothing is retrained, replaced or deployed automatically; every stage needs a human decision recorded in the audit log.</text>
 </svg>
