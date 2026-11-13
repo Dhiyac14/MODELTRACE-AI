@@ -25,6 +25,15 @@ Rules:
 - missing_information: what a model document must contain that the code cannot tell us."""
 
 
+def model_scope(model_hint: str | None, model_id: str, code_name: str | None = None) -> str | None:
+    """What the metadata and claim-check prompts are told about the model: the hint and, when the code names
+    the model differently from the inventory, that both names belong to the same model."""
+    if code_name is None:
+        return model_hint
+    identity = f"inventory ID {model_id}, which the code names {code_name}: two names for one model, not separate models"
+    return f"{model_hint}; {identity}" if model_hint else identity
+
+
 def discovery_user(code_listing: str, model_hint: str | None = None) -> str:
     scope = (f"Describe this model only: {model_hint}. Other models defined in the same files are out of scope.\n\n"
              if model_hint else "")
@@ -54,6 +63,7 @@ For each claim choose a verdict:
 - contradiction: the code shows something different. Cite the code lines that show it.
 - unverifiable: the listed files can neither confirm nor refute it, for example statements about
   past events, people or processes that the code does not record.
+When the model's inventory ID and the name its code uses are both given, either name identifies the model.
 
 Then list omissions: important behaviour in the code that the document does not mention at all.
 Do not report input features, the decision threshold or the train/test split; those are checked separately.
@@ -62,8 +72,11 @@ Do not report input features, the decision threshold or the train/test split; th
 suggested_correction: what the document should say instead, based only on the code. Do not invent facts."""
 
 
-def claim_check_user(claims_json: str, code_listing: str) -> str:
-    return f"Document claims (JSON):\n{claims_json}\n\nSource code:\n\n{code_listing}"
+def claim_check_user(claims_json: str, code_listing: str, model_hint: str | None = None) -> str:
+    """``model_hint`` is the same scope the metadata prompt gets (``model_scope``)."""
+    scope = (f"The document describes this model: {model_hint}. Other models defined in the same files are out of "
+             "scope.\n\n" if model_hint else "")
+    return f"{scope}Document claims (JSON):\n{claims_json}\n\nSource code:\n\n{code_listing}"
 
 
 # --------------------------------------------------------------------------- documentation

@@ -31,6 +31,9 @@ PERSON1_REPORTS = {
 # SHAP results that Person 1's validation run computes for the supporting models, stored inside the legacy
 # model's report. Only these blocks belong to those models; the report's metrics belong to the migrated model.
 PERSON1_SHAP_KEYS = {"python-random-forest": "random_forest_shap", "python-gradient-boosting": "gradient_boosting_shap"}
+# The name engine/models.py gives each supporting model (its train_python_models key and ModelBundle name). The
+# inventory ID stays the canonical one; this is the same model's implementation identifier, not another model.
+PERSON1_BUNDLE_NAMES = {"python-random-forest": "random_forest", "python-gradient-boosting": "gradient_boosting"}
 PYTHON_CANDIDATE_SOURCE = "engine/models.py"  # Person 1's Statsmodels candidate (train_statsmodels_logistic)
 STAGE_EVIDENCE = {
     "discover": "discovery",

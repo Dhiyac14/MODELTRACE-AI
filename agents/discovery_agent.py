@@ -5,7 +5,9 @@
 3. If an existing model document is given, the LLM lists its claims (also verified against the document).
 4. Feature list, decision threshold and split ratio are compared in Python.
 5. The LLM judges the remaining free-text claims; its code citations are verified, and a
-   contradiction without verified code evidence is downgraded to "unverifiable".
+   contradiction without verified code evidence is downgraded to "unverifiable". Both LLM steps that read the
+   code get the same model scope, including the model's inventory ID and code name when they differ; a model
+   name contradiction between those two names is not reported.
 
 Usage:
     python -m agents.discovery_agent --model-id legacy-r-logistic \\
@@ -32,6 +34,7 @@ from llm.prompts import (
     claim_check_user,
     discovery_user,
     doc_claims_user,
+    model_scope,
 )
 from llm.schemas import (
     MECHANICAL_FIELDS,
@@ -52,7 +55,7 @@ from llm.schemas import (
 )
 
 from inventory.registry import get_record, load_inventory
-from workflow.artifacts import PERSON1_MODEL
+from workflow.artifacts import PERSON1_BUNDLE_NAMES, PERSON1_MODEL
 
 from ._common import read_source
 
@@ -180,7 +183,21 @@ def verify_claims(claims: DocumentClaims, doc: Sources) -> tuple[DocumentClaims,
     return claims.model_copy(update=update), frozenset(skip), warnings
 
 
-def assess_free_text(check: ClaimCheck, claims: DocumentClaims, sources: Sources, warnings: list[str]) -> list[Discrepancy]:
+def model_names(model_id: str) -> frozenset[str]:
+    """The model's inventory ID and, if it has one, the name its code gives it (``PERSON1_BUNDLE_NAMES``)."""
+    return frozenset({model_id, PERSON1_BUNDLE_NAMES.get(model_id, model_id)})
+
+
+def _names_one_of(text: str, names: frozenset[str]) -> bool:
+    """``text`` contains one of ``names`` as a whole identifier (gradient_boosting, not gradient_boosting_shap)."""
+    return any(re.search(rf"(?<![\w-]){re.escape(name)}(?![\w-])", text) for name in names)
+
+
+def assess_free_text(check: ClaimCheck, claims: DocumentClaims, sources: Sources, warnings: list[str],
+                     same_model: frozenset[str] = frozenset()) -> list[Discrepancy]:
+    """``same_model`` holds the names of the model under review (``model_names``). A model_name contradiction whose
+    claim and code evidence each use one of them only says the document and the code name the model differently,
+    so it is not reported (a warning records it)."""
     by_id = {c.claim_id: c for c in claims.other_claims}
     assessed = set()
     out: list[Discrepancy] = []
@@ -197,6 +214,11 @@ def assess_free_text(check: ClaimCheck, claims: DocumentClaims, sources: Sources
         if verdict == "contradiction" and not evidence:
             verdict = "unverifiable"
             explanation += " (Downgraded from contradiction: the cited code could not be verified.)"
+        if (verdict == "contradiction" and claim.field == "model_name" and _names_one_of(claim.statement, same_model)
+                and any(_names_one_of(ref.quote, same_model) for ref in evidence)):
+            warnings.append(f"claim {a.claim_id} (model_name) not reported: the document and the code use names of "
+                            f"the same model ({', '.join(sorted(same_model))}).")
+            continue
         out.append(Discrepancy(
             discrepancy_id="", field=claim.field, type=verdict, documented_claim=claim.statement,
             document_ref=claim.doc_ref, code_evidence=evidence, explanation=explanation,
@@ -227,10 +249,12 @@ def run_discovery(
     legacy_doc_path: str | Path | None = None,
     model_hint: str | None = None,
 ) -> DiscoveryReport:
-    """``model_hint`` names the model to describe when the source files define several (e.g. engine/models.py)."""
+    """``model_hint`` names the model to describe when the source files define several (e.g. engine/models.py).
+    The metadata and claim-check prompts get the same scope: the hint plus, when registered, the model's code name."""
     sources = load_sources(source_paths)
     listing = render_listing(sources)
-    raw = llm.structured(DISCOVERY_SYSTEM, discovery_user(listing, model_hint), ModelMetadata)
+    scope = model_scope(model_hint, model_id, PERSON1_BUNDLE_NAMES.get(model_id))
+    raw = llm.structured(DISCOVERY_SYSTEM, discovery_user(listing, scope), ModelMetadata)
     metadata, warnings = verify_facts(raw, sources)
 
     discrepancies: list[Discrepancy] = []
@@ -244,8 +268,8 @@ def run_discovery(
         discrepancies += compare_mechanical(metadata, claims, skip)
         if claims.other_claims:
             claims_json = json.dumps([c.model_dump(include={"claim_id", "field", "statement"}) for c in claims.other_claims], indent=1)
-            check = llm.structured(CLAIM_CHECK_SYSTEM, claim_check_user(claims_json, listing), ClaimCheck)
-            discrepancies += assess_free_text(check, claims, sources, warnings)
+            check = llm.structured(CLAIM_CHECK_SYSTEM, claim_check_user(claims_json, listing, scope), ClaimCheck)
+            discrepancies += assess_free_text(check, claims, sources, warnings, model_names(model_id))
 
     numbered = [d.model_copy(update={"discrepancy_id": f"D-{i:03d}"}) for i, d in enumerate(discrepancies, start=1)]
     return DiscoveryReport(

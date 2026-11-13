@@ -3,8 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from agents.discovery_agent import assess_free_text, compare_mechanical, run_discovery, save_report
+from agents.discovery_agent import assess_free_text, compare_mechanical, model_names, run_discovery, save_report
 from llm.client import ReplayLLM
+from llm.prompts import model_scope
 from llm.schemas import (
     ClaimAssessment,
     ClaimCheck,
@@ -176,3 +177,74 @@ def test_model_hint_scopes_the_prompt():
     llm = Capture(f"{FIX}/replay_lr")
     run_discovery("python-random-forest", SOURCES, llm, model_hint="Python Random Forest (RandomForestClassifier)")
     assert llm.last_user.startswith("Describe this model only: Python Random Forest")
+
+
+# --------------------------------------------------------------------------- model identity
+GB = "python-gradient-boosting"
+GB_HINT = "Python Gradient Boosting (Gradient Boosting classifier (scikit-learn))"
+# The engine/models.py lines the live claim check cited for its false model_name contradiction (D-001 in 0f7039f).
+GB_CODE = [
+    "    models = {",
+    '        "gradient_boosting": GradientBoostingClassifier(random_state=seed),',
+    "    }",
+    "    for name, model in models.items():",
+    "        bundles[name] = ModelBundle(name, model, list(model_features.columns))",
+]
+
+
+class Scripted:
+    """Gives one fixed reply per schema and keeps the prompt each step was sent."""
+
+    model = "scripted"
+
+    def __init__(self, **replies):
+        self.replies, self.prompts = replies, {}
+
+    def structured(self, system, user, schema):
+        self.prompts[schema.__name__] = user
+        return self.replies[schema.__name__]
+
+
+def run_gb(tmp_path, documented_name):
+    """Discovery for the GB model whose document names it ``documented_name``; the claim check returns the
+    verdict of that live run: a contradiction citing the code's "gradient_boosting" lines."""
+    code, doc = tmp_path / "models.py", tmp_path / "doc.md"
+    code.write_text("\n".join(GB_CODE) + "\n")
+    line = f"This is the challenger model identified as `{documented_name}`."
+    doc.write_text(line + "\n")
+    claim = DocClaim(claim_id="C1", field="model_name",
+                     statement=f"The model is a challenger model identified as {documented_name}.",
+                     doc_ref=SourceRef(file=str(doc), line_start=1, line_end=1, quote=line))
+    cited = [SourceRef(file=str(code), line_start=n, line_end=n, quote=GB_CODE[n - 1]) for n in (2, 5)]
+    verdict = ClaimAssessment(claim_id="C1", verdict="contradiction", code_evidence=cited,
+                              explanation=f'The code names the model "gradient_boosting"; {documented_name} does not appear.')
+    llm = Scripted(ModelMetadata=metadata(), DocumentClaims=DocumentClaims(other_claims=[claim]),
+                   ClaimCheck=ClaimCheck(assessments=[verdict]))
+    return run_discovery(GB, [str(code)], llm, str(doc), GB_HINT), llm
+
+
+def test_inventory_id_and_bundle_name_are_not_a_model_name_discrepancy(tmp_path):
+    assert model_names(GB) == {"python-gradient-boosting", "gradient_boosting"}
+    report, _ = run_gb(tmp_path, GB)
+    assert [d for d in report.discrepancies if d.field == "model_name"] == []
+    assert report.evidence_warnings == ["claim C1 (model_name) not reported: the document and the code use names of "
+                                        "the same model (gradient_boosting, python-gradient-boosting)."]
+
+
+def test_an_unregistered_model_name_is_still_a_contradiction(tmp_path):
+    report, _ = run_gb(tmp_path, "credit-boost-v2")
+    assert [(d.field, d.type) for d in report.discrepancies] == [("model_name", "contradiction")]
+    assert report.evidence_warnings == []
+
+
+def test_claim_check_gets_the_same_model_scope_as_metadata_extraction(tmp_path):
+    _, llm = run_gb(tmp_path, GB)
+    scope = model_scope(GB_HINT, GB, "gradient_boosting")
+    assert "inventory ID python-gradient-boosting, which the code names gradient_boosting" in scope
+    assert llm.prompts["ModelMetadata"].startswith(f"Describe this model only: {scope}.")
+    assert llm.prompts["ClaimCheck"].startswith(f"The document describes this model: {scope}.")
+
+
+def test_a_model_without_a_code_name_keeps_its_hint():
+    assert model_scope("Legacy R Logistic Regression", "legacy-r-logistic") == "Legacy R Logistic Regression"
+    assert model_names("legacy-r-logistic") == {"legacy-r-logistic"}
