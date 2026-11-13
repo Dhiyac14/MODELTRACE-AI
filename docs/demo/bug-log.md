@@ -7,6 +7,17 @@ references: **Brief** = *EXL Data & AI Hackathon 2026*, Challenge 04 and p. 13; 
 Each entry is **recorded only**: nothing has been fixed. Evidence (clips, frames) lives outside the repository
 in `~/Movies/app-video/2026-11-13-modeltrace-mrm/` and is referenced by clip and time.
 
+## Status after the fixes of 13 November (branch `fix/bug-hunt-findings`, on `f9126ef`)
+
+| Entry | Status |
+|---|---|
+| 1 threshold, 2 parity labels, 3 comments, 6 card SHAP, 8 card gate status, 9 impact, 10 missing document, 12 validation result, 13 "Person 1", 14 fairness groups, 15 charts, 17 alert collapse, 19 duplicate uploads, 20 tier wording, 21 card wait | Fixed, with tests; evidence regenerated on the final code |
+| 7 Gradient Boosting control | Inventory fixed in `4dc80a2`; regenerated report has no contradiction, but 1 unverifiable (the install instruction added to the document cannot be checked in the code) and 2 omissions |
+| 4 score not shown | Open: needs the answer-key holder to score the regenerated reports and commit the score files |
+| 5 target rule | Not changed; the regenerated report finds all five planted contradictions, but the target is still judged by the LLM |
+| 11 moderate batch rated high | By design (plan multipliers); the scenario is now named next to its severity |
+| 16 cut-off columns, 18 silent second window, 22 small issues | Partly (code evidence column moved forward); the rest left as polish |
+
 ## Run of 13 November 2026: Morgan, model risk lead
 
 Build `530337a`, run from a copy of the repository (`MODELTRACE_ROOT`), real Claude Opus 5.5 at medium effort
