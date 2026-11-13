@@ -314,6 +314,17 @@ def _names_one_of(text: str, names: frozenset[str]) -> bool:
     )
 
 
+def _correction(suggested: str, verdict: str, explanation: str) -> str:
+    """The LLM's correction, or a rule-based one when it left it empty, so every finding says what to change."""
+    if suggested.strip():
+        return suggested
+    if verdict == "unverifiable":
+        return "Confirm this claim against the model code or remove it."
+    if verdict == "omission":
+        return f"Add to the document: {explanation}"
+    return f"Rewrite the claim to match the code: {explanation}"
+
+
 def assess_free_text(check: ClaimCheck, claims: DocumentClaims, sources: Sources, warnings: list[str],
                      same_model: frozenset[str] = frozenset()) -> list[Discrepancy]:
     """``same_model`` holds the names of the model under review (``model_names``). A model_name contradiction whose
@@ -343,7 +354,7 @@ def assess_free_text(check: ClaimCheck, claims: DocumentClaims, sources: Sources
         out.append(Discrepancy(
             discrepancy_id="", field=claim.field, type=verdict, documented_claim=claim.statement,
             document_ref=claim.doc_ref, code_evidence=evidence, explanation=explanation,
-            suggested_correction=a.suggested_correction, detected_by="llm",
+            suggested_correction=_correction(a.suggested_correction, verdict, a.explanation), detected_by="llm",
         ))
     for claim_id in sorted(by_id.keys() - assessed):
         warnings.append(f"claim {claim_id} was not assessed by the LLM; review it manually.")
@@ -356,7 +367,8 @@ def assess_free_text(check: ClaimCheck, claims: DocumentClaims, sources: Sources
             continue
         out.append(Discrepancy(
             discrepancy_id="", field=o.field, type="omission", documented_claim="Not mentioned in the document.",
-            code_evidence=evidence, explanation=o.explanation, suggested_correction=o.suggested_correction,
+            code_evidence=evidence, explanation=o.explanation,
+            suggested_correction=_correction(o.suggested_correction, "omission", o.explanation),
             detected_by="llm",
         ))
     return out

@@ -216,6 +216,24 @@ def test_contradiction_without_verified_evidence_is_downgraded():
     assert "Downgraded" in result[0].explanation
 
 
+def test_every_finding_says_what_to_change():
+    # The LLM may leave the correction empty; the card would then print "Correction:" with nothing after it.
+    real = SourceRef(file="model.R", line_start=1, line_end=1, quote="y ~ a + b")
+    bogus = SourceRef(file="model.R", line_start=1, line_end=1, quote="not in the file")
+    check = ClaimCheck(
+        assessments=[
+            ClaimAssessment(claim_id="C1", verdict="contradiction", code_evidence=[real], explanation="The target is y."),
+            ClaimAssessment(claim_id="C2", verdict="contradiction", code_evidence=[bogus], explanation="Not owned."),
+        ],
+        omissions=[OmissionFinding(field="preprocessing", code_evidence=[real], explanation="No scaling.",
+                                   suggested_correction="")],
+    )
+    result = {d.field: d.suggested_correction for d in assess_free_text(check, CLAIMS, CODE, [])}
+    assert result == {"target_variable": "Rewrite the claim to match the code: The target is y.",
+                      "ownership": "Confirm this claim against the model code or remove it.",
+                      "preprocessing": "Add to the document: No scaling."}
+
+
 def test_unassessed_claim_is_flagged_and_unsupported_omission_dropped():
     check = ClaimCheck(
         assessments=[ClaimAssessment(claim_id="C1", verdict="consistent", explanation="ok")],
