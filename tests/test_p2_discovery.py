@@ -214,8 +214,9 @@ def run_gb(tmp_path, documented_name):
     doc.write_text(line + "\n")
     claim = DocClaim(claim_id="C1", field="model_name",
                      statement=f"The model is a challenger model identified as {documented_name}.",
-                     doc_ref=SourceRef(file=str(doc), line_start=1, line_end=1, quote=line))
-    cited = [SourceRef(file=str(code), line_start=n, line_end=n, quote=GB_CODE[n - 1]) for n in (2, 5)]
+                     doc_ref=SourceRef(file=doc.as_posix(), line_start=1, line_end=1, quote=line))
+    # Cite files as the listing names them (as_posix), like the LLM does; str() has backslashes on Windows.
+    cited = [SourceRef(file=code.as_posix(), line_start=n, line_end=n, quote=GB_CODE[n - 1]) for n in (2, 5)]
     verdict = ClaimAssessment(claim_id="C1", verdict="contradiction", code_evidence=cited,
                               explanation=f'The code names the model "gradient_boosting"; {documented_name} does not appear.')
     llm = Scripted(ModelMetadata=metadata(), DocumentClaims=DocumentClaims(other_claims=[claim]),
