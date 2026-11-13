@@ -2,10 +2,15 @@
 
 ### An agentic model risk factory that discovers, documents, redevelops, validates, and monitors a bank's models, with a human approval gate at every stage.
 
-Architecture: [View System Architecture](docs/architecture.svg).
-Process flow and use cases: [View Process Flow](docs/process_flow.svg).
-
 **Jump to:** [Problem](#the-problem) · [Solution](#what-modeltrace-ai-does) · [Results](#headline-results) · [Architecture](#system-architecture) · [Agents](#ai-agents-governance-and-dashboard) · [Reports](#automated-pdf-model-risk-reports) · [Quick Start](#quick-start) · [CLI](#command-line-agent-usage) · [Limitations](#known-limitations-and-scope)
+
+**System architecture**
+
+![MODELTRACE AI system architecture](docs/architecture.svg)
+
+**Process flow and use cases**
+
+![MODELTRACE AI process flow and use cases](docs/process_flow.svg)
 
 ### Contents
 
