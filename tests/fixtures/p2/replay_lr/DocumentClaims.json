@@ -1,4 +1,5 @@
 {
+  "target_variable": null,
   "input_features": {"value": ["LIMIT_BAL", "SEX", "EDUCATION", "MARRIAGE", "PAY_0", "PAY_2", "PAY_3", "PAY_4", "PAY_5", "PAY_6",
       "BILL_AMT1", "BILL_AMT2", "BILL_AMT3", "BILL_AMT4", "BILL_AMT5", "BILL_AMT6", "PAY_AMT1", "PAY_AMT2", "PAY_AMT3"],
     "ref": {"file": "tests/fixtures/p2/lr_doc_outdated_dev.md", "line_start": 15, "line_end": 15, "quote": "LIMIT_BAL, SEX, EDUCATION, MARRIAGE, PAY_0, PAY_2 to PAY_6"}},

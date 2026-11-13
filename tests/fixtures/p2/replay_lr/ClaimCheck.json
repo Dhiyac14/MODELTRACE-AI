@@ -2,8 +2,6 @@
   "assessments": [
     {"claim_id": "C1", "verdict": "consistent", "explanation": "The code predicts default probabilities and refers accounts above the cut-off.",
      "code_evidence": [{"file": "tests/fixtures/p2/legacy_lr_model.R", "line_start": 21, "line_end": 21, "quote": "Accounts with a predicted default probability above the cut-off are referred for review."}]},
-    {"claim_id": "C2", "verdict": "consistent", "explanation": "The model target is default.payment.next.month.",
-     "code_evidence": [{"file": "tests/fixtures/p2/legacy_lr_model.R", "line_start": 12, "line_end": 12, "quote": "default.payment.next.month ~"}]},
     {"claim_id": "C3", "verdict": "contradiction", "explanation": "LIMIT_BAL enters the formula untransformed; no log transform appears in the code.",
      "code_evidence": [{"file": "tests/fixtures/p2/legacy_lr_model.R", "line_start": 12, "line_end": 12, "quote": "default.payment.next.month ~ LIMIT_BAL + EDUCATION + MARRIAGE"}],
      "suggested_correction": "State that LIMIT_BAL enters the model untransformed."},

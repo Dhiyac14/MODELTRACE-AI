@@ -102,7 +102,7 @@ def test_approval_wording_is_flagged(discovery, record):
 def test_replayed_card_has_no_warnings(discovery, record):
     card = build_model_card(discovery, record, llm=ReplayLLM(f"{FIX}/replay_lr"))
     assert card.grounding_warnings == []
-    assert len(section(card, "corrections").rows) == len(discovery.discrepancies) == 9
+    assert len(section(card, "corrections").rows) == len(discovery.discrepancies) == 10
     governance = {r.label: r.value for r in section(card, "governance").rows}
     assert governance["Risk tier"] == "Tier 1" and governance["Approval records"] == "None recorded"
 
@@ -122,7 +122,7 @@ def test_markdown_and_files(tmp_path, discovery, record):
     json_path, md_path = save_model_card(card, reports_root=tmp_path, cards_dir=tmp_path / "cards")
     assert json_path.exists() and md_path.name == "legacy-r-logistic.md"
     markdown = render_markdown(card)
-    assert "**pending_human_review**" in markdown and "| D-001 input_features (contradiction) |" in markdown
+    assert "**pending_human_review**" in markdown and "| D-001 target_variable (omission) |" in markdown
 
 
 def test_card_without_legacy_document(record):

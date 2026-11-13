@@ -36,7 +36,9 @@ DiscrepancyField = Literal[
     "other",
 ]
 # Compared in Python by the Discovery Agent, never judged by the LLM.
-MECHANICAL_FIELDS: frozenset[str] = frozenset({"input_features", "decision_threshold", "train_test_split"})
+MECHANICAL_FIELDS: frozenset[str] = frozenset(
+    {"target_variable", "input_features", "decision_threshold", "train_test_split"}
+)
 
 
 def utc_now() -> str:
@@ -103,6 +105,9 @@ class DocClaim(BaseModel):
 
 
 class DocumentClaims(BaseModel):
+    target_variable: Documented[str] | None = Field(
+        default=None, description="The response or target column name, exactly as stated. Null if not stated."
+    )
     input_features: Documented[list[str]] | None = Field(
         default=None, description="Predictors the document lists, expanded into single names. Null if not stated."
     )

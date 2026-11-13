@@ -41,6 +41,7 @@ def test_planted_discrepancies_are_found(report):
     assert found == sorted([
         ("input_features", "contradiction", "rule"),      # SEX documented, excluded in code
         ("input_features", "omission", "rule"),           # PAY_AMT4-6 undocumented
+        ("target_variable", "omission", "rule"),           # prose describes defaults but names no target column
         ("decision_threshold", "contradiction", "rule"),  # 0.40 vs 0.35
         ("train_test_split", "contradiction", "rule"),    # 75/25 vs 80/20
         ("preprocessing", "contradiction", "llm"),        # log transform not in code
@@ -49,7 +50,7 @@ def test_planted_discrepancies_are_found(report):
         ("validation_history", "unverifiable", "llm"),
         ("other", "unverifiable", "llm"),
     ])
-    assert [d.discrepancy_id for d in report.discrepancies] == [f"D-{i:03d}" for i in range(1, 10)]
+    assert [d.discrepancy_id for d in report.discrepancies] == [f"D-{i:03d}" for i in range(1, 11)]
 
 
 def test_documented_but_excluded_feature_cites_the_exclusion(report):
@@ -135,6 +136,64 @@ def test_no_code_evidence_is_unverifiable():
 def test_skipped_field_is_not_compared():
     md = metadata(decision_threshold=Fact(value=0.3, status="verified"))
     assert compare_mechanical(md, DocumentClaims(), skip=frozenset({"decision_threshold"})) == []
+
+
+def target_sources(*lines):
+    return {"data.py": list(lines)}
+
+
+def test_target_aliases_from_a_rename_are_not_a_contradiction():
+    sources = target_sources(
+        'TARGET = "dataset_target"',
+        "target = frame[TARGET]",
+        'train["target"] = y_train',
+    )
+    claims = DocumentClaims(target_variable=documented("dataset_target"))
+    assert compare_mechanical(metadata(), claims, sources=sources) == []
+
+
+def test_exact_target_match_has_no_discrepancy():
+    sources = target_sources("target ~ feature_a")
+    claims = DocumentClaims(target_variable=documented("target"))
+    assert compare_mechanical(metadata(), claims, sources=sources) == []
+
+
+def test_missing_target_claim_is_an_omission():
+    sources = target_sources("target ~ feature_a")
+    result = compare_mechanical(metadata(), DocumentClaims(), sources=sources)
+    assert [(d.field, d.type, d.detected_by) for d in result] == [
+        ("target_variable", "omission", "rule")
+    ]
+
+
+def test_incorrect_target_claim_is_a_deterministic_contradiction():
+    sources = target_sources(
+        'TARGET = "dataset_target"',
+        "target = frame[TARGET]",
+        'train["target"] = y_train',
+    )
+    claims = DocumentClaims(target_variable=documented("other_target"))
+    result = compare_mechanical(metadata(), claims, sources=sources)
+    assert [(d.field, d.type, d.detected_by) for d in result] == [
+        ("target_variable", "contradiction", "rule")
+    ]
+
+
+def test_ambiguous_target_evidence_does_not_fabricate_a_contradiction():
+    sources = target_sources("first_target ~ feature_a", "second_target ~ feature_b")
+    claims = DocumentClaims(target_variable=documented("other_target"))
+    assert compare_mechanical(metadata(), claims, sources=sources) == []
+
+
+def test_conceptual_default_description_is_not_a_target_contradiction(report):
+    target_findings = [d for d in report.discrepancies if d.field == "target_variable"]
+    assert [(d.type, d.detected_by) for d in target_findings] == [("omission", "rule")]
+
+
+def test_unrelated_target_constant_does_not_create_a_lineage():
+    sources = target_sources('TARGET = "dataset_target"', "response ~ feature_a", "frame[TARGET]")
+    claims = DocumentClaims(target_variable=documented("response"))
+    assert compare_mechanical(metadata(), claims, sources=sources) == []
 
 
 # --------------------------------------------------------------------------- free-text guards
@@ -260,12 +319,17 @@ def run_legacy(tmp_path, documented_name):
     code, doc = tmp_path / "legacy_model.R", tmp_path / "legacy_doc.md"
     code.write_text("# Reference implementation for the legacy production model.\nlegacy_model <- glm(target ~ x)\n")
     line = f"# {documented_name}\n"
-    doc.write_text(line)
+    target_line = "# Target: target\n"
+    doc.write_text(line + target_line)
     claim = DocClaim(
         claim_id="C1",
         field="model_name",
         statement=f"The model is called {documented_name}.",
         doc_ref=SourceRef(file=doc.as_posix(), line_start=1, line_end=1, quote=line.rstrip()),
+    )
+    target_claim = Documented(
+        value="target",
+        ref=SourceRef(file=doc.as_posix(), line_start=2, line_end=2, quote=target_line.rstrip()),
     )
     cited = [SourceRef(file=code.as_posix(), line_start=1, line_end=1, quote=code.read_text().splitlines()[0])]
     verdict = ClaimAssessment(
@@ -276,7 +340,7 @@ def run_legacy(tmp_path, documented_name):
     )
     llm = Scripted(
         ModelMetadata=metadata(),
-        DocumentClaims=DocumentClaims(other_claims=[claim]),
+        DocumentClaims=DocumentClaims(target_variable=target_claim, other_claims=[claim]),
         ClaimCheck=ClaimCheck(assessments=[verdict]),
     )
     return run_discovery(
