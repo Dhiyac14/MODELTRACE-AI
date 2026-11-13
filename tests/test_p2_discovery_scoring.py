@@ -11,7 +11,7 @@ from llm.schemas import Discrepancy, DiscoveryReport, SourceRef
 
 ROOT = Path(__file__).resolve().parents[1]
 R_FILE = "models/legacy_model.R"
-THRESHOLD = "prediction <- as.integer(probability >= 0.5)"  # line 23
+THRESHOLD = "prediction <- as.integer(probability >= CLASSIFICATION_THRESHOLD)"  # line 24
 EXCLUDED = 'feature_names <- setdiff(names(train), c("row_id", "target", "SEX", "AGE", "ID"))'  # line 19
 SECRET = "SECRET-DESCRIPTION"  # stands in for the key's free text, which must never reach the score
 
@@ -21,7 +21,7 @@ def at_repo_root(monkeypatch):
     monkeypatch.chdir(ROOT)
 
 
-def finding(did, field, type_, quote=None, line=23):
+def finding(did, field, type_, quote=None, line=24):
     refs = [SourceRef(file=R_FILE, line_start=line, line_end=line, quote=quote, verified=True)] if quote else []
     return Discrepancy(discrepancy_id=did, field=field, type=type_, documented_claim="claim", code_evidence=refs,
                        explanation="why", suggested_correction="fix", detected_by="rule")
@@ -98,7 +98,8 @@ def test_detected_without_resolved_evidence_is_counted_apart(quote, status):
 def test_evidence_must_resolve_in_the_current_code():
     r = report(finding("D-001", "decision_threshold", "contradiction", THRESHOLD))
     k = key(("K-1", "decision_threshold", "contradiction"))
-    changed = {R_FILE: [line.replace(">= 0.5", ">= 0.4") for line in load_sources([R_FILE])[R_FILE]]}
+    changed = {R_FILE: [line.replace("probability >= CLASSIFICATION_THRESHOLD", "probability >= 0.4")
+                        for line in load_sources([R_FILE])[R_FILE]]}
     assert outcomes(score_discovery(r, k))["D-001"][2] == "verified"
     assert outcomes(score_discovery(r, k, code=changed))["D-001"][2] == "unresolved"
 
@@ -194,10 +195,10 @@ def test_a_model_missing_from_the_inventory_cannot_be_scored():
 
 
 @pytest.mark.parametrize("ref_file, quote, line", [
-    ("models/outdated_model_document.md", "- Threshold: 0.5", 9),  # the legacy document is not code
+    ("models/outdated_model_document.md", "- Classification threshold: 0.40", 14),  # the legacy document is not code
     ("elsewhere/legacy_model.R", THRESHOLD, 23),                   # same base name, wrong path
     (R_FILE, "e", 1),                                               # a fragment of the cited line
-    (R_FILE, "0.5", 23),
+    (R_FILE, "0.35", 23),
 ])
 def test_only_substantial_quotes_from_the_registered_code_count(ref_file, quote, line):
     ref = SourceRef(file=ref_file, line_start=line, line_end=line, quote=quote, verified=True)
@@ -207,15 +208,15 @@ def test_only_substantial_quotes_from_the_registered_code_count(ref_file, quote,
 
 
 def test_every_cited_reference_must_resolve():
-    good = SourceRef(file=R_FILE, line_start=23, line_end=23, quote=THRESHOLD, verified=True)
-    fake = SourceRef(file=R_FILE, line_start=24, line_end=24, quote="threshold <- 0.4", verified=True)
+    good = SourceRef(file=R_FILE, line_start=24, line_end=24, quote=THRESHOLD, verified=True)
+    fake = SourceRef(file=R_FILE, line_start=25, line_end=25, quote="threshold <- 0.4", verified=True)
     r = report(finding("D-001", "decision_threshold", "contradiction").model_copy(update={"code_evidence": [good, fake]}))
     disc = score_discovery(r, key(("K-1", "decision_threshold", "contradiction")))["discrepancies"]
     assert disc["findings"][0]["evidence"] == "unresolved" and disc["recall_with_evidence"] == 0.0
 
 
 def test_a_quote_found_only_away_from_its_cited_lines_does_not_count():
-    moved = report(finding("D-001", "decision_threshold", "contradiction", THRESHOLD, line=22))  # really on line 23
+    moved = report(finding("D-001", "decision_threshold", "contradiction", THRESHOLD, line=22))  # really on line 24
     assert outcomes(score_discovery(moved, key(("K-1", "decision_threshold", "contradiction"))))["D-001"][2] == "unresolved"
 
 
