@@ -113,7 +113,7 @@ def seed_records() -> list[InventoryRecord]:
             business_purpose="Challenger model compared against the production default model; informs but does not drive decisions.",
             algorithm="Gradient Boosting classifier (scikit-learn)",
             language="Python",
-            source_files=["engine/models.py", "engine/data.py"],
+            source_files=["engine/models.py", "engine/data.py", "engine/pipeline.py", "engine/validation.py"],
             legacy_document="models/gradient_boosting_model_document.md",
             migration_status="not_applicable",
             materiality="medium",

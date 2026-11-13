@@ -36,7 +36,9 @@
     "language": "Python",
     "source_files": [
       "engine/models.py",
-      "engine/data.py"
+      "engine/data.py",
+      "engine/pipeline.py",
+      "engine/validation.py"
     ],
     "legacy_document": "models/gradient_boosting_model_document.md",
     "lifecycle_stage": "discover",
