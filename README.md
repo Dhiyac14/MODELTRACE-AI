@@ -1,7 +1,5 @@
 # MODELTRACE AI
 
-## Person 1 ML engine
-
 This repository contains the reproducible ML engineering, migration, validation,
 and monitoring components for ModelTrace AI.
 
@@ -9,13 +7,27 @@ The dataset is historical Taiwanese credit-card data from the official UCI
 repository and is used strictly for a public demonstration. It must not be
 described as representative of a current UK bank portfolio.
 
-### Quick start
+## Quick start
 
 ```powershell
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev,validation,statsmodels]"
 python -m pytest
+streamlit run app.py
+```
+
+To run the end-to-end ML pipeline, use:
+
+```powershell
 python -m engine.pipeline
 ```
+
+The pipeline uses the downloaded UCI workbook and requires `Rscript`, network
+access for the first data download, and the installed Python dependencies.
+
+## Person 1 ML engine
+
+The ML engine provides reproducible migration, validation, monitoring, and risk
+evidence for the legacy R model.
 
 The pipeline writes integration-ready JSON to:
 
@@ -50,14 +62,11 @@ The agent layer discovers, documents and monitors the models, and every stage pa
 The Streamlit dashboard brings the five lifecycle stages together: Discover, Document, Redevelop, Validate
 and Monitor. Design and interfaces: `docs/design/person2_design.md`. Architecture: `docs/architecture.png`.
 
-### Quick start
+For local dashboard development, optionally create `.env` from `.env.example`
+and add `LLM_API_KEY`. To reset the demonstration inventory only, run:
 
 ```bash
-python -m pip install -e ".[dev,validation,statsmodels]"
-python -m pip install -r requirements.txt
-cp .env.example .env          # optional: add LLM_API_KEY to use Claude
-python -m inventory.registry --seed --force   # only to reset the inventory
-streamlit run app.py
+python -m inventory.registry --seed --force
 ```
 
 Without an API key the dashboard and the Documentation and Monitoring Agents still run with template text;
@@ -143,13 +152,9 @@ Responsible AI note: `governance/responsible_ai.md`. AI-use declaration: `govern
 The read-only `reporting/` package turns the existing inventory, Discovery reports,
 model cards, validation, migration, monitoring, risk-finding and SS1/23 mapping
 JSON into printable A4 PDFs. It does not create metrics or alter source reports.
-Missing evidence is labelled `Not Assessed`, `Not Available` or `Not Applicable`.
-
-Install the reporting dependency with the normal project setup:
-
-```bash
-python -m pip install -e ".[dev,validation,statsmodels]"
-```
+Missing evidence is labelled `Not Assessed`, `Not Available` or `Not Applicable`;
+recorded governance approval is shown as `Approved (recorded)` and is not treated
+as independent validation.
 
 Generate reports from Python:
 
