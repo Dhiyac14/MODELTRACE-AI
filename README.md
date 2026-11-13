@@ -4,6 +4,10 @@
 
 **Jump to:** [Problem](#the-problem) · [Solution](#what-modeltrace-ai-does) · [Results](#headline-results) · [Architecture](#system-architecture) · [Agents](#ai-agents-governance-and-dashboard) · [Reports](#automated-pdf-model-risk-reports) · [Quick Start](#quick-start) · [CLI](#command-line-agent-usage) · [Limitations](#known-limitations-and-scope)
 
+## Demo Video
+
+[▶ Watch MODELTRACE AI – Project Demonstration](https://drive.google.com/file/d/1Xy5f7FgsODnLROSPzcXega5wFj3Mr7_f/view?usp=sharing)
+
 **System architecture**
 
 ![MODELTRACE AI system architecture](docs/architecture.svg)
@@ -11,10 +15,6 @@
 **Process flow and use cases**
 
 ![MODELTRACE AI process flow and use cases](docs/process_flow.svg)
-
-## Demo Video
-
-[▶ Watch MODELTRACE AI – Project Demonstration](https://drive.google.com/file/d/1Xy5f7FgsODnLROSPzcXega5wFj3Mr7_f/view?usp=sharing)
 
 ### Contents
 
