@@ -5,6 +5,20 @@
 Architecture: [View System Architecture](docs/architecture.svg).
 Process flow and use cases: [View Process Flow](docs/process_flow.svg).
 
+**Jump to:** [Problem](#the-problem) · [Solution](#what-modeltrace-ai-does) · [Results](#headline-results) · [Architecture](#system-architecture) · [Agents](#ai-agents-governance-and-dashboard) · [Reports](#automated-pdf-model-risk-reports) · [Quick Start](#quick-start) · [CLI](#command-line-agent-usage) · [Limitations](#known-limitations-and-scope)
+
+### Contents
+
+| Overview | Architecture & Implementation | Running It | Responsibility & Scope |
+|---|---|---|---|
+| [Challenge 04](#challenge-04--agentic-model-risk-factory) | [System Architecture](#system-architecture) | [Quick Start](#quick-start) | [Responsible AI](#responsible-ai) |
+| [The Problem](#the-problem) | [Dataset and Model Portfolio](#dataset-and-model-portfolio) | [Command-Line Agent Usage](#command-line-agent-usage) | [Judging Criteria Alignment](#alignment-with-hackathon-judging-criteria) |
+| [What MODELTRACE AI Does](#what-modeltrace-ai-does) | [ML Engineering Implementation](#ml-engineering-implementation) | [Scoring the Discovery Agent](#scoring-the-discovery-agent) | [Known Limitations and Scope](#known-limitations-and-scope) |
+| [Why It Is Trustworthy](#why-it-is-trustworthy) | [AI Agents, Governance and Dashboard](#ai-agents-governance-and-dashboard) | [MLflow Tracking](#mlflow-tracking) | [Our Objective](#our-objective) |
+| [Headline Results](#headline-results) | [Governance and Human Approval](#governance-and-human-approval) | [Tests and Reproducibility](#tests-and-reproducibility) | |
+| [Business Impact](#business-impact) | [Automated PDF Reports](#automated-pdf-model-risk-reports) | [Technology Stack](#technology-stack) | |
+| | [Dashboard](#dashboard) | | |
+
 ---
 
 ## Challenge 04 — Agentic Model Risk Factory
