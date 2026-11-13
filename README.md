@@ -305,7 +305,7 @@ The agent layer discovers, documents, and monitors the models. Each lifecycle st
 
 Design and interfaces: `docs/design/person2_design.md`
 
-Architecture: `docs/architecture.png`
+Architecture: `docs/architecture.svg`
 
 ### What Runs Where
 
