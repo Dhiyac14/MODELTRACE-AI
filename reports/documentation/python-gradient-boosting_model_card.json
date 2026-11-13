@@ -9,7 +9,7 @@
       "title": "Model overview and intended purpose",
       "status": "available",
       "source": "llm_draft",
-      "text": "Python Gradient Boosting (python-gradient-boosting) is a challenger model that is compared against the production default model; it informs but does not drive decisions. The business purpose shown here is inferred, and the model owner and intended business use or decision are not documented. It predicts the target default.payment.next.month using the UCI Default of Credit Card Clients dataset (30,000 records, 23 input variables), which is public demonstration data and not representative of a UK bank's current portfolio. The facts list the model as risk tier 2.",
+      "text": "Python Gradient Boosting (model_id python-gradient-boosting) predicts default.payment.next.month on the UCI Default of Credit Card Clients dataset. Its recorded business purpose, a challenger compared against the production default model that informs but does not drive decisions, was inferred rather than confirmed. This conflicts with the documented limitation that the model is used only for SHAP explainability. The business owner, the intended business use and the decision supported are not documented, and the facts list a risk tier of 2 while also listing the tier/risk rating as missing information.",
       "rows": []
     },
     {
@@ -51,7 +51,7 @@
       "title": "Algorithm and methodology",
       "status": "available",
       "source": "llm_draft",
-      "text": "The model is a scikit-learn GradientBoostingClassifier with default hyperparameters and random_state set to the seed (default 42). The data is fetched from UCI dataset 350 and checked for 30,000 rows, 25 columns, no missing values and a default rate between 0.20 and 0.24. A stratified train/test split of 80/20 is then applied with random_state=42; the train fraction is inferred. The model uses 21 predictors: LIMIT_BAL, EDUCATION, MARRIAGE, the PAY, BILL_AMT and PAY_AMT series. ID, SEX and AGE are excluded, and no scaling or encoding is applied.",
+      "text": "The model is a scikit-learn GradientBoostingClassifier with random_state set to a seed that defaults to 42 and no other hyperparameters set, so library defaults apply. It uses 21 input features (credit limit, education, marriage, the PAY_0 to PAY_6 repayment-status fields, six bill amounts and six payment amounts); ID, SEX and AGE are excluded from the predictors, though the input feature list itself was inferred. Data is fetched from UCI dataset 350 and validated for shape, missing values and default rate, then split 80/20 into stratified train and test sets with random_state 42 (the train fraction was inferred). No scaling, encoding or class imbalance handling is applied, and no decision threshold is documented.",
       "rows": []
     },
     {
@@ -69,27 +69,27 @@
         {
           "label": "Input features (21)",
           "value": "LIMIT_BAL, EDUCATION, MARRIAGE, PAY_0, PAY_2, PAY_3, PAY_4, PAY_5, PAY_6, BILL_AMT1, BILL_AMT2, BILL_AMT3, BILL_AMT4, BILL_AMT5, BILL_AMT6, PAY_AMT1, PAY_AMT2, PAY_AMT3, PAY_AMT4, PAY_AMT5, PAY_AMT6",
-          "source": "engine/data.py:L58-63; engine/data.py:L150-151; engine/models.py:L63 (inferred)"
+          "source": "engine/data.py:L58-63; engine/data.py:L148-151; engine/models.py:L63 (inferred)"
         },
         {
           "label": "Excluded columns",
           "value": "ID, SEX, AGE, default.payment.next.month",
-          "source": "engine/data.py:L20-22; engine/data.py:L148-151; engine/data.py:L141 (verified)"
+          "source": "engine/data.py:L20-22; engine/data.py:L150; engine/data.py:L141 (verified)"
         },
         {
           "label": "Preprocessing",
-          "value": "Fetch UCI dataset 350 via ucimlrepo and rename X1..X23 columns to the expected feature names, Validate the dataset: 30,000 rows, 25 columns, no missing values, default rate between 0.20 and 0.24, Separate the target default.payment.next.month and cast it to int, Stratified train/test split with test_size=0.2 and random_state=42, Drop ID, SEX and AGE from the predictors via predictive_features, No scaling or encoding is applied for gradient_boosting",
-          "source": "engine/data.py:L64-65; engine/data.py:L103; engine/data.py:L143-145; engine/models.py:L71 (verified)"
+          "value": "Fetch UCI dataset 350 via ucimlrepo and rename X1..X23 columns to named features, Validate dataset shape (30,000 rows, 25 columns), no missing values, default rate 20-24%, Separate target default.payment.next.month and cast to int, Stratified train/test split with test_size=0.2, random_state=42, Drop ID, SEX and AGE from predictors via predictive_features, No scaling or encoding applied to gradient boosting inputs",
+          "source": "engine/data.py:L64-65; engine/data.py:L103; engine/data.py:L143-145; engine/models.py:L74-76 (verified)"
         },
         {
           "label": "Train/test split",
           "value": "80% train / 20% test",
-          "source": "engine/data.py:L135-137 (inferred)"
+          "source": "engine/data.py:L135-137; engine/pipeline.py:L173 (inferred)"
         },
         {
           "label": "Decision threshold",
           "value": "Not determined from the code",
-          "source": "engine/models.py:L30-31 (missing)"
+          "source": "engine/models.py:L30-31; engine/models.py:L19-21 (missing)"
         }
       ]
     },
@@ -241,7 +241,7 @@
       "title": "Limitations and assumptions",
       "status": "available",
       "source": "llm_draft",
-      "text": "Performance, fairness, stability and monitoring metrics are computed only for the Statsmodels candidate; for this model only SHAP explainability is produced, using just the first 500 test rows. The decision threshold, hyperparameter rationale or tuning, model version, artifact hash, approval, deployment and monitoring status are not documented. The training data is historical Taiwanese data (April to September 2005), and deployment population representativeness and production calibration are unknown. The model assumes the library default hyperparameters are adequate and treats SEX and AGE as fairness-only attributes, and in demo mode it is trained on a synthetic dataset with only 3 predictors.",
+      "text": "Performance, calibration, fairness, stability and monitoring are not evaluated for this model, since those reports use the Statsmodels candidate, and SHAP explainability is computed only on the first 500 test rows. The model assumes default hyperparameters are adequate, but no rationale for them or any tuning is documented. Training data is public 2005 Taiwanese credit-card demonstration data that is not representative of a UK bank's current portfolio, so its representativeness for any deployment population is unknown. The decision threshold, monitoring plan, approval status and deployment status are not documented.",
       "rows": []
     },
     {
@@ -307,19 +307,24 @@
       "rows": [
         {
           "label": "D-001 other (omission)",
-          "value": "Document: Not mentioned in the document. Correction: State that the fitted model is saved to models/artifacts/gradient_boosting.joblib on every demo and real pipeline run.",
+          "value": "Document: Not mentioned in the document. Correction: State that the fitted model is persisted to models/artifacts/gradient_boosting.joblib in both the demo and real pipelines.",
           "source": "engine/pipeline.py:L175-176"
         },
         {
           "label": "D-002 other (omission)",
-          "value": "Document: Not mentioned in the document. Correction: State that Gradient Boosting SHAP uses shap.TreeExplainer on the first 500 rows of the test set and reports mean absolute SHAP values per feature.",
-          "source": "engine/validation.py:L128-129"
+          "value": "Document: Not mentioned in the document. Correction: State that Gradient Boosting SHAP explainability uses TreeExplainer on the first 500 test rows and reports mean absolute SHAP values per feature.",
+          "source": "engine/validation.py:L120-128"
+        },
+        {
+          "label": "D-003 monitoring (omission)",
+          "value": "Document: Not mentioned in the document. Correction: State that the pipeline does not monitor the Gradient Boosting model; monitoring covers only the Statsmodels candidate.",
+          "source": "engine/pipeline.py:L213-214"
         }
       ]
     }
   ],
   "grounding_warnings": [],
   "generated_by": "Documentation Agent (LLM: claude-opus-5-5)",
-  "generated_at": "2026-11-13T15:18:29+00:00",
+  "generated_at": "2026-11-13T17:47:02+00:00",
   "review_status": "pending_human_review"
 }
