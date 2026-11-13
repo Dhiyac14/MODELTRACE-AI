@@ -1,0 +1,120 @@
+{
+  "model_id": "legacy-r-logistic",
+  "metadata_scored": true,
+  "recall": 1.0,
+  "precision": 1.0,
+  "matched": [
+    "expected_model_type",
+    "expected_training_function",
+    "expected_link",
+    "expected_target"
+  ],
+  "missed": [],
+  "unmapped_keys": [],
+  "discrepancies": {
+    "scored_types": [
+      "contradiction",
+      "unverifiable"
+    ],
+    "recall": 1.0,
+    "precision": 1.0,
+    "recall_with_evidence": 1.0,
+    "counts": {
+      "expected": 5,
+      "scored_findings": 5,
+      "detected": 5,
+      "misclassified": 0,
+      "unsupported": 0,
+      "not_scored": 2,
+      "missed": 0,
+      "detected_without_evidence": 0
+    },
+    "key_entries": [
+      {
+        "id": "LEGACY-TARGET",
+        "outcome": "detected",
+        "discrepancy_id": "D-001"
+      },
+      {
+        "id": "LEGACY-EXCLUDED-SEX",
+        "outcome": "detected",
+        "discrepancy_id": "D-002"
+      },
+      {
+        "id": "LEGACY-SPLIT",
+        "outcome": "detected",
+        "discrepancy_id": "D-004"
+      },
+      {
+        "id": "LEGACY-PREPROCESSING",
+        "outcome": "detected",
+        "discrepancy_id": "D-005"
+      },
+      {
+        "id": "LEGACY-THRESHOLD",
+        "outcome": "detected",
+        "discrepancy_id": "D-003"
+      }
+    ],
+    "findings": [
+      {
+        "discrepancy_id": "D-001",
+        "field": "target_variable",
+        "type": "contradiction",
+        "evidence": "verified",
+        "outcome": "detected",
+        "expected_id": "LEGACY-TARGET"
+      },
+      {
+        "discrepancy_id": "D-002",
+        "field": "input_features",
+        "type": "contradiction",
+        "evidence": "verified",
+        "outcome": "detected",
+        "expected_id": "LEGACY-EXCLUDED-SEX"
+      },
+      {
+        "discrepancy_id": "D-003",
+        "field": "decision_threshold",
+        "type": "contradiction",
+        "evidence": "verified",
+        "outcome": "detected",
+        "expected_id": "LEGACY-THRESHOLD"
+      },
+      {
+        "discrepancy_id": "D-004",
+        "field": "train_test_split",
+        "type": "contradiction",
+        "evidence": "verified",
+        "outcome": "detected",
+        "expected_id": "LEGACY-SPLIT"
+      },
+      {
+        "discrepancy_id": "D-005",
+        "field": "preprocessing",
+        "type": "contradiction",
+        "evidence": "verified",
+        "outcome": "detected",
+        "expected_id": "LEGACY-PREPROCESSING"
+      },
+      {
+        "discrepancy_id": "D-006",
+        "field": "preprocessing",
+        "type": "omission",
+        "evidence": "verified",
+        "outcome": "not_scored",
+        "expected_id": null
+      },
+      {
+        "discrepancy_id": "D-007",
+        "field": "other",
+        "type": "omission",
+        "evidence": "verified",
+        "outcome": "not_scored",
+        "expected_id": null
+      }
+    ]
+  },
+  "report_generated_at": "2026-11-13T15:11:37+00:00",
+  "scored_at": "2026-11-13T15:39:34+00:00"
+}

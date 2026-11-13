@@ -1,0 +1,49 @@
+{
+  "model_id": "python-gradient-boosting",
+  "metadata_scored": false,
+  "recall": null,
+  "precision": null,
+  "matched": [],
+  "missed": [],
+  "unmapped_keys": [],
+  "discrepancies": {
+    "scored_types": [
+      "contradiction",
+      "unverifiable"
+    ],
+    "recall": null,
+    "precision": null,
+    "recall_with_evidence": null,
+    "counts": {
+      "expected": 0,
+      "scored_findings": 0,
+      "detected": 0,
+      "misclassified": 0,
+      "unsupported": 0,
+      "not_scored": 2,
+      "missed": 0,
+      "detected_without_evidence": 0
+    },
+    "key_entries": [],
+    "findings": [
+      {
+        "discrepancy_id": "D-001",
+        "field": "other",
+        "type": "omission",
+        "evidence": "verified",
+        "outcome": "not_scored",
+        "expected_id": null
+      },
+      {
+        "discrepancy_id": "D-002",
+        "field": "other",
+        "type": "omission",
+        "evidence": "verified",
+        "outcome": "not_scored",
+        "expected_id": null
+      }
+    ]
+  },
+  "report_generated_at": "2026-11-13T15:13:12+00:00",
+  "scored_at": "2026-11-13T15:40:05+00:00"
+}
