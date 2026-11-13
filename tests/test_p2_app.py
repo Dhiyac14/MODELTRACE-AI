@@ -76,6 +76,21 @@ def test_every_section_renders(data_root, section, samples):
     assert bool(sample_banners) == (samples and uses_person1_data)
 
 
+def test_a_comment_stays_with_its_author_and_decision(data_root):
+    at = app("Discovery", user="dev.alex")
+    at.button(key="submit-legacy-r-logistic-discover").click().run()
+    at = app("Discovery", user="mrm.jordan")
+    at.text_input(key="comment-legacy-r-logistic-discover-mrm.jordan-1").input("Cite the threshold line.").run()
+    at.button(key="request_changes-legacy-r-logistic-discover").click().run()
+    assert at.text_input(key="comment-legacy-r-logistic-discover-mrm.jordan-2").value == ""  # cleared by the action
+    at.session_state["user"] = USER_INDEX["lead.taylor"]  # same browser session, another person
+    at.run()
+    at.button(key="submit-legacy-r-logistic-discover").click().run()
+    records = json.loads((data_root / "governance/approval_log.json").read_text())
+    assert [(r["actor"], r["comment"]) for r in records] == [
+        ("dev.alex", ""), ("mrm.jordan", "Cite the threshold line."), ("lead.taylor", "")]
+
+
 def test_python_model_has_no_redevelopment(data_root):
     at = app("Migration", model="python-gradient-boosting")
     assert any("already implemented in Python" in i.value for i in at.info)

@@ -141,7 +141,10 @@ def gate_panel(model_id: str, stage: str) -> None:
         return
     if stage in WF.stale_approvals(model_id):
         st.warning("The evidence file changed after this stage was approved. A risk manager should reopen it (Governance).")
-    comment = st.text_input("Comment (required to reject or request changes)", key=f"comment-{model_id}-{stage}")
+    history = [r for r in WF.history(model_id) if r.stage == stage]
+    # One box per user and per recorded action, so a comment never carries over to another person or decision.
+    comment = st.text_input("Comment (required to reject or request changes)",
+                            key=f"comment-{model_id}-{stage}-{USER.user_id}-{len(history)}")
     blocked: dict[str, list[str]] = {}
     for column, (action, label) in zip(st.columns(4), GATE_ACTIONS):
         blocked[label] = WF.check(model_id, stage, action, USER)
@@ -157,7 +160,6 @@ def gate_panel(model_id: str, stage: str) -> None:
         with st.expander(f"Why some actions are unavailable for {USER.name}"):
             for label, problems in reasons.items():
                 st.markdown(f"**{label}:** " + " ".join(problems))
-    history = [r for r in WF.history(model_id) if r.stage == stage]
     if history:
         table([r.model_dump(include={"timestamp", "action", "actor", "role", "comment", "evidence_ref"}) for r in history])
 
@@ -658,7 +660,9 @@ def page_monitoring(model_id: str) -> None:
             status = alert_status(reviews, alert.alert_id)
             icon = "🔴" if alert.severity == "high" else "🟠"
             title = f"{icon} {alert.severity.upper()} · {alert.batch_id} · {alert.metric} · {alert.feature or 'model output'} · {status}"
-            with st.expander(title, expanded=alert.severity == "high" and status == "open"):
+            history = [r for r in reviews if r.alert_id == alert.alert_id]
+            # Stays open while someone works on it, instead of closing after each review action.
+            with st.expander(title, expanded=status != "closed" and (alert.severity == "high" or bool(history))):
                 exp = alert.explanation
                 st.markdown(f"**Evidence:** value `{alert.value}` at `{alert.evidence_ref}`  \n**Rule:** {alert.rule}")
                 if exp:
@@ -667,13 +671,12 @@ def page_monitoring(model_id: str) -> None:
                     st.markdown("**Investigate:**\n" + "\n".join(f"- {c}" for c in exp.investigate))
                 if is_sample:
                     continue
-                comment = st.text_input("Comment", key=f"ac-{alert.alert_id}")
+                comment = st.text_input("Comment", key=f"ac-{alert.alert_id}-{USER.user_id}-{len(history)}")
                 for column, (action, label) in zip(st.columns(len(ALERT_ACTIONS)), ALERT_ACTIONS):
                     problems = [p for p in check_alert_action(action, status, USER, "x") if not p.startswith("A comment")]
                     if column.button(label, key=f"{action}-{alert.alert_id}", disabled=bool(problems)):
                         act(lambda: WF.review_alert(model_id, alert.alert_id, USER, action, comment),
                             f"Alert {alert.alert_id}: {label.lower()} recorded.")
-                history = [r for r in reviews if r.alert_id == alert.alert_id]
                 if history:
                     table([r.model_dump(include={"timestamp", "action", "actor", "role", "comment"}) for r in history])
     gate_panel(model_id, "monitor")
