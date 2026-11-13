@@ -1,5 +1,5 @@
 """Person 2: deterministic verification of LLM source references."""
-from llm.evidence import render_listing, verify_fact, verify_facts, verify_ref
+from llm.evidence import REPO_ROOT, load_sources, render_listing, verify_fact, verify_facts, verify_ref
 from llm.schemas import Fact, ModelMetadata, SourceRef
 
 SOURCES = {
@@ -74,6 +74,15 @@ def test_verify_facts_covers_fact_lists():
     checked, warnings = verify_facts(metadata, SOURCES)
     assert checked.assumptions[0].status == "inferred"
     assert any(w.startswith("assumptions[0]") for w in warnings)
+
+
+def test_sources_are_keyed_by_repository_path(tmp_path):
+    # The dashboard passes absolute paths; the report must not hold the local home directory.
+    inside = load_sources([REPO_ROOT / "models" / "legacy_model.R", "models/legacy_model.R"])
+    assert list(inside) == ["models/legacy_model.R"]
+    outside = tmp_path / "model.R"
+    outside.write_text("x <- 1\n")
+    assert list(load_sources([outside])) == [outside.as_posix()]
 
 
 def test_listing_numbers_lines():
