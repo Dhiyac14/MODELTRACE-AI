@@ -91,6 +91,15 @@ def test_a_comment_stays_with_its_author_and_decision(data_root):
         ("dev.alex", ""), ("mrm.jordan", "Cite the threshold line."), ("lead.taylor", "")]
 
 
+def test_risk_register_shows_impact_and_a_missing_document(data_root):
+    at = app("Risk & Evidence", user="mrm.jordan")
+    frame = at.dataframe[0].value
+    assert "Potential impact" in frame.columns
+    missing = frame[frame["ID"] == "DOC-MISSING"]
+    assert list(missing["Model"]) == ["python-random-forest"] and missing["Potential impact"].str.len().gt(0).all()
+    assert frame.loc[frame["Source"] == "Discovery: document vs code", "Potential impact"].str.len().gt(0).all()
+
+
 def test_python_model_has_no_redevelopment(data_root):
     at = app("Migration", model="python-gradient-boosting")
     assert any("already implemented in Python" in i.value for i in at.info)

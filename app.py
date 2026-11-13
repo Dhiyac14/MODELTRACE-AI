@@ -40,6 +40,12 @@ STATUS_LABEL = {"approved": "✅ approved", "pending_review": "🕒 pending revi
                 "invalidated": "♻️ invalidated", "not_started": "not started", "not_applicable": "n/a"}
 GATE_ACTIONS = [("submit", "Submit for review"), ("approve", "Approve"),
                 ("request_changes", "Request changes"), ("reject", "Reject")]
+DISCREPANCY_IMPACT = {
+    "contradiction": "Reviewers who rely on the existing document get a wrong account of how the model works.",
+    "omission": "The existing document is incomplete, so reviewers cannot rely on it alone.",
+    "unverifiable": "A documented claim has no support in the code, so it cannot be relied on.",
+    "missing": "Without development documentation (SS1/23 3.5) reviewers have only the code and generated drafts.",
+}
 ALERT_ACTIONS = [("acknowledge", "Acknowledge"), ("investigate", "Investigate"), ("escalate", "Escalate"),
                  ("close", "Close"), ("request_revalidation", "Request re-validation")]
 
@@ -304,7 +310,8 @@ def page_discovery(model_id: str) -> None:
         report = DiscoveryReport.model_validate(data)
         st.caption(f"Report generated {report.generated_at} with LLM `{report.llm_model}` from "
                    f"{', '.join(report.source_files)}; compared with `{report.legacy_document or 'no document'}`.")
-        tabs = st.tabs(["Extracted metadata", f"Discrepancies ({len(report.discrepancies)})", "Source code",
+        compared = f"Discrepancies ({len(report.discrepancies)})" if report.legacy_document else "Discrepancies (no document)"
+        tabs = st.tabs(["Extracted metadata", compared, "Source code",
                         f"Evidence warnings ({len(report.evidence_warnings)})"])
         with tabs[0]:
             rows = []
@@ -320,6 +327,9 @@ def page_discovery(model_id: str) -> None:
             if report.metadata.missing_information:
                 st.markdown("**Missing from the code:** " + "; ".join(report.metadata.missing_information))
         with tabs[1]:
+            if not report.legacy_document:
+                st.warning("Missing documentation: no existing model document is registered for this model, so there "
+                           "is nothing to compare with the code. The generated model card will be its first document.")
             score = ARTIFACTS.load("discovery_score", model_id)
             scored = {}
             if score:
@@ -576,12 +586,23 @@ def page_risk() -> None:
             rows.append({"Model": record.model_id, "ID": f.get("id"),
                          "Source": "Person 1 risk findings" + (" (SAMPLE COPY)" if is_sample else ""),
                          "Category": f.get("risk_category") or f.get("category"), "Severity": f.get("severity"),
-                         "Description": f.get("description"), "Evidence": json.dumps(f.get("evidence"))[:300],
+                         "Description": f.get("description"), "Potential impact": f.get("impact", ""),
+                         "Evidence": json.dumps(f.get("evidence"))[:300],
                          "Remediation": f.get("remediation"), "Status": f.get("review_status")})
+        if not record.legacy_document:
+            rows.append({"Model": record.model_id, "ID": "DOC-MISSING", "Source": "Inventory",
+                         "Category": "documentation · missing document", "Severity": "medium",
+                         "Description": "No existing model document is registered for this model.",
+                         "Potential impact": DISCREPANCY_IMPACT["missing"],
+                         "Evidence": "inventory/model_inventory.json: legacy_document is empty",
+                         "Remediation": "Review and approve the generated model card at the Document gate.",
+                         "Status": WF.statuses(record.model_id)["document"]})
         for d in (ARTIFACTS.load("discovery", record.model_id) or {}).get("discrepancies", []):
             rows.append({"Model": record.model_id, "ID": d["discrepancy_id"], "Source": "Discovery: document vs code",
                          "Category": f"documentation · {d['field']}", "Severity": "medium" if d["type"] == "contradiction" else "low",
-                         "Description": f"{d['type']}: {d['documented_claim']}", "Evidence": "; ".join(
+                         "Description": f"{d['type']}: {d['documented_claim']}",
+                         "Potential impact": DISCREPANCY_IMPACT.get(d["type"], DISCREPANCY_IMPACT["omission"]),
+                         "Evidence": "; ".join(
                              f"{r['file']}:L{r['line_start']}" for r in d["code_evidence"]) or "no code evidence",
                          "Remediation": d["suggested_correction"], "Status": WF.statuses(record.model_id)["discover"]})
         alerts = ARTIFACTS.load("alerts", record.model_id)
@@ -589,6 +610,7 @@ def page_risk() -> None:
         for a in (alerts or {}).get("alerts", []):
             rows.append({"Model": record.model_id, "ID": a["alert_id"], "Source": "Monitoring", "Category": a["metric"],
                          "Severity": a["severity"], "Description": (a.get("explanation") or {}).get("summary", ""),
+                         "Potential impact": (a.get("explanation") or {}).get("potential_impact", ""),
                          "Evidence": a["evidence_ref"], "Remediation": (a.get("explanation") or {}).get("recommendation", ""),
                          "Status": alert_status(reviews, a["alert_id"])})
     if not rows:
@@ -602,8 +624,8 @@ def page_risk() -> None:
     st.plotly_chart(px.histogram(frame, x="Severity", color="Source", title="Risk register by severity",
                                  category_orders={"Severity": levels}), key="risk")
     table(frame)
-    st.caption("Discrepancy severity is a fixed rule: contradiction = medium, omission or unverifiable = low. "
-               "Every row points to the file and line, or report key, that supports it.")
+    st.caption("Discrepancy severity is a fixed rule: contradiction = medium, omission or unverifiable = low, "
+               "no document at all = medium. Every row points to the file and line, or report key, that supports it.")
 
 
 def page_monitoring(model_id: str) -> None:
